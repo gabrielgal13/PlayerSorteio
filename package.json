@@ -1,0 +1,45 @@
+{
+  "name": "raffle-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@gsap/react": "^2.1.2",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@types/three": "^0.184.1",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
+    "framer-motion": "^12.38.0",
+    "gsap": "^3.15.0",
+    "jose": "^6.2.3",
+    "next": "16.2.6",
+    "pg": "^8.20.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "three": "^0.184.0",
+    "tmi.js": "^1.8.5",
+    "xlsx": "^0.18.5",
+    "youtube-chat": "^2.2.0",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@prisma/client": "^7.8.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/tmi.js": "^1.8.6",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "prisma": "^7.8.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

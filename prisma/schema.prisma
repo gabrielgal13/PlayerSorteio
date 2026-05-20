@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Streamer {
+  id           String  @id @default(cuid())
+  username     String  @unique
+  passwordHash String
+  mascot       String  @default("careca")
+  displayName  String?
+  isAdmin      Boolean @default(false)
+
+  // Canais
+  twitchChannel  String?
+  kickChannel    String?
+  kickChatroomId Int?
+  youtubeChannel     String?
+  youtubeDisplayName String?
+
+  // TwitchConfig (editável pelo modal de Configurações)
+  registrationCommand String @default("!entrar")
+  claimCommand        String @default("!claim")
+  validationTimeout   Int    @default(60)
+
+  // Saldo PSC
+  pscBalance Int @default(0)
+
+  // Preferências
+  audioEnabled              Boolean @default(true)
+  excelImportEnabled        Boolean @default(true)
+  excelPrizesImportEnabled  Boolean @default(true)
+  eventMusic          String  @default("cyberpunk")
+  eventEffect         String  @default("confetti")
+  spinEffect              String  @default("numbers")
+  themeColor              String  @default("#00E5FF")
+  socoChuteModeEnabled    Boolean @default(true)
+  raffleTriggerMode       String  @default("manual")
+  autoRoundDelay          Int     @default(30)
+  chatTriggerCount        Int     @default(50)
+  chatTriggerCommand      String  @default("!sortear")
+  raffleAnimationStyle    String  @default("balada")
+
+  history         RaffleHistory[]
+  pscTransactions PscTransaction[]
+  prizeLists      PrizeList[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PrizeList {
+  id          String          @id @default(cuid())
+  streamer    Streamer        @relation(fields: [streamerId], references: [id])
+  streamerId  String
+  name        String
+  description String?
+  visibility  String          @default("public")
+  coverUrl    String?
+  items       PrizeListItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PrizeListItem {
+  id          String    @id @default(cuid())
+  prizeList   PrizeList @relation(fields: [prizeListId], references: [id], onDelete: Cascade)
+  prizeListId String
+  name        String
+  description String?
+  imageUrl    String?
+  quantity    Int       @default(1)
+  pscValue    Int?
+  skipPsc     Boolean   @default(false)
+  order       Int       @default(0)
+}
+
+model PscTransaction {
+  id          String   @id @default(cuid())
+  streamer    Streamer @relation(fields: [streamerId], references: [id])
+  streamerId  String
+  type        String   @default("credit")
+  amount      Int
+  description String   @default("Recarga PSC")
+  timestamp   DateTime @default(now())
+}
+
+model RaffleHistory {
+  id         String   @id @default(cuid())
+  streamer   Streamer @relation(fields: [streamerId], references: [id])
+  streamerId String
+
+  // Ganhador
+  winnerNumber Int
+  winnerName   String
+  winnerSource String?
+
+  // Prêmio
+  prizeName        String
+  prizeDescription String?
+  prizeImageUrl    String?
+  prizeQuantity    Int
+  prizePscValue    Int?
+
+  confirmed Boolean  @default(false)
+  timestamp DateTime @default(now())
+
+  tradeLink      String?
+  deliveryStatus String  @default("novo")
+  tradeLockAt    DateTime?
+}

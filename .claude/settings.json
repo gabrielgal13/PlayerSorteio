@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Force)",
+      "Bash(node_modules/.bin/prisma db *)",
+      "Bash(node_modules/.bin/prisma generate *)",
+      "Bash(Get-ChildItem -Path . -Recurse -Name)",
+      "Bash(rtk find *)",
+      "Bash(rtk ls *)",
+      "Bash(Select-String \"PrizeManager\")"
+    ]
+  }
+}

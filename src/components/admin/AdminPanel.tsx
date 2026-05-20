@@ -1,0 +1,1462 @@
+'use client';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useStore } from '@/store/useStore';
+import EntregasPage from '@/components/deliveries/EntregasPage';
+import type { RaffleResult, DeliveryStatus } from '@/types';
+
+interface StreamerRow { username: string; displayName: string | null; pscBalance: number; }
+type Section = 'psc' | 'criar-streamer' | 'entregas';
+
+const COLOR_PRESETS = ['#BF5AF2', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#00E5FF', '#00FFA3'];
+
+const STAGE_THEMES = [
+  { id: 'cyber-purple', label: 'Cyber Purple', image: '/Cyber Purple.png' },
+  { id: 'neon-blue',    label: 'Neon Blue',    image: '/Neon Blue.png' },
+  { id: 'dark-forest',  label: 'Dark Forest',  image: '/Dark Forest.png' },
+  { id: 'inferno',      label: 'Inferno',       image: '/Inferno.png' },
+  { id: 'arctic',       label: 'Arctic',        image: '/Arctic.png' },
+];
+
+const MAX_FRAMES = 8;
+const DEFAULT_TIMINGS = [0, 2.0, 3.5, 5.5, 6.3, 7.5, 9.0, 11.0];
+
+// ── Frame Animation Builder ───────────────────────────────────────────────────
+function FrameBuilder({
+  frames, timings, onFramesChange, onTimingsChange,
+}: {
+  frames: (string | null)[];
+  timings: number[];
+  onFramesChange: (f: (string | null)[]) => void;
+  onTimingsChange: (t: number[]) => void;
+}) {
+  const [previewIdx, setPreviewIdx] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const playRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const uploadedCount = frames.filter(Boolean).length;
+
+  const handleFileChange = (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const next = [...frames];
+      next[idx] = ev.target?.result as string;
+      onFramesChange(next);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeFrame = (idx: number) => {
+    const next = [...frames];
+    next[idx] = null;
+    const compacted = [...next.filter(Boolean), ...Array(MAX_FRAMES).fill(null)].slice(0, MAX_FRAMES);
+    onFramesChange(compacted);
+  };
+
+  const playPreview = () => {
+    if (uploadedCount < 2) return;
+    const filled = frames.map((f, i) => ({ f, i })).filter(x => x.f !== null);
+    let step = 0;
+    setPreviewIdx(filled[0].i);
+    setPlaying(true);
+
+    const next = () => {
+      step++;
+      if (step >= filled.length) { setPlaying(false); setPreviewIdx(0); return; }
+      setPreviewIdx(filled[step].i);
+      const delay = (timings[filled[step].i] - timings[filled[step - 1].i]) * 1000;
+      playRef.current = setTimeout(next, Math.max(delay, 300));
+    };
+    playRef.current = setTimeout(next, 800);
+  };
+
+  useEffect(() => () => { if (playRef.current) clearTimeout(playRef.current); }, []);
+
+  return (
+    <div className="flex flex-col gap-5">
+
+      {/* Frame grid */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            FRAMES DA ANIMAÇÃO
+          </p>
+          <span className="font-orbitron text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
+            {uploadedCount}/{MAX_FRAMES} frames
+          </span>
+        </div>
+
+        <div className="grid grid-cols-4 gap-2">
+          {Array.from({ length: MAX_FRAMES }).map((_, i) => {
+            const img = frames[i];
+            const isActive = previewIdx === i && playing;
+            return (
+              <div
+                key={i}
+                className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center"
+                style={{
+                  aspectRatio: '1 / 1.2',
+                  background: img ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.02)',
+                  border: isActive
+                    ? '2px solid #00E5FF'
+                    : img
+                    ? '1px solid rgba(255,255,255,0.15)'
+                    : '1px dashed rgba(255,255,255,0.1)',
+                  boxShadow: isActive ? '0 0 12px rgba(0,229,255,0.4)' : 'none',
+                  transition: 'border-color 0.15s, box-shadow 0.15s',
+                }}
+              >
+                {img ? (
+                  <>
+                    <img src={img} alt={`frame ${i + 1}`} className="w-full h-full object-contain" />
+                    <div
+                      className="absolute top-1 left-1 font-orbitron text-xs font-bold px-1.5 py-0.5 rounded"
+                      style={{ background: 'rgba(0,0,0,0.7)', color: isActive ? '#00E5FF' : 'rgba(255,255,255,0.6)', fontSize: 9 }}
+                    >
+                      F{i + 1}
+                    </div>
+                    <button
+                      onClick={() => removeFrame(i)}
+                      className="absolute top-1 right-1 w-5 h-5 rounded flex items-center justify-center transition-all"
+                      style={{ background: 'rgba(255,50,50,0.7)' }}
+                    >
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="white">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                      </svg>
+                    </button>
+                  </>
+                ) : (
+                  <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer gap-1.5">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,0.15)">
+                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                    </svg>
+                    <span className="font-orbitron" style={{ fontSize: 8, color: 'rgba(255,255,255,0.2)' }}>
+                      F{i + 1}
+                    </span>
+                    <input type="file" accept="image/*" className="hidden" onChange={e => handleFileChange(i, e)} />
+                  </label>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Preview player */}
+      {uploadedCount > 0 && (
+        <div className="flex gap-4 items-start">
+          <div
+            className="rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0"
+            style={{
+              width: 120, height: 150,
+              background: 'rgba(0,0,0,0.5)',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }}
+          >
+            {frames[previewIdx] ? (
+              <img src={frames[previewIdx]!} alt="preview" className="w-full h-full object-contain" />
+            ) : (
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="rgba(255,255,255,0.1)">
+                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2z"/>
+              </svg>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3 flex-1">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={playPreview}
+                disabled={playing || uploadedCount < 2}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg font-orbitron text-xs font-bold tracking-widest transition-all"
+                style={{
+                  background: playing ? 'rgba(255,255,255,0.04)' : 'rgba(0,229,255,0.1)',
+                  border: playing ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,229,255,0.3)',
+                  color: playing ? 'rgba(255,255,255,0.3)' : 'rgba(0,229,255,0.9)',
+                  cursor: playing || uploadedCount < 2 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {playing ? (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                  </svg>
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                )}
+                {playing ? 'PLAYING...' : 'PREVIEW'}
+              </button>
+              <div className="flex gap-1">
+                {frames.map((f, i) => f ? (
+                  <button
+                    key={i}
+                    onClick={() => { if (!playing) setPreviewIdx(i); }}
+                    className="rounded-full transition-all"
+                    style={{
+                      width: previewIdx === i ? 10 : 6,
+                      height: previewIdx === i ? 10 : 6,
+                      background: previewIdx === i ? '#00E5FF' : 'rgba(255,255,255,0.2)',
+                    }}
+                  />
+                ) : null)}
+              </div>
+            </div>
+            <p className="font-orbitron text-xs" style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>
+              Frame {previewIdx + 1} de {MAX_FRAMES} • {uploadedCount} carregados
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Timing editor */}
+      {uploadedCount >= 2 && (
+        <div className="flex flex-col gap-2">
+          <p className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            TIMING DAS TRANSIÇÕES (segundos desde o início)
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {frames.map((f, i) => !f ? null : (
+              <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span className="font-orbitron text-xs font-bold" style={{ color: 'rgba(0,229,255,0.6)', minWidth: 24, fontSize: 10 }}>
+                  F{i + 1}
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={timings[i]}
+                  onChange={e => {
+                    const next = [...timings];
+                    next[i] = parseFloat(e.target.value) || 0;
+                    onTimingsChange(next);
+                  }}
+                  className="flex-1 rounded-lg font-orbitron text-xs outline-none px-2 py-1 text-center"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)' }}
+                />
+                <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>s</span>
+              </div>
+            ))}
+          </div>
+          <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>
+            Cada valor é o momento (em segundos) em que aquele frame aparece durante o sorteio.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function AdminPanel() {
+  const logout = useStore(s => s.logout);
+  const addPscToAll = useStore(s => s.addPscToAll);
+
+  const [activeSection, setActiveSection] = useState<Section>('psc');
+
+  // PSC state
+  const [streamers, setStreamers] = useState<StreamerRow[]>([]);
+  const [amount, setAmount] = useState('');
+  const [pscFeedback, setPscFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  // Criar streamer state
+  const [form, setForm] = useState({ username: '', displayName: '', password: '', mascot: 'dreads', themeColor: '#BF5AF2', pscBalance: 0, stageTheme: 'cyber-purple', twitchChannel: '', kickChannel: '', youtubeChannel: '' });
+  const [mascotImg, setMascotImg] = useState<string | null>(null);
+  const [animFrames, setAnimFrames] = useState<(string | null)[]>(Array(MAX_FRAMES).fill(null));
+  const [animTimings, setAnimTimings] = useState<number[]>([...DEFAULT_TIMINGS]);
+  const [createFeedback, setCreateFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [showAnimModal, setShowAnimModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [raffleMascotImg, setRaffleMascotImg] = useState<string | null>(null);
+  const [stageBgImg, setStageBgImg] = useState<string | null>(null);
+  const [configBgImg, setConfigBgImg] = useState<string | null>(null);
+
+  // Entregas admin state
+  const [entregasStreamer, setEntregasStreamer] = useState<string>('');
+  const [entregasHistory, setEntregasHistory] = useState<RaffleResult[]>([]);
+  const [entregasLoading, setEntregasLoading] = useState(false);
+
+  const loadEntregasHistory = useCallback(async (username: string) => {
+    if (!username) return;
+    setEntregasLoading(true);
+    try {
+      const res = await fetch(`/api/streamer/history?username=${username}`);
+      const data = await res.json();
+      if (Array.isArray(data)) setEntregasHistory(data);
+    } catch {}
+    setEntregasLoading(false);
+  }, []);
+
+  const handleEntregasUpdateDelivery = useCallback((id: string, tradeLink?: string, deliveryStatus?: DeliveryStatus) => {
+    const now = Date.now();
+    setEntregasHistory(prev => prev.map(r => r.id === id ? {
+      ...r,
+      ...(tradeLink !== undefined && { tradeLink }),
+      ...(deliveryStatus !== undefined && { deliveryStatus }),
+      ...(deliveryStatus === 'tradelocked' && !r.tradeLockAt && { tradeLockAt: now }),
+    } : r));
+    fetch('/api/streamer/delivery', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ historyId: id, tradeLink, deliveryStatus }),
+    }).catch(() => {});
+  }, []);
+
+  const loadStreamers = useCallback(() => {
+    fetch('/api/admin/streamers')
+      .then(r => r.json())
+      .then(setStreamers)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => { loadStreamers(); }, [loadStreamers]);
+
+  const handleAddPsc = () => {
+    const value = Number(amount);
+    if (!amount || isNaN(value) || value <= 0) {
+      setPscFeedback({ type: 'error', msg: 'Informe um valor válido maior que zero.' });
+      setTimeout(() => setPscFeedback(null), 3000);
+      return;
+    }
+    addPscToAll(value);
+    setPscFeedback({ type: 'success', msg: `+${value.toLocaleString('pt-BR')} PSC adicionados para todos os streamers.` });
+    setAmount('');
+    setTimeout(() => { setPscFeedback(null); loadStreamers(); }, 2000);
+  };
+
+  const handleMascotImgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setMascotImg(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleRaffleMascotImgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setRaffleMascotImg(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleStageBgImgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setStageBgImg(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleConfigBgImgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setConfigBgImg(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleCreateStreamer = async () => {
+    if (!form.username || !form.password) {
+      setCreateFeedback({ type: 'error', msg: 'Username e senha são obrigatórios.' });
+      setTimeout(() => setCreateFeedback(null), 3000);
+      return;
+    }
+    setCreating(true);
+    try {
+      const uploadedFrames = animFrames.filter(Boolean);
+      const res = await fetch('/api/admin/streamers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          mascotImg,
+          raffleMascotImg,
+          animFrames: uploadedFrames,
+          animTimings: animTimings.slice(0, uploadedFrames.length),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCreateFeedback({ type: 'error', msg: data.error || 'Erro ao criar streamer.' });
+      } else {
+        setCreateFeedback({ type: 'success', msg: `Streamer "${data.username}" criado com sucesso!` });
+        setForm({ username: '', displayName: '', password: '', mascot: 'dreads', themeColor: '#BF5AF2', pscBalance: 0, stageTheme: 'cyber-purple', twitchChannel: '', kickChannel: '', youtubeChannel: '' });
+        setMascotImg(null);
+        setRaffleMascotImg(null);
+        setStageBgImg(null);
+        setConfigBgImg(null);
+        setAnimFrames(Array(MAX_FRAMES).fill(null));
+        setAnimTimings([...DEFAULT_TIMINGS]);
+        loadStreamers();
+      }
+    } catch {
+      setCreateFeedback({ type: 'error', msg: 'Erro de conexão.' });
+    } finally {
+      setCreating(false);
+      setTimeout(() => setCreateFeedback(null), 4000);
+    }
+  };
+
+  const SIDEBAR_ITEMS: { id: Section; label: string; icon: React.ReactNode }[] = [
+    {
+      id: 'psc',
+      label: 'DISTRIBUIÇÃO PSC',
+      icon: <span style={{ fontSize: 15 }}>💠</span>,
+    },
+    {
+      id: 'criar-streamer',
+      label: 'CRIAR STREAMER',
+      icon: (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'entregas' as Section,
+      label: 'ENTREGAS',
+      icon: (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9 1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: 'linear-gradient(135deg, #050816 0%, #0a0f2e 50%, #050816 100%)' }}
+    >
+      {/* Header */}
+      <header
+        className="flex items-center justify-between px-8 py-5 border-b"
+        style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(5,8,22,0.8)', backdropFilter: 'blur(12px)' }}
+      >
+        <div className="flex items-center gap-4">
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+            style={{ background: 'rgba(255,180,0,0.1)', border: '1px solid rgba(255,180,0,0.25)' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,180,0,0.9)" strokeWidth="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+            <span className="font-orbitron text-xs font-bold tracking-widest" style={{ color: 'rgba(255,180,0,0.9)' }}>
+              ADMIN
+            </span>
+          </div>
+          <span className="font-orbitron text-base font-bold tracking-wider" style={{ color: 'rgba(255,255,255,0.85)' }}>
+            PAINEL DE ADMINISTRAÇÃO
+          </span>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <span className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            ddK
+          </span>
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-orbitron text-xs font-bold tracking-widest transition-all"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,60,60,0.12)';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,60,60,0.3)';
+              (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,100,100,0.9)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.04)';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.1)';
+              (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.5)';
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+            </svg>
+            SAIR
+          </button>
+        </div>
+      </header>
+
+      {/* Body: sidebar + content */}
+      <div className="flex-1 flex overflow-hidden">
+
+        {/* LEFT SIDEBAR */}
+        <aside
+          className="flex flex-col gap-1 p-4 flex-shrink-0"
+          style={{
+            width: 220,
+            background: 'rgba(5,8,22,0.6)',
+            borderRight: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <p className="font-orbitron text-xs tracking-widest mb-3 px-2" style={{ color: 'rgba(255,255,255,0.2)' }}>
+            MENU
+          </p>
+          {SIDEBAR_ITEMS.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveSection(item.id)}
+              className="flex items-center gap-3 px-3 py-3 rounded-xl font-orbitron text-xs font-bold tracking-wider transition-all text-left"
+              style={{
+                background: activeSection === item.id ? 'rgba(255,180,0,0.1)' : 'transparent',
+                border: activeSection === item.id ? '1px solid rgba(255,180,0,0.25)' : '1px solid transparent',
+                color: activeSection === item.id ? 'rgba(255,180,0,0.9)' : 'rgba(255,255,255,0.35)',
+              }}
+              onMouseEnter={e => {
+                if (activeSection !== item.id)
+                  (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.6)';
+              }}
+              onMouseLeave={e => {
+                if (activeSection !== item.id)
+                  (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.35)';
+              }}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </aside>
+
+        {/* MAIN CONTENT */}
+        <main className={activeSection === 'entregas' ? 'flex-1 flex flex-col overflow-hidden' : 'flex-1 overflow-y-auto px-8 py-10'}>
+          <AnimatePresence mode="wait">
+
+            {/* ── PSC DISTRIBUTION ── */}
+            {activeSection === 'psc' && (
+              <motion.div
+                key="psc"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -12 }}
+                transition={{ duration: 0.22 }}
+                className="w-full max-w-2xl flex flex-col gap-6"
+              >
+                <motion.div
+                  className="rounded-2xl overflow-hidden"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <div
+                    className="flex items-center gap-3 px-6 py-4 border-b"
+                    style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ background: 'rgba(100,160,255,0.12)', border: '1px solid rgba(100,160,255,0.25)' }}
+                    >
+                      <span style={{ fontSize: 16 }}>💠</span>
+                    </div>
+                    <div>
+                      <p className="font-orbitron text-sm font-bold tracking-wider" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                        DISTRIBUIÇÃO DE PSC
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                        Adicionar PlayerSkins Coins para todos os streamers
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="px-6 py-4 flex flex-col gap-2">
+                    {streamers.map(streamer => (
+                      <div
+                        key={streamer.username}
+                        className="flex items-center justify-between px-4 py-3 rounded-xl"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-7 h-7 rounded-lg flex items-center justify-center font-orbitron text-xs font-bold"
+                            style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}
+                          >
+                            {streamer.username.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-orbitron text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                            {streamer.displayName || streamer.username}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span style={{ fontSize: 13 }}>💠</span>
+                          <span className="font-orbitron text-sm font-bold" style={{ color: 'rgba(100,180,255,0.9)' }}>
+                            {streamer.pscBalance.toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-3 px-6 pb-5">
+                    <div className="flex-1 relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ fontSize: 14, pointerEvents: 'none' }}>💠</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={amount}
+                        onChange={e => setAmount(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleAddPsc()}
+                        placeholder="Quantidade de PSC"
+                        className="w-full rounded-xl font-orbitron text-sm outline-none pl-9 pr-4 py-3"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)' }}
+                      />
+                    </div>
+                    <motion.button
+                      onClick={handleAddPsc}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="px-5 py-3 rounded-xl font-orbitron text-xs font-bold tracking-widest whitespace-nowrap"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(100,160,255,0.25), rgba(60,100,220,0.2))',
+                        border: '1px solid rgba(100,160,255,0.35)',
+                        color: 'rgba(140,190,255,0.95)',
+                      }}
+                    >
+                      ADICIONAR PARA TODOS
+                    </motion.button>
+                  </div>
+
+                  <AnimatePresence>
+                    {pscFeedback && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        className="mx-6 mb-5 px-4 py-3 rounded-xl text-xs font-orbitron font-semibold tracking-wide"
+                        style={{
+                          background: pscFeedback.type === 'success' ? 'rgba(60,200,120,0.1)' : 'rgba(255,80,80,0.1)',
+                          border: `1px solid ${pscFeedback.type === 'success' ? 'rgba(60,200,120,0.3)' : 'rgba(255,80,80,0.3)'}`,
+                          color: pscFeedback.type === 'success' ? 'rgba(80,220,140,0.9)' : 'rgba(255,120,120,0.9)',
+                        }}
+                      >
+                        {pscFeedback.msg}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* ── CRIAR STREAMER ── */}
+            {activeSection === 'criar-streamer' && (
+              <motion.div
+                key="criar"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -12 }}
+                transition={{ duration: 0.22 }}
+                className="w-full flex gap-8 items-start"
+              >
+                {/* Left: Form */}
+                <div className="flex-1 min-w-0 flex flex-col gap-8">
+                {/* Page title */}
+                <div>
+                  <h2 className="font-orbitron text-lg font-bold tracking-wider" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                    CRIAR NOVO STREAMER
+                  </h2>
+                  <p className="font-rajdhani text-sm mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    Configure todos os detalhes do streamer e personalize sua experiência na plataforma.
+                  </p>
+                </div>
+
+                {/* ── 1. IDENTIDADE DO STREAMER ── */}
+                <div className="flex flex-col gap-4">
+                  <span className="font-orbitron text-xs font-bold tracking-widest" style={{ color: 'rgba(255,180,0,0.85)' }}>
+                    1. IDENTIDADE DO STREAMER
+                  </span>
+
+                  <div className="flex gap-6">
+                    {/* Left: inputs */}
+                    <div className="flex-1 flex flex-col gap-4">
+                      <div className="flex gap-3">
+                        <div className="flex-1 flex flex-col gap-1.5">
+                          <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>USERNAME</label>
+                          <input
+                            type="text"
+                            value={form.username}
+                            onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
+                            placeholder="ex: shadowganjaking"
+                            className="rounded-xl font-rajdhani text-sm outline-none px-4 py-3"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)' }}
+                          />
+                        </div>
+                        <div className="flex-1 flex flex-col gap-1.5">
+                          <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>NOME DE EXIBIÇÃO</label>
+                          <input
+                            type="text"
+                            value={form.displayName}
+                            onChange={e => setForm(f => ({ ...f, displayName: e.target.value }))}
+                            placeholder="ex: ShadowGanjaKing"
+                            className="rounded-xl font-rajdhani text-sm outline-none px-4 py-3"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>SENHA</label>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={form.password}
+                            onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                            placeholder="••••••••••••"
+                            className="w-full rounded-xl font-rajdhani text-sm outline-none px-4 py-3 pr-12"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(p => !p)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 transition-all"
+                            style={{ color: showPassword ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)' }}
+                          >
+                            {showPassword ? (
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                <line x1="1" y1="1" x2="23" y2="23"/>
+                              </svg>
+                            ) : (
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Mascote Principal */}
+                    <div className="flex flex-col items-center gap-2 flex-shrink-0" style={{ width: 138 }}>
+                      <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>MASCOTE PRINCIPAL</label>
+                      <div
+                        className="w-full rounded-xl overflow-hidden flex items-center justify-center"
+                        style={{ height: 148, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      >
+                        {mascotImg ? (
+                          <img src={mascotImg} alt="mascote" className="w-full h-full object-contain" />
+                        ) : (
+                          <svg width="36" height="36" viewBox="0 0 24 24" fill="rgba(255,255,255,0.08)">
+                            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                          </svg>
+                        )}
+                      </div>
+                      <label
+                        className="w-full flex items-center justify-center py-2 rounded-xl font-orbitron text-xs font-bold tracking-widest cursor-pointer transition-all"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)' }}
+                      >
+                        ALTERAR
+                        <input type="file" accept="image/*" className="hidden" onChange={handleMascotImgChange} />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── 2. EXPERIÊNCIA VISUAL DO SORTEIO ── */}
+                <div className="flex flex-col gap-5">
+                  <span className="font-orbitron text-xs font-bold tracking-widest" style={{ color: 'rgba(255,180,0,0.85)' }}>
+                    2. EXPERIÊNCIA VISUAL DO SORTEIO
+                  </span>
+
+                  {/* Color theme */}
+                  <div className="flex flex-col gap-2">
+                    <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>COR DE TEMA INICIAL</label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {COLOR_PRESETS.map(c => (
+                        <button
+                          key={c}
+                          onClick={() => setForm(f => ({ ...f, themeColor: c }))}
+                          className="relative rounded-full flex items-center justify-center flex-shrink-0 transition-all"
+                          style={{
+                            width: 28, height: 28,
+                            background: c,
+                            border: form.themeColor === c ? '2px solid white' : '2px solid transparent',
+                            boxShadow: form.themeColor === c ? `0 0 10px ${c}99` : 'none',
+                          }}
+                        >
+                          {form.themeColor === c && (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+                              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                            </svg>
+                          )}
+                        </button>
+                      ))}
+                      <input
+                        type="color"
+                        value={form.themeColor}
+                        onChange={e => setForm(f => ({ ...f, themeColor: e.target.value }))}
+                        title="Cor personalizada"
+                        className="rounded-full cursor-pointer flex-shrink-0"
+                        style={{ width: 28, height: 28, border: '1px dashed rgba(255,255,255,0.2)', padding: 2, background: 'rgba(255,255,255,0.05)' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mascote do Sorteio */}
+                  <div className="flex flex-col gap-2">
+                    <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>MASCOTE DO SORTEIO</label>
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0"
+                        style={{ width: 100, height: 120, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      >
+                        {raffleMascotImg ? (
+                          <img src={raffleMascotImg} alt="mascote sorteio" className="w-full h-full object-contain" />
+                        ) : (
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,0.08)">
+                            <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-orbitron text-xs font-bold tracking-widest cursor-pointer transition-all"
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)' }}
+                        >
+                          {raffleMascotImg ? 'ALTERAR' : 'ADICIONAR'}
+                          <input type="file" accept="image/*" className="hidden" onChange={handleRaffleMascotImgChange} />
+                        </label>
+                        {raffleMascotImg && (
+                          <button
+                            onClick={() => setRaffleMascotImg(null)}
+                            className="px-4 py-2 rounded-xl font-orbitron text-xs tracking-widest transition-all"
+                            style={{ background: 'rgba(255,50,50,0.06)', border: '1px solid rgba(255,50,50,0.15)', color: 'rgba(255,100,100,0.6)' }}
+                          >
+                            REMOVER
+                          </button>
+                        )}
+                        <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>
+                          Aparece durante o sorteio
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fundo do Palco de Sorteio (reflete no Stage 2) */}
+                  <div className="flex flex-col gap-2">
+                    <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>FUNDO DO PALCO DE SORTEIO</label>
+                    <div className="flex items-start gap-4 flex-wrap">
+                      {/* Dropdown de tema */}
+                      <div className="relative" style={{ minWidth: 180 }}>
+                        <select
+                          value={form.stageTheme}
+                          onChange={e => setForm(f => ({ ...f, stageTheme: e.target.value }))}
+                          className="w-full rounded-xl font-rajdhani text-sm outline-none px-4 py-3 appearance-none cursor-pointer"
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.75)' }}
+                        >
+                          {STAGE_THEMES.map(t => (
+                            <option key={t.id} value={t.id} style={{ background: '#080d24' }}>{t.label}</option>
+                          ))}
+                        </select>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.3)" className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                      </div>
+
+                      {/* Upload de fundo personalizado */}
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="rounded-xl overflow-hidden flex-shrink-0"
+                          style={{
+                            width: 60,
+                            height: 44,
+                            background: stageBgImg ? 'transparent' : 'rgba(255,255,255,0.04)',
+                            border: stageBgImg ? '1px solid rgba(255,255,255,0.15)' : '1px dashed rgba(255,255,255,0.12)',
+                          }}
+                        >
+                          {stageBgImg ? (
+                            <img src={stageBgImg} alt="fundo" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.12)">
+                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label
+                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-orbitron text-xs font-bold tracking-widest cursor-pointer transition-all whitespace-nowrap"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)', fontSize: 9 }}
+                          >
+                            {stageBgImg ? 'ALTERAR' : 'PERSONALIZADO'}
+                            <input type="file" accept="image/*" className="hidden" onChange={handleStageBgImgChange} />
+                          </label>
+                          {stageBgImg && (
+                            <button
+                              onClick={() => setStageBgImg(null)}
+                              className="px-3 py-1 rounded-lg font-orbitron tracking-widest transition-all"
+                              style={{ background: 'rgba(255,50,50,0.06)', border: '1px solid rgba(255,50,50,0.15)', color: 'rgba(255,100,100,0.6)', fontSize: 9 }}
+                            >
+                              REMOVER
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {stageBgImg && (
+                      <p className="font-rajdhani text-xs" style={{ color: `${form.themeColor}99`, fontSize: 10 }}>
+                        Fundo personalizado ativo — sobrepõe o tema selecionado
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Fundo do Palco de Configuração (reflete no Stage 1) */}
+                  <div className="flex flex-col gap-2">
+                    <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>FUNDO DO PALCO DE CONFIGURAÇÃO</label>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="rounded-xl overflow-hidden flex-shrink-0"
+                        style={{
+                          width: 60,
+                          height: 44,
+                          background: configBgImg ? 'transparent' : 'rgba(255,255,255,0.04)',
+                          border: configBgImg ? '1px solid rgba(255,255,255,0.15)' : '1px dashed rgba(255,255,255,0.12)',
+                        }}
+                      >
+                        {configBgImg ? (
+                          <img src={configBgImg} alt="fundo configuração" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.12)">
+                              <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label
+                          className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-orbitron text-xs font-bold tracking-widest cursor-pointer transition-all whitespace-nowrap"
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)', fontSize: 9 }}
+                        >
+                          {configBgImg ? 'ALTERAR' : 'PERSONALIZADO'}
+                          <input type="file" accept="image/*" className="hidden" onChange={handleConfigBgImgChange} />
+                        </label>
+                        {configBgImg && (
+                          <button
+                            onClick={() => setConfigBgImg(null)}
+                            className="px-3 py-1 rounded-lg font-orbitron tracking-widest transition-all"
+                            style={{ background: 'rgba(255,50,50,0.06)', border: '1px solid rgba(255,50,50,0.15)', color: 'rgba(255,100,100,0.6)', fontSize: 9 }}
+                          >
+                            REMOVER
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>
+                      Aparece atrás da tela de configuração do sorteio (Stage 1)
+                    </p>
+                  </div>
+
+                  {/* Animation button */}
+                  <button
+                    onClick={() => setShowAnimModal(true)}
+                    className="flex items-center justify-between px-4 py-3.5 rounded-xl transition-all"
+                    style={{
+                      background: animFrames.some(Boolean) ? 'rgba(0,229,255,0.06)' : 'rgba(255,255,255,0.03)',
+                      border: animFrames.some(Boolean) ? '1px solid rgba(0,229,255,0.25)' : '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{
+                          background: animFrames.some(Boolean) ? 'rgba(0,229,255,0.12)' : 'rgba(255,255,255,0.05)',
+                          border: animFrames.some(Boolean) ? '1px solid rgba(0,229,255,0.3)' : '1px solid rgba(255,255,255,0.08)',
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill={animFrames.some(Boolean) ? 'rgba(0,229,255,0.8)' : 'rgba(255,255,255,0.25)'}>
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                        </svg>
+                      </div>
+                      <div className="flex flex-col items-start gap-0.5">
+                        <span className="font-orbitron text-xs font-bold tracking-widest" style={{ color: animFrames.some(Boolean) ? 'rgba(0,229,255,0.85)' : 'rgba(255,255,255,0.5)' }}>
+                          PERSONALIZAR ANIMAÇÃO DO SORTEIO
+                        </span>
+                        <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                          {animFrames.filter(Boolean).length > 0
+                            ? `${animFrames.filter(Boolean).length} frame${animFrames.filter(Boolean).length > 1 ? 's' : ''} configurado${animFrames.filter(Boolean).length > 1 ? 's' : ''}`
+                            : 'Nenhum frame configurado'}
+                        </span>
+                      </div>
+                    </div>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.25)" className="flex-shrink-0">
+                      <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/>
+                    </svg>
+                  </button>
+                </div>
+
+                {/* ── 3. INTEGRAÇÕES ── */}
+                <div className="flex flex-col gap-4">
+                  <span className="font-orbitron text-xs font-bold tracking-widest" style={{ color: 'rgba(255,180,0,0.85)' }}>
+                    3. INTEGRAÇÕES
+                  </span>
+                  <div className="flex gap-3">
+                    {/* Twitch */}
+                    <div
+                      className="flex-1 flex flex-col items-center gap-3 px-4 py-5 rounded-xl"
+                      style={{ background: 'rgba(145,70,255,0.06)', border: '1px solid rgba(145,70,255,0.2)' }}
+                    >
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="#9146FF">
+                        <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
+                      </svg>
+                      <span className="font-orbitron text-xs font-bold tracking-wide" style={{ color: 'rgba(145,70,255,0.85)' }}>TWITCH</span>
+                      <input
+                        type="text"
+                        value={form.twitchChannel}
+                        onChange={e => setForm(f => ({ ...f, twitchChannel: e.target.value }))}
+                        placeholder="canal"
+                        className="w-full rounded-lg font-rajdhani text-sm outline-none px-3 py-2 text-center"
+                        style={{ background: 'rgba(145,70,255,0.1)', border: '1px solid rgba(145,70,255,0.25)', color: 'rgba(255,255,255,0.8)' }}
+                      />
+                    </div>
+                    {/* Kick */}
+                    <div
+                      className="flex-1 flex flex-col items-center gap-3 px-4 py-5 rounded-xl"
+                      style={{ background: 'rgba(83,252,20,0.04)', border: '1px solid rgba(83,252,20,0.2)' }}
+                    >
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="#53FC14">
+                        <path d="M2 2h6v8.5l4-4.5h7l-6 7 6 7H12l-4-4.5V22H2V2z"/>
+                      </svg>
+                      <span className="font-orbitron text-xs font-bold tracking-wide" style={{ color: 'rgba(83,252,20,0.85)' }}>KICK</span>
+                      <input
+                        type="text"
+                        value={form.kickChannel}
+                        onChange={e => setForm(f => ({ ...f, kickChannel: e.target.value }))}
+                        placeholder="canal"
+                        className="w-full rounded-lg font-rajdhani text-sm outline-none px-3 py-2 text-center"
+                        style={{ background: 'rgba(83,252,20,0.08)', border: '1px solid rgba(83,252,20,0.25)', color: 'rgba(255,255,255,0.8)' }}
+                      />
+                    </div>
+                    {/* YouTube */}
+                    <div
+                      className="flex-1 flex flex-col items-center gap-3 px-4 py-5 rounded-xl"
+                      style={{ background: 'rgba(255,0,0,0.04)', border: '1px solid rgba(255,60,60,0.2)' }}
+                    >
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="#FF0000">
+                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      <span className="font-orbitron text-xs font-bold tracking-wide" style={{ color: 'rgba(255,80,80,0.85)' }}>YOUTUBE</span>
+                      <input
+                        type="text"
+                        value={form.youtubeChannel}
+                        onChange={e => setForm(f => ({ ...f, youtubeChannel: e.target.value }))}
+                        placeholder="@canal"
+                        className="w-full rounded-lg font-rajdhani text-sm outline-none px-3 py-2 text-center"
+                        style={{ background: 'rgba(255,0,0,0.08)', border: '1px solid rgba(255,60,60,0.25)', color: 'rgba(255,255,255,0.8)' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── 4. ECONOMIA PSC ── */}
+                <div className="flex flex-col gap-4">
+                  <span className="font-orbitron text-xs font-bold tracking-widest" style={{ color: 'rgba(255,180,0,0.85)' }}>
+                    4. ECONOMIA PSC
+                  </span>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>SALDO INICIAL (PSC)</label>
+                    <div className="relative" style={{ width: 160 }}>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ fontSize: 14 }}>💠</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.pscBalance}
+                        onChange={e => setForm(f => ({ ...f, pscBalance: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        className="w-full rounded-xl font-orbitron text-sm outline-none pl-9 pr-4 py-3"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Feedback */}
+                <AnimatePresence>
+                  {createFeedback && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="px-4 py-3 rounded-xl text-xs font-orbitron font-semibold tracking-wide"
+                      style={{
+                        background: createFeedback.type === 'success' ? 'rgba(60,200,120,0.1)' : 'rgba(255,80,80,0.1)',
+                        border: `1px solid ${createFeedback.type === 'success' ? 'rgba(60,200,120,0.3)' : 'rgba(255,80,80,0.3)'}`,
+                        color: createFeedback.type === 'success' ? 'rgba(80,220,140,0.9)' : 'rgba(255,120,120,0.9)',
+                      }}
+                    >
+                      {createFeedback.msg}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Submit */}
+                <motion.button
+                  onClick={handleCreateStreamer}
+                  disabled={creating}
+                  whileHover={{ scale: creating ? 1 : 1.02 }}
+                  whileTap={{ scale: creating ? 1 : 0.98 }}
+                  className="w-full py-4 rounded-xl font-orbitron text-sm font-bold tracking-widest flex items-center justify-center gap-3"
+                  style={{
+                    background: creating
+                      ? 'rgba(255,255,255,0.05)'
+                      : 'linear-gradient(135deg, rgba(60,200,80,0.3), rgba(20,150,50,0.25))',
+                    border: creating
+                      ? '1px solid rgba(255,255,255,0.1)'
+                      : '1px solid rgba(60,200,80,0.4)',
+                    color: creating ? 'rgba(255,255,255,0.3)' : 'rgba(100,240,120,0.95)',
+                    cursor: creating ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {!creating && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2.5c-1.5 0-3 .5-4.2 1.5L3.5 8.2C2.5 9.4 2 10.9 2 12.5v1c0 1.6.5 3.1 1.5 4.3l1.5 1.8c.7.8 1.7 1.4 2.8 1.4h8.4c1.1 0 2.1-.6 2.8-1.4l1.5-1.8c1-1.2 1.5-2.7 1.5-4.3v-1c0-1.6-.5-3.1-1.5-4.3L16.2 4c-1.2-1-2.7-1.5-4.2-1.5zM12 15a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/>
+                    </svg>
+                  )}
+                  {creating ? 'CRIANDO...' : 'ATIVAR STREAMER'}
+                </motion.button>
+                </div>
+
+                {/* ── PREVIEW DO STREAMER ── */}
+                <div className="flex-shrink-0 sticky top-8 flex flex-col gap-3" style={{ width: 300 }}>
+                  <p className="font-orbitron text-xs font-bold tracking-widest" style={{ color: 'rgba(255,180,0,0.85)' }}>
+                    PREVIEW DO STREAMER
+                  </p>
+                  <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.3)', marginTop: -4 }}>
+                    Veja como ficará o streamer na plataforma
+                  </p>
+
+                  <div className="rounded-2xl overflow-hidden" style={{ background: '#050816', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    {/* Stage */}
+                    <div
+                      className="relative flex items-end justify-center overflow-hidden"
+                      style={{
+                        height: 260,
+                        background: (() => {
+                          const img = stageBgImg ?? STAGE_THEMES.find(t => t.id === form.stageTheme)?.image ?? null;
+                          return img
+                            ? `url('${img}') center/cover no-repeat`
+                            : [
+                                `radial-gradient(ellipse at 25% 0%, ${form.themeColor}55 0%, transparent 55%)`,
+                                `radial-gradient(ellipse at 75% 0%, ${form.themeColor}33 0%, transparent 55%)`,
+                                `radial-gradient(ellipse at 50% 0%, ${form.themeColor}22 0%, transparent 45%)`,
+                                'linear-gradient(to bottom, #0a0520 0%, #050816 100%)',
+                              ].join(', ');
+                        })(),
+                      }}
+                    >
+                      {/* Overlay sobre imagem de fundo */}
+                      {(stageBgImg || STAGE_THEMES.find(t => t.id === form.stageTheme)?.image) && (
+                        <div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            background: [
+                              'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.55) 100%)',
+                              `radial-gradient(ellipse at 25% 0%, ${form.themeColor}33 0%, transparent 50%)`,
+                              `radial-gradient(ellipse at 75% 0%, ${form.themeColor}22 0%, transparent 50%)`,
+                            ].join(', '),
+                          }}
+                        />
+                      )}
+                      {/* P watermark */}
+                      <div
+                        className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
+                        style={{ paddingBottom: 20 }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: 'Orbitron, sans-serif',
+                            fontSize: 160,
+                            fontWeight: 900,
+                            color: 'transparent',
+                            WebkitTextStroke: `2px ${form.themeColor}22`,
+                            textShadow: `0 0 80px ${form.themeColor}33`,
+                            lineHeight: 1,
+                            userSelect: 'none',
+                          }}
+                        >
+                          P
+                        </span>
+                      </div>
+
+                      {/* Floor glow */}
+                      <div
+                        className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
+                        style={{ background: `linear-gradient(to right, transparent, ${form.themeColor}55, transparent)` }}
+                      />
+
+                      {/* Mascot */}
+                      <div
+                        className="relative z-10 flex items-end justify-center"
+                        style={{ height: '88%' }}
+                      >
+                        {mascotImg ? (
+                          <img
+                            src={mascotImg}
+                            alt="preview"
+                            style={{
+                              height: '100%',
+                              width: 'auto',
+                              objectFit: 'contain',
+                              filter: `drop-shadow(0 4px 28px ${form.themeColor}66)`,
+                            }}
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 pb-5">
+                            <div
+                              className="rounded-2xl flex items-center justify-center"
+                              style={{
+                                width: 110,
+                                height: 140,
+                                background: 'rgba(255,255,255,0.03)',
+                                border: `1px dashed ${form.themeColor}44`,
+                              }}
+                            >
+                              <svg width="36" height="36" viewBox="0 0 24 24" fill="rgba(255,255,255,0.06)">
+                                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                              </svg>
+                            </div>
+                            <span className="font-orbitron" style={{ fontSize: 9, color: `${form.themeColor}66` }}>SEM MASCOTE</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Name & status bar */}
+                    <div
+                      className="px-5 py-4"
+                      style={{ background: 'rgba(0,0,0,0.4)', borderTop: '1px solid rgba(255,255,255,0.06)' }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-orbitron text-sm font-bold" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                          {form.displayName || form.username || 'NomeDoStreamer'}
+                        </span>
+                        <div
+                          className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ background: form.themeColor, boxShadow: `0 0 8px ${form.themeColor}80` }}
+                        >
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="white">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <div
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ background: '#4ADE80', boxShadow: '0 0 5px #4ADE8099' }}
+                        />
+                        <span
+                          className="font-rajdhani text-xs font-semibold tracking-wider"
+                          style={{ color: 'rgba(74,222,128,0.8)' }}
+                        >
+                          ONLINE
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── ENTREGAS ── */}
+            {activeSection === 'entregas' && (
+              <motion.div
+                key="entregas"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -12 }}
+                transition={{ duration: 0.22 }}
+                className="flex-1 flex flex-col overflow-hidden"
+              >
+                {/* Streamer selector bar */}
+                <div
+                  className="flex-shrink-0 flex items-center gap-4 px-8 py-4"
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(5,8,22,0.4)' }}
+                >
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+                      style={{ background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.2)' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#00E5FF">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                      </svg>
+                    </div>
+                    <span className="font-orbitron text-xs font-bold tracking-widest" style={{ color: 'rgba(0,229,255,0.85)' }}>
+                      STREAMER
+                    </span>
+                  </div>
+
+                  <div className="relative" style={{ minWidth: 220 }}>
+                    <select
+                      value={entregasStreamer}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setEntregasStreamer(val);
+                        setEntregasHistory([]);
+                        if (val) loadEntregasHistory(val);
+                      }}
+                      className="w-full rounded-xl font-rajdhani text-sm outline-none px-4 py-2.5 appearance-none cursor-pointer"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: entregasStreamer ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.3)' }}
+                    >
+                      <option value="" style={{ background: '#080d24' }}>Selecionar streamer...</option>
+                      {streamers.map(s => (
+                        <option key={s.username} value={s.username} style={{ background: '#080d24' }}>
+                          {s.displayName || s.username}
+                        </option>
+                      ))}
+                    </select>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.3)" className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <path d="M7 10l5 5 5-5z"/>
+                    </svg>
+                  </div>
+
+                  {entregasStreamer && (
+                    <button
+                      onClick={() => loadEntregasHistory(entregasStreamer)}
+                      disabled={entregasLoading}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-125 disabled:opacity-60"
+                      style={{ fontSize: 10, color: '#00FFA3', background: 'rgba(0,255,163,0.08)', border: '1px solid rgba(0,255,163,0.25)' }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+                        style={{ animation: entregasLoading ? 'spin 1s linear infinite' : 'none' }}>
+                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                      </svg>
+                      ATUALIZAR
+                    </button>
+                  )}
+
+                  {entregasLoading && (
+                    <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      Carregando...
+                    </span>
+                  )}
+                </div>
+
+                {/* Content */}
+                {!entregasStreamer ? (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,0.12)">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                      </svg>
+                    </div>
+                    <p className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                      SELECIONE UM STREAMER
+                    </p>
+                    <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.18)' }}>
+                      Escolha um streamer acima para visualizar e gerenciar suas entregas
+                    </p>
+                  </div>
+                ) : entregasLoading ? (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(0,229,255,0.5)"
+                        style={{ animation: 'spin 1s linear infinite' }}>
+                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                      </svg>
+                      <span className="font-rajdhani text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                        Carregando histórico...
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <EntregasPage
+                    historyOverride={entregasHistory}
+                    onHistoryRefresh={() => loadEntregasHistory(entregasStreamer)}
+                    onUpdateDelivery={handleEntregasUpdateDelivery}
+                  />
+                )}
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+        </main>
+      </div>
+
+      {/* ── Animation Modal ── */}
+      <AnimatePresence>
+        {showAnimModal && (
+          <motion.div
+            key="anim-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6"
+            style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+            onClick={e => { if (e.target === e.currentTarget) setShowAnimModal(false); }}
+          >
+            <motion.div
+              key="anim-modal"
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              transition={{ duration: 0.22 }}
+              className="w-full max-w-xl rounded-2xl flex flex-col overflow-hidden"
+              style={{ background: '#080d24', border: '1px solid rgba(0,229,255,0.2)', maxHeight: '90vh' }}
+            >
+              {/* Modal header */}
+              <div
+                className="flex items-center justify-between px-6 py-4 flex-shrink-0"
+                style={{ borderBottom: '1px solid rgba(0,229,255,0.1)', background: 'rgba(0,229,255,0.04)' }}
+              >
+                <div className="flex items-center gap-3">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(0,229,255,0.7)">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                  </svg>
+                  <span className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(0,229,255,0.85)' }}>
+                    ANIMAÇÃO PERSONALIZADA DO SORTEIO
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowAnimModal(false)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,60,60,0.15)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,100,100,0.9)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)'; }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal body */}
+              <div className="overflow-y-auto px-6 py-5 flex flex-col gap-4">
+                <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  Sobe os frames em ordem. O mascote vai percorrer eles em sequência durante o sorteio, igual ao ShadowGanjaKing.
+                </p>
+                <FrameBuilder
+                  frames={animFrames}
+                  timings={animTimings}
+                  onFramesChange={setAnimFrames}
+                  onTimingsChange={setAnimTimings}
+                />
+              </div>
+
+              {/* Modal footer */}
+              <div
+                className="flex items-center justify-end gap-3 px-6 py-4 flex-shrink-0"
+                style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <button
+                  onClick={() => { setAnimFrames(Array(MAX_FRAMES).fill(null)); setAnimTimings([...DEFAULT_TIMINGS]); }}
+                  className="px-4 py-2 rounded-xl font-orbitron text-xs tracking-widest transition-all"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.35)' }}
+                >
+                  LIMPAR
+                </button>
+                <button
+                  onClick={() => setShowAnimModal(false)}
+                  className="px-5 py-2 rounded-xl font-orbitron text-xs font-bold tracking-widest transition-all"
+                  style={{ background: 'rgba(0,229,255,0.12)', border: '1px solid rgba(0,229,255,0.35)', color: 'rgba(0,229,255,0.9)' }}
+                >
+                  CONFIRMAR
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

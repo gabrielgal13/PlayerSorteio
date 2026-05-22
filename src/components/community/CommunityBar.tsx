@@ -1,6 +1,19 @@
 'use client';
+import { useEffect, useState } from 'react';
+
+function useMarketingImage() {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    fetch('/api/marketing/random')
+      .then(r => r.json())
+      .then(data => { if (data?.imageData) setSrc(data.imageData); })
+      .catch(() => {});
+  }, []);
+  return src;
+}
 
 export default function CommunityBar() {
+  const marketingImg = useMarketingImage();
   return (
     <div
       className="relative z-20 w-full flex items-stretch hide-in-obs"
@@ -15,14 +28,22 @@ export default function CommunityBar() {
         className="flex items-stretch flex-shrink-0 overflow-hidden"
         style={{ borderRight: '1px solid rgba(0,229,255,0.1)', width: '420px' }}
       >
-        {/* Image placeholder area */}
+        {/* Marketing image slot */}
         <div
           className="relative flex-shrink-0 flex items-center justify-center"
           style={{ width: '160px', background: 'rgba(0,0,0,0.45)' }}
         >
-          <span className="font-rajdhani text-white/15 tracking-widest uppercase text-xs">
-            imagem
-          </span>
+          {marketingImg ? (
+            <img
+              src={marketingImg}
+              alt="marketing"
+              style={{ maxWidth: 148, maxHeight: 84, objectFit: 'contain' }}
+            />
+          ) : (
+            <span className="font-rajdhani text-white/15 tracking-widest uppercase text-xs">
+              imagem
+            </span>
+          )}
         </div>
 
         {/* Branding em coluna única */}

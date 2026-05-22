@@ -12,7 +12,6 @@ import FireworksExplosion from '@/components/effects/FireworksExplosion';
 import SparklesExplosion from '@/components/effects/SparklesExplosion';
 import { useEventMusic } from '@/hooks/useEventMusic';
 import AnimationPreviewMini from '@/components/effects/AnimationPreviewMini';
-import MarketingBanner from '@/components/marketing/MarketingBanner';
 import type { RaffleSpinEffect, RaffleTriggerMode, EventMusicTrack, EventEffectType, RaffleAnimationStyle } from '@/types';
 
 const ANIMATION_STYLES: { id: RaffleAnimationStyle; name: string; desc: string; emoji: string }[] = [
@@ -1587,9 +1586,6 @@ export default function EventConfig() {
           />
         </div>
       )}
-
-      {/* Marketing banner — between header and columns */}
-      <MarketingBanner />
 
       {/* 2 columns + mascot center */}
       <div className="relative flex justify-between flex-1 min-h-0 overflow-hidden">

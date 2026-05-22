@@ -12,6 +12,7 @@ import FireworksExplosion from '@/components/effects/FireworksExplosion';
 import SparklesExplosion from '@/components/effects/SparklesExplosion';
 import { useEventMusic } from '@/hooks/useEventMusic';
 import AnimationPreviewMini from '@/components/effects/AnimationPreviewMini';
+import MarketingBanner from '@/components/marketing/MarketingBanner';
 import type { RaffleSpinEffect, RaffleTriggerMode, EventMusicTrack, EventEffectType, RaffleAnimationStyle } from '@/types';
 
 const ANIMATION_STYLES: { id: RaffleAnimationStyle; name: string; desc: string; emoji: string }[] = [
@@ -357,7 +358,7 @@ const SETTINGS_TABS: { id: SettingsTab; label: string; subtitle: string }[] = [
 ];
 
 export default function EventConfig() {
-  const { participants, prizes, setRaffleStage, currentUser, twitchConfig, setTwitchConfig, saveConfigToDB, setYoutubeChannel: saveYoutubeChannel, setKickChannel: saveKickChannel, excelImportEnabled, setExcelImportEnabled, excelPrizesImportEnabled, setExcelPrizesImportEnabled, autoRevealWinner, setAutoRevealWinner, spinEffect, setSpinEffect, socoChuteModeEnabled, setSocoChuteModeEnabled, raffleTriggerMode, setRaffleTriggerMode, autoRoundDelay, setAutoRoundDelay, chatTriggerCount, setChatTriggerCount, chatTriggerCommand, setChatTriggerCommand, themeColor, eventBackground, setEventBackground, eventMusic, setEventMusic, eventEffect, setEventEffect, raffleAnimationStyle, setRaffleAnimationStyle } = useStore();
+  const { participants, prizes, setRaffleStage, currentUser, twitchConfig, setTwitchConfig, saveConfigToDB, setYoutubeChannel: saveYoutubeChannel, setKickChannel: saveKickChannel, excelImportEnabled, setExcelImportEnabled, excelPrizesImportEnabled, setExcelPrizesImportEnabled, autoRevealWinner, setAutoRevealWinner, spinEffect, setSpinEffect, socoChuteModeEnabled, setSocoChuteModeEnabled, raffleTriggerMode, setRaffleTriggerMode, autoRoundDelay, setAutoRoundDelay, chatTriggerCount, setChatTriggerCount, chatTriggerCommand, setChatTriggerCommand, themeColor, eventBackground, setEventBackground, eventMusic, setEventMusic, eventEffect, setEventEffect, raffleAnimationStyle, setRaffleAnimationStyle, isAffiliate } = useStore();
   const prizeManagerRef = useRef<PrizeManagerHandle>(null);
   const overlayMouseDownRef = useRef(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -1587,6 +1588,9 @@ export default function EventConfig() {
         </div>
       )}
 
+      {/* Marketing banner — between header and columns */}
+      <MarketingBanner />
+
       {/* 2 columns + mascot center */}
       <div className="relative flex justify-between flex-1 min-h-0 overflow-hidden">
 
@@ -1640,7 +1644,7 @@ export default function EventConfig() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '10px',
+          gap: '0',
         }}>
           {/* Mascot */}
           <div style={{ pointerEvents: 'none' }}>
@@ -1658,9 +1662,8 @@ export default function EventConfig() {
             )}
           </div>
           {/* Event name + button below mascot */}
-          <div style={{ width: '320px' }}>
+          <div style={{ width: '280px' }}>
             <EventHeader />
-            {/* Iniciar Sorteio — centralizado abaixo do header de evento */}
             <motion.button
               onClick={() => setRaffleStage(2)}
               disabled={!canStart}
@@ -1748,8 +1751,8 @@ export default function EventConfig() {
             <PrizeManager ref={prizeManagerRef} />
           </div>
 
-          {/* Total — preso embaixo com visual flutuante */}
-          {prizes.some(p => p.pscValue !== undefined) && (
+          {/* Total PSC — apenas para afiliados */}
+          {isAffiliate && prizes.some(p => p.pscValue !== undefined) && (
             <div style={{ padding: '0 10px 10px 10px', flexShrink: 0 }}>
               <div style={{
                 padding: '10px 14px',

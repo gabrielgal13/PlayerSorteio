@@ -6,12 +6,6 @@ import MascotContainer from '@/components/mascots/MascotContainer';
 
 const PRIZE_ICONS = ['🏆', '🎮', '💰', '🎁', '⚔️', '🔥', '💎', '🌟'];
 
-function formatElapsed(ms: number) {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-}
 
 function formatDuration(s: number) {
   const m = Math.floor(s / 60);
@@ -162,84 +156,69 @@ export default function ResultsPanel() {
                 <p className="font-rajdhani text-white/30 text-sm tracking-widest">Nenhum resultado nesta sessão</p>
               </div>
             ) : sessionResults.map((result, i) => {
-              const elapsed = sessionStartTimestamp != null
-                ? formatElapsed(result.timestamp - sessionStartTimestamp)
-                : '--:--';
-
               return (
                 <motion.div
                   key={result.id}
                   initial={{ opacity: 0, x: -16 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.06, duration: 0.3 }}
-                  className="flex items-center gap-3 rounded-xl"
+                  className="flex items-center gap-4 rounded-xl"
                   style={{
-                    padding: '12px 16px',
+                    padding: '24px 32px',
                     background: 'rgba(255,255,255,0.02)',
                     border: '1px solid rgba(255,255,255,0.06)',
                   }}
                 >
                   {/* Rank number */}
                   <div
-                    className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center font-orbitron font-black text-sm"
+                    className="flex-shrink-0 w-16 h-16 rounded-full flex items-center justify-center font-orbitron font-black text-lg"
                     style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.35)' }}
                   >
                     {i + 1}
                   </div>
 
                   {/* Prize image */}
-                  <div className="flex-shrink-0 w-11 h-11 rounded-lg flex items-center justify-center overflow-hidden"
+                  <div className="flex-shrink-0 w-20 h-20 rounded-lg flex items-center justify-center overflow-hidden"
                     style={{ background: 'rgba(255,209,102,0.08)', border: '1px solid rgba(255,209,102,0.15)' }}>
                     {result.prize.imageUrl ? (
                       <img src={result.prize.imageUrl} alt="" className="w-full h-full object-contain" />
                     ) : (
-                      <span className="text-xl">{PRIZE_ICONS[result.prize.order % PRIZE_ICONS.length] ?? '🏆'}</span>
+                      <span className="text-3xl">{PRIZE_ICONS[result.prize.order % PRIZE_ICONS.length] ?? '🏆'}</span>
                     )}
                   </div>
 
                   {/* Prize name + qty */}
-                  <div className="flex-shrink-0 min-w-[130px]">
-                    <p className="font-orbitron font-bold text-sm text-white tracking-wide leading-tight">
-                      {result.prize.name}
+                  <div className="flex-shrink-0 min-w-[200px]">
+                    <p className="font-orbitron font-bold text-lg text-white tracking-wide leading-tight">
+                      {stripParens(result.prize.name)}
                     </p>
-                    <p className="font-rajdhani text-xs text-white/30 tracking-widest mt-0.5">
+                    <p className="font-rajdhani text-sm text-white/30 tracking-widest mt-0.5">
                       {result.prize.quantity}x
                     </p>
                   </div>
 
-                  <div className="flex-shrink-0 w-px h-8" style={{ background: 'rgba(255,255,255,0.08)' }} />
+                  <div className="flex-shrink-0 w-px h-16" style={{ background: 'rgba(255,255,255,0.08)' }} />
 
                   {/* Winner */}
-                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div
-                      className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-orbitron font-bold text-sm"
+                      className="flex-shrink-0 w-14 h-14 rounded-full flex items-center justify-center font-orbitron font-bold text-lg"
                       style={{ background: `rgba(${accentRgb},0.18)`, color: accent, border: `1px solid rgba(${accentRgb},0.3)` }}
                     >
                       {stripParens(result.winner.name)[0]?.toUpperCase()}
                     </div>
                     <div className="min-w-0">
                       <p className="font-rajdhani font-bold tracking-[0.3em] text-white/30 uppercase"
-                        style={{ fontSize: '9px' }}>
+                        style={{ fontSize: '11px' }}>
                         GANHADOR
                       </p>
-                      <p className="font-rajdhani font-bold text-base text-white leading-tight truncate">
+                      <p className="font-rajdhani font-bold text-2xl text-white leading-tight truncate">
                         {stripParens(result.winner.name)}
                       </p>
-                      <p className="font-rajdhani text-xs text-white/30 truncate">
+                      <p className="font-rajdhani text-sm text-white/30 truncate">
                         @{stripParens(result.winner.name).toLowerCase().replace(/\s+/g, '')}
                       </p>
                     </div>
-                  </div>
-
-                  <div className="flex-shrink-0 w-px h-8" style={{ background: 'rgba(255,255,255,0.08)' }} />
-
-                  {/* Elapsed time */}
-                  <div className="flex-shrink-0 text-right">
-                    <p className="font-rajdhani tracking-[0.3em] text-white/30 uppercase"
-                      style={{ fontSize: '9px' }}>
-                      SORTEADO EM
-                    </p>
-                    <p className="font-orbitron font-bold text-base text-white/80">{elapsed}</p>
                   </div>
                 </motion.div>
               );

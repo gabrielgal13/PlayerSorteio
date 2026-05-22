@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { signToken, sessionCookieOptions } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
-  const { username, password } = await req.json();
+  const { username, password, rememberMe = false } = await req.json();
   if (!username || !password)
     return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
 
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     youtubeChannel: streamer.youtubeChannel,
     youtubeDisplayName: streamer.youtubeDisplayName,
     isAdmin: streamer.isAdmin,
+    isAffiliate: streamer.isAffiliate,
     pscBalance: streamer.pscBalance,
     audioEnabled: streamer.audioEnabled,
     excelImportEnabled: streamer.excelImportEnabled,
@@ -48,6 +49,6 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  res.cookies.set(sessionCookieOptions(token));
+  res.cookies.set(sessionCookieOptions(token, rememberMe));
   return res;
 }

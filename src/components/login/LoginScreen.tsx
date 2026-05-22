@@ -8,6 +8,7 @@ import NeonGrid from '@/components/effects/NeonGrid';
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [shake, setShake] = useState(false);
@@ -20,7 +21,7 @@ export default function LoginScreen() {
     setIsLoading(true);
     await new Promise(r => setTimeout(r, 1200));
     try {
-      await login({ username, password, mascot: 'careca' });
+      await login({ username, password, rememberMe, mascot: 'careca' });
     } catch {
       setError('ACESSO NEGADO — Credenciais inválidas');
       setShake(true);
@@ -190,6 +191,36 @@ export default function LoginScreen() {
                   />
                 </div>
               </div>
+
+              {/* Remember me */}
+              <label className="flex items-center gap-2.5 cursor-pointer group w-fit">
+                <div className="relative w-4 h-4 flex-shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={e => setRememberMe(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div
+                    className="w-4 h-4 rounded transition-all"
+                    style={{
+                      background: rememberMe ? 'rgba(0,229,255,0.3)' : 'transparent',
+                      border: rememberMe ? '1.5px solid rgba(0,229,255,0.9)' : '1.5px solid rgba(255,255,255,0.2)',
+                      boxShadow: rememberMe ? '0 0 8px rgba(0,229,255,0.4)' : 'none',
+                    }}
+                  >
+                    {rememberMe && (
+                      <svg className="absolute inset-0 w-full h-full p-0.5" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="#00E5FF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                </div>
+                <span className="font-rajdhani text-xs tracking-widest uppercase group-hover:text-white/60 transition-colors"
+                  style={{ color: rememberMe ? 'rgba(0,229,255,0.8)' : 'rgba(255,255,255,0.35)' }}>
+                  Lembrar de mim por 30 dias
+                </span>
+              </label>
 
               {/* Error */}
               <AnimatePresence>

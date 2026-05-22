@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 export async function GET() {
   const streamers = await prisma.streamer.findMany({
     where: { isAdmin: false },
-    select: { username: true, displayName: true, pscBalance: true },
+    select: { username: true, displayName: true, pscBalance: true, isAffiliate: true },
     orderBy: { username: 'asc' },
   });
   return NextResponse.json(streamers);

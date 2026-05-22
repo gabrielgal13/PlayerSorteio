@@ -3,6 +3,7 @@ export type MascotType = 'careca' | 'dreads';
 export interface StreamerProfile {
   username: string;
   password: string;
+  rememberMe?: boolean;
   mascot: MascotType;
   displayName?: string;
   twitchChannel?: string;
@@ -134,6 +135,7 @@ export interface AppState {
   eventBackground: string | null;
   chatMessages: ChatMessage[];
   pscBalance: number;
+  isAffiliate: boolean;
   pscBalances: Record<string, number>;
   themeColor: string;
   eventMusic: EventMusicTrack;

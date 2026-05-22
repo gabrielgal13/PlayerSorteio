@@ -25,10 +25,9 @@ export async function PATCH(req: NextRequest) {
 
   if (!username) return NextResponse.json({ error: 'username required' }, { status: 400 });
 
-  const streamer = await prisma.streamer.upsert({
+  const streamer = await prisma.streamer.update({
     where: { username },
-    update: config,
-    create: { username, ...config },
+    data: config,
   });
 
   return NextResponse.json({

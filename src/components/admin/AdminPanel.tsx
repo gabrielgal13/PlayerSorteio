@@ -3,10 +3,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import EntregasPage from '@/components/deliveries/EntregasPage';
+import MarketingSection from '@/components/admin/MarketingSection';
 import type { RaffleResult, DeliveryStatus } from '@/types';
 
-interface StreamerRow { username: string; displayName: string | null; pscBalance: number; }
-type Section = 'psc' | 'criar-streamer' | 'entregas';
+interface StreamerRow { username: string; displayName: string | null; pscBalance: number; isAffiliate: boolean; }
+interface AdminProduct { id: string; name: string; description: string | null; imageUrl: string | null; quantity: number; pscValue: number | null; skipPsc: boolean; }
+type Section = 'psc' | 'criar-streamer' | 'entregas' | 'editar-streamer' | 'marketing';
 
 const COLOR_PRESETS = ['#BF5AF2', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#00E5FF', '#00FFA3'];
 
@@ -274,6 +276,17 @@ export default function AdminPanel() {
   const [stageBgImg, setStageBgImg] = useState<string | null>(null);
   const [configBgImg, setConfigBgImg] = useState<string | null>(null);
 
+  // Editar streamer state
+  const [editStreamer, setEditStreamer] = useState<string>('');
+  const [editData, setEditData] = useState<StreamerRow | null>(null);
+  const [editPscInput, setEditPscInput] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editFeedback, setEditFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [adminProducts, setAdminProducts] = useState<AdminProduct[]>([]);
+  const [prodLoading, setProdLoading] = useState(false);
+  const [newProd, setNewProd] = useState({ name: '', description: '', quantity: 1, pscValue: '', skipPsc: false });
+  const [addingProd, setAddingProd] = useState(false);
+
   // Entregas admin state
   const [entregasStreamer, setEntregasStreamer] = useState<string>('');
   const [entregasHistory, setEntregasHistory] = useState<RaffleResult[]>([]);
@@ -325,6 +338,126 @@ export default function AdminPanel() {
     setPscFeedback({ type: 'success', msg: `+${value.toLocaleString('pt-BR')} PSC adicionados para todos os streamers.` });
     setAmount('');
     setTimeout(() => { setPscFeedback(null); loadStreamers(); }, 2000);
+  };
+
+  const loadAdminProducts = useCallback(async (username: string) => {
+    if (!username) return;
+    setProdLoading(true);
+    try {
+      const res = await fetch(`/api/admin/streamers/${username}/products`);
+      const data = await res.json();
+      if (Array.isArray(data)) setAdminProducts(data);
+    } catch {}
+    setProdLoading(false);
+  }, []);
+
+  const loadEditStreamer = useCallback((username: string) => {
+    const row = streamers.find(s => s.username === username) ?? null;
+    setEditData(row);
+    setEditPscInput(row ? String(row.pscBalance) : '');
+    setAdminProducts([]);
+    if (username) loadAdminProducts(username);
+  }, [streamers, loadAdminProducts]);
+
+  const handleEditSelectStreamer = (username: string) => {
+    setEditStreamer(username);
+    loadEditStreamer(username);
+    setEditFeedback(null);
+  };
+
+  const handleToggleAffiliate = async () => {
+    if (!editData) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/admin/streamers/${editData.username}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isAffiliate: !editData.isAffiliate }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditFeedback({ type: 'error', msg: data.error ?? 'Erro ao atualizar.' });
+      } else {
+        setEditData(data);
+        setStreamers(prev => prev.map(s => s.username === data.username ? { ...s, isAffiliate: data.isAffiliate } : s));
+        setEditFeedback({ type: 'success', msg: data.isAffiliate ? 'Afiliado ativado.' : 'Afiliado desativado.' });
+      }
+    } catch {
+      setEditFeedback({ type: 'error', msg: 'Erro de conexão.' });
+    } finally {
+      setEditSaving(false);
+      setTimeout(() => setEditFeedback(null), 3000);
+    }
+  };
+
+  const handleSavePsc = async () => {
+    if (!editData) return;
+    const value = Number(editPscInput);
+    if (isNaN(value) || value < 0) {
+      setEditFeedback({ type: 'error', msg: 'Valor PSC inválido.' });
+      setTimeout(() => setEditFeedback(null), 3000);
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/admin/streamers/${editData.username}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pscBalance: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditFeedback({ type: 'error', msg: data.error ?? 'Erro ao atualizar PSC.' });
+      } else {
+        setEditData(data);
+        setStreamers(prev => prev.map(s => s.username === data.username ? { ...s, pscBalance: data.pscBalance } : s));
+        setEditFeedback({ type: 'success', msg: `PSC atualizado para ${value.toLocaleString('pt-BR')}.` });
+      }
+    } catch {
+      setEditFeedback({ type: 'error', msg: 'Erro de conexão.' });
+    } finally {
+      setEditSaving(false);
+      setTimeout(() => setEditFeedback(null), 3000);
+    }
+  };
+
+  const handleAddProduct = async () => {
+    if (!editData || !newProd.name.trim()) return;
+    setAddingProd(true);
+    try {
+      const res = await fetch(`/api/admin/streamers/${editData.username}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newProd.name,
+          description: newProd.description || null,
+          quantity: newProd.quantity,
+          pscValue: newProd.pscValue !== '' ? Number(newProd.pscValue) : null,
+          skipPsc: newProd.skipPsc,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditFeedback({ type: 'error', msg: data.error ?? 'Erro ao adicionar produto.' });
+      } else {
+        setAdminProducts(prev => [...prev, data]);
+        setNewProd({ name: '', description: '', quantity: 1, pscValue: '', skipPsc: false });
+        setEditFeedback({ type: 'success', msg: `Produto "${data.name}" adicionado.` });
+      }
+    } catch {
+      setEditFeedback({ type: 'error', msg: 'Erro de conexão.' });
+    } finally {
+      setAddingProd(false);
+      setTimeout(() => setEditFeedback(null), 3000);
+    }
+  };
+
+  const handleDeleteProduct = async (itemId: string) => {
+    if (!editData) return;
+    try {
+      await fetch(`/api/admin/streamers/${editData.username}/products?itemId=${itemId}`, { method: 'DELETE' });
+      setAdminProducts(prev => prev.filter(p => p.id !== itemId));
+    } catch {}
   };
 
   const handleMascotImgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -417,11 +550,29 @@ export default function AdminPanel() {
       ),
     },
     {
+      id: 'editar-streamer' as Section,
+      label: 'EDITAR STREAMER',
+      icon: (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+        </svg>
+      ),
+    },
+    {
       id: 'entregas' as Section,
       label: 'ENTREGAS',
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
           <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9 1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'marketing' as Section,
+      label: 'MARKETING',
+      icon: (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-5-7l-3 3.72L11 13l-4 5h14l-4-5z"/>
         </svg>
       ),
     },
@@ -1257,6 +1408,367 @@ export default function AdminPanel() {
               </motion.div>
             )}
 
+            {/* ── EDITAR STREAMER ── */}
+            {activeSection === 'editar-streamer' && (
+              <motion.div
+                key="editar-streamer"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -12 }}
+                transition={{ duration: 0.22 }}
+                className="flex-1 flex flex-col overflow-hidden"
+              >
+                {/* Streamer selector bar */}
+                <div
+                  className="flex-shrink-0 flex items-center gap-4 px-8 py-4"
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(5,8,22,0.4)' }}
+                >
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+                      style={{ background: 'rgba(191,90,242,0.1)', border: '1px solid rgba(191,90,242,0.25)' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#BF5AF2">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                      </svg>
+                    </div>
+                    <span className="font-orbitron text-xs font-bold tracking-widest" style={{ color: 'rgba(191,90,242,0.85)' }}>
+                      EDITAR STREAMER
+                    </span>
+                  </div>
+                  <div className="relative" style={{ minWidth: 220 }}>
+                    <select
+                      value={editStreamer}
+                      onChange={e => handleEditSelectStreamer(e.target.value)}
+                      className="w-full rounded-xl font-rajdhani text-sm outline-none px-4 py-2.5 appearance-none cursor-pointer"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: editStreamer ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.3)' }}
+                    >
+                      <option value="" style={{ background: '#080d24' }}>Selecionar streamer...</option>
+                      {streamers.map(s => (
+                        <option key={s.username} value={s.username} style={{ background: '#080d24' }}>
+                          {s.displayName || s.username}
+                        </option>
+                      ))}
+                    </select>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.3)" className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <path d="M7 10l5 5 5-5z"/>
+                    </svg>
+                  </div>
+                  {editFeedback && (
+                    <motion.div
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                      style={{
+                        background: editFeedback.type === 'success' ? 'rgba(74,222,128,0.1)' : 'rgba(239,68,68,0.1)',
+                        border: `1px solid ${editFeedback.type === 'success' ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                      }}
+                    >
+                      <span className="font-rajdhani text-xs font-semibold" style={{ color: editFeedback.type === 'success' ? 'rgba(74,222,128,0.9)' : 'rgba(239,68,68,0.9)' }}>
+                        {editFeedback.msg}
+                      </span>
+                    </motion.div>
+                  )}
+                </div>
+
+                {/* Content */}
+                {!editStreamer ? (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,0.12)">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                      </svg>
+                    </div>
+                    <p className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                      SELECIONE UM STREAMER
+                    </p>
+                    <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.18)' }}>
+                      Escolha um streamer acima para editar suas configurações
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-6">
+
+                    {/* ── AFILIADO TOGGLE ── */}
+                    <div
+                      className="rounded-2xl p-6 flex items-center justify-between gap-6"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                          STATUS DE AFILIADO
+                        </span>
+                        <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                          Afiliados têm acesso ao sistema PSC e saldo de moedas
+                        </span>
+                        {editData && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{
+                                background: editData.isAffiliate ? '#4ADE80' : 'rgba(255,255,255,0.2)',
+                                boxShadow: editData.isAffiliate ? '0 0 6px #4ADE8099' : 'none',
+                              }}
+                            />
+                            <span className="font-orbitron text-xs font-bold tracking-widest"
+                              style={{ color: editData.isAffiliate ? 'rgba(74,222,128,0.85)' : 'rgba(255,255,255,0.25)' }}>
+                              {editData.isAffiliate ? 'AFILIADO ATIVO' : 'NÃO AFILIADO'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleToggleAffiliate}
+                        disabled={editSaving || !editData}
+                        className="relative flex-shrink-0 rounded-full transition-all"
+                        style={{
+                          width: 56,
+                          height: 30,
+                          background: editData?.isAffiliate ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)',
+                          border: `2px solid ${editData?.isAffiliate ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,0.15)'}`,
+                          opacity: editSaving ? 0.6 : 1,
+                          cursor: editSaving ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        <div
+                          className="absolute top-1/2 rounded-full transition-all"
+                          style={{
+                            width: 20,
+                            height: 20,
+                            transform: 'translateY(-50%)',
+                            left: editData?.isAffiliate ? 'calc(100% - 24px)' : '2px',
+                            background: editData?.isAffiliate ? '#4ADE80' : 'rgba(255,255,255,0.3)',
+                            boxShadow: editData?.isAffiliate ? '0 0 8px #4ADE8066' : 'none',
+                          }}
+                        />
+                      </button>
+                    </div>
+
+                    {/* ── PSC BALANCE ── */}
+                    <div
+                      className="rounded-2xl p-6 flex flex-col gap-4"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                          SALDO PSC
+                        </span>
+                        {editData && (
+                          <div className="px-2 py-0.5 rounded-md"
+                            style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.2)' }}>
+                            <span className="font-orbitron text-xs font-bold" style={{ color: 'rgba(0,229,255,0.8)' }}>
+                              ATUAL: {editData.pscBalance.toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          min="0"
+                          value={editPscInput}
+                          onChange={e => setEditPscInput(e.target.value)}
+                          placeholder="Novo saldo..."
+                          className="flex-1 rounded-xl font-orbitron text-sm outline-none px-4 py-3"
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                        />
+                        <button
+                          onClick={handleSavePsc}
+                          disabled={editSaving || !editData}
+                          className="px-5 py-3 rounded-xl font-orbitron text-xs font-bold tracking-widest transition-all"
+                          style={{
+                            background: editSaving ? 'rgba(255,255,255,0.04)' : 'rgba(0,229,255,0.12)',
+                            border: `1px solid ${editSaving ? 'rgba(255,255,255,0.08)' : 'rgba(0,229,255,0.35)'}`,
+                            color: editSaving ? 'rgba(255,255,255,0.25)' : 'rgba(0,229,255,0.9)',
+                            cursor: editSaving ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {editSaving ? 'SALVANDO...' : 'SALVAR'}
+                        </button>
+                      </div>
+                      <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                        Define o saldo absoluto. A diferença será registrada como transação PSC.
+                      </p>
+                    </div>
+
+                    {/* ── PRODUTOS CUSTOMIZADOS ── */}
+                    <div
+                      className="rounded-2xl p-6 flex flex-col gap-5"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                            PRODUTOS EXCLUSIVOS
+                          </span>
+                          <p className="font-rajdhani text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                            Prêmios personalizados disponíveis somente para este streamer
+                          </p>
+                        </div>
+                        <div className="px-2 py-1 rounded-lg" style={{ background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.2)' }}>
+                          <span className="font-orbitron text-xs font-bold" style={{ color: 'rgba(255,180,0,0.8)' }}>
+                            {adminProducts.length} item{adminProducts.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Existing products list */}
+                      {prodLoading ? (
+                        <div className="flex items-center gap-2 py-2">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(0,229,255,0.5)" style={{ animation: 'spin 1s linear infinite' }}>
+                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                          </svg>
+                          <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Carregando produtos...</span>
+                        </div>
+                      ) : adminProducts.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          {adminProducts.map(prod => (
+                            <div
+                              key={prod.id}
+                              className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                                  style={{ background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.2)' }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,180,0,0.7)">
+                                    <path d="M20 6h-2.18c.07-.44.18-.88.18-1.38C18 2.06 15.94 0 13.38 0c-1.3 0-2.48.49-3.38 1.28C9.1.49 7.92 0 6.62 0 4.06 0 2 2.06 2 4.62c0 .5.11.94.18 1.38H0v14h24V6h-4zm-4-1.38C16 3.25 16.85 2 18.12 2c.83 0 1.5.67 1.5 1.5S18.95 5 18.12 5H16v-.38zM8.5 3.5c0-.83.67-1.5 1.5-1.5 1.27 0 2.12 1.25 2.12 3H9.88C9.15 5 8.5 4.33 8.5 3.5z"/>
+                                  </svg>
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-orbitron text-xs font-bold truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                                    {prod.name}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                                      Qtd: {prod.quantity}
+                                    </span>
+                                    {prod.pscValue != null && (
+                                      <span className="font-rajdhani text-xs font-semibold" style={{ color: 'rgba(0,229,255,0.6)' }}>
+                                        • {prod.pscValue.toLocaleString('pt-BR')} PSC
+                                      </span>
+                                    )}
+                                    {prod.skipPsc && (
+                                      <span className="font-orbitron text-xs" style={{ color: 'rgba(255,180,0,0.5)', fontSize: 9 }}>
+                                        SEM PSC
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteProduct(prod.id)}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+                                style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: 'rgba(239,68,68,0.6)' }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.2)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(239,68,68,0.9)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.08)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(239,68,68,0.6)'; }}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="font-rajdhani text-xs py-2" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                          Nenhum produto exclusivo cadastrado.
+                        </p>
+                      )}
+
+                      {/* Add new product form */}
+                      <div
+                        className="flex flex-col gap-3 pt-4"
+                        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+                      >
+                        <p className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          ADICIONAR PRODUTO
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <input
+                            type="text"
+                            value={newProd.name}
+                            onChange={e => setNewProd(p => ({ ...p, name: e.target.value }))}
+                            placeholder="Nome do produto *"
+                            className="rounded-xl font-rajdhani text-sm outline-none px-4 py-2.5 col-span-2"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                          />
+                          <input
+                            type="text"
+                            value={newProd.description}
+                            onChange={e => setNewProd(p => ({ ...p, description: e.target.value }))}
+                            placeholder="Descrição (opcional)"
+                            className="rounded-xl font-rajdhani text-sm outline-none px-4 py-2.5 col-span-2"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                          />
+                          <div className="flex flex-col gap-1">
+                            <label className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>QUANTIDADE</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={newProd.quantity}
+                              onChange={e => setNewProd(p => ({ ...p, quantity: Math.max(1, Number(e.target.value)) }))}
+                              className="rounded-xl font-orbitron text-sm outline-none px-4 py-2.5"
+                              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>VALOR PSC (opcional)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={newProd.pscValue}
+                              onChange={e => setNewProd(p => ({ ...p, pscValue: e.target.value }))}
+                              placeholder="0"
+                              className="rounded-xl font-orbitron text-sm outline-none px-4 py-2.5"
+                              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <div
+                              onClick={() => setNewProd(p => ({ ...p, skipPsc: !p.skipPsc }))}
+                              className="w-4 h-4 rounded flex items-center justify-center"
+                              style={{
+                                background: newProd.skipPsc ? 'rgba(255,180,0,0.3)' : 'rgba(255,255,255,0.05)',
+                                border: `1px solid ${newProd.skipPsc ? 'rgba(255,180,0,0.6)' : 'rgba(255,255,255,0.12)'}`,
+                              }}
+                            >
+                              {newProd.skipPsc && (
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(255,180,0,0.9)">
+                                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                </svg>
+                              )}
+                            </div>
+                            <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                              Ignorar PSC (não desconta do saldo)
+                            </span>
+                          </label>
+                          <button
+                            onClick={handleAddProduct}
+                            disabled={addingProd || !newProd.name.trim()}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-orbitron text-xs font-bold tracking-widest transition-all"
+                            style={{
+                              background: addingProd || !newProd.name.trim() ? 'rgba(255,255,255,0.04)' : 'rgba(255,180,0,0.12)',
+                              border: `1px solid ${addingProd || !newProd.name.trim() ? 'rgba(255,255,255,0.08)' : 'rgba(255,180,0,0.35)'}`,
+                              color: addingProd || !newProd.name.trim() ? 'rgba(255,255,255,0.2)' : 'rgba(255,180,0,0.9)',
+                              cursor: addingProd || !newProd.name.trim() ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                            </svg>
+                            {addingProd ? 'ADICIONANDO...' : 'ADICIONAR'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+              </motion.div>
+            )}
+
             {/* ── ENTREGAS ── */}
             {activeSection === 'entregas' && (
               <motion.div
@@ -1365,6 +1877,19 @@ export default function AdminPanel() {
                     onUpdateDelivery={handleEntregasUpdateDelivery}
                   />
                 )}
+              </motion.div>
+            )}
+
+            {/* ── MARKETING ── */}
+            {activeSection === 'marketing' && (
+              <motion.div
+                key="marketing"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -12 }}
+                transition={{ duration: 0.22 }}
+              >
+                <MarketingSection />
               </motion.div>
             )}
 

@@ -102,6 +102,7 @@ export const useStore = create<AppState & AppActions>()(
       eventBackground: null,
       chatMessages: [],
       pscBalance: 0,
+      isAffiliate: true,
       pscBalances: {},
       themeColor: '#00E5FF',
       eventMusic: 'cyberpunk',
@@ -259,7 +260,7 @@ export const useStore = create<AppState & AppActions>()(
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: profile.username, password: profile.password }),
+          body: JSON.stringify({ username: profile.username, password: profile.password, rememberMe: profile.rememberMe }),
         });
         if (!res.ok) throw new Error('Credenciais inválidas');
 
@@ -286,6 +287,7 @@ export const useStore = create<AppState & AppActions>()(
           raffleStage: 1,
           chatMessages: [],
           pscBalance: data.pscBalance,
+          isAffiliate: data.isAffiliate ?? true,
           audioEnabled: data.audioEnabled,
           excelImportEnabled: data.excelImportEnabled ?? true,
           excelPrizesImportEnabled: data.excelPrizesImportEnabled ?? true,

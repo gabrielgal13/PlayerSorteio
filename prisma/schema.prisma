@@ -26,6 +26,9 @@ model Streamer {
   claimCommand        String @default("!claim")
   validationTimeout   Int    @default(60)
 
+  // Afiliado (controla visibilidade do PSC)
+  isAffiliate Boolean @default(true)
+
   // Saldo PSC
   pscBalance Int @default(0)
 
@@ -87,6 +90,15 @@ model PscTransaction {
   amount      Int
   description String   @default("Recarga PSC")
   timestamp   DateTime @default(now())
+}
+
+model MarketingImage {
+  id        Int      @id @default(autoincrement())
+  imageData String   // base64 data URL
+  label     String?
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
 }
 
 model RaffleHistory {

@@ -2,7 +2,6 @@
 import { useStore } from '@/store/useStore';
 import MascotNakelas from './MascotNakelas';
 import MascotShadowGanjaK from './MascotShadowGanjaK';
-import StageBase from './StageBase';
 
 interface MascotContainerProps {
   isExploding: boolean;
@@ -32,18 +31,6 @@ export default function MascotContainer({ isExploding, isScorched, withStage = f
       isScorched={isScorched}
     />
   );
-
-  if (withStage) {
-    return (
-      <div className="relative w-full h-full">
-        <StageBase />
-        {/* Lift the mascot so its feet sit at the stage top platform level */}
-        <div className="absolute inset-0" style={{ bottom: '130px' }}>
-          {mascot}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="relative w-full h-full">

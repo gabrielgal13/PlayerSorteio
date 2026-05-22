@@ -569,6 +569,7 @@ export default function RaffleEngine() {
     setRaffleStage,
     updatePrize,
     deductPSC,
+    isAffiliate,
     themeColor,
     eventEffect,
     spinEffect,
@@ -600,6 +601,7 @@ export default function RaffleEngine() {
   const chatCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pendingAutoRerollRef = useRef(false);
   const skipResolverRef = useRef<(() => void) | null>(null);
+  const skipAllRef = useRef(false);
   const [autoCountdown, setAutoCountdown] = useState<number | null>(null);
   const [chatVoteProgress, setChatVoteProgress] = useState(0);
   const [chatTriggerArmed, setChatTriggerArmed] = useState(false);
@@ -707,11 +709,13 @@ export default function RaffleEngine() {
 
   const skipableDelay = useCallback((ms: number) =>
     new Promise<void>(resolve => {
+      if (skipAllRef.current) { resolve(); return; }
       const t = setTimeout(resolve, ms);
       skipResolverRef.current = () => { clearTimeout(t); resolve(); };
     }), []);
 
   const handleSkipAnimation = () => {
+    skipAllRef.current = true;
     skipResolverRef.current?.();
     skipResolverRef.current = null;
   };
@@ -735,7 +739,7 @@ export default function RaffleEngine() {
     setRaffleStatus('spinning');
     setSpinningNumber(true);
     play('spin');
-    await skipableDelay(700);
+    await skipableDelay(1400);
     if (isCancelledRef.current) return;
     setIsExploding(false);
     await skipableDelay(2800);
@@ -744,11 +748,12 @@ export default function RaffleEngine() {
     setSpinningNumber(false);
     setCurrentWinner(winner);
     play('reveal');
-    await skipableDelay(600);
+    await skipableDelay(1800);
     if (isCancelledRef.current) return;
+    skipAllRef.current = false;
     setRaffleStatus('revealing');
     if (autoRevealWinner) {
-      await skipableDelay(800);
+      await skipableDelay(2000);
     } else {
       await new Promise<void>(resolve => { revealResolveRef.current = resolve; });
     }
@@ -839,7 +844,7 @@ export default function RaffleEngine() {
       timestamp: Date.now(),
       confirmed: true,
     });
-    if (activePrize.pscValue && !activePrize.skipPsc) deductPSC(activePrize.pscValue);
+    if (isAffiliate && activePrize.pscValue && !activePrize.skipPsc) deductPSC(activePrize.pscValue);
     const newQty = activePrize.quantity - 1;
     updatePrize(activePrize.id, { quantity: newQty });
     if (newQty <= 0) {
@@ -871,6 +876,7 @@ export default function RaffleEngine() {
 
   const reset = () => {
     isCancelledRef.current = true;
+    skipAllRef.current = false;
     skipResolverRef.current?.();
     skipResolverRef.current = null;
     revealResolveRef.current?.();
@@ -1010,15 +1016,14 @@ export default function RaffleEngine() {
           {isTimeout && (
             <motion.div
               key="timeout-popup"
-              initial={{ scale: 0.85, opacity: 0, y: -10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.85, opacity: 0, y: -10 }}
+              initial={{ scale: 0.85, opacity: 0, y: -10, x: '-50%' }}
+              animate={{ scale: 1, opacity: 1, y: 0, x: '-50%' }}
+              exit={{ scale: 0.85, opacity: 0, y: -10, x: '-50%' }}
               transition={{ type: 'spring', damping: 20, stiffness: 300 }}
               style={{
                 position: 'fixed',
                 top: timeoutPopupTop,
                 left: '50%',
-                transform: 'translateX(-50%)',
                 zIndex: 9999,
                 borderRadius: '16px',
                 overflow: 'hidden',
@@ -1275,7 +1280,7 @@ export default function RaffleEngine() {
 
           {/* Mascot area */}
           <div className="flex-1 relative min-h-0 overflow-hidden"
-            style={{ background: 'rgba(255,255,255,0.005)', paddingBottom: isIdle ? '80px' : '0' }}>
+            style={{ background: 'rgba(255,255,255,0.005)', paddingBottom: '80px' }}>
 
             {/* Floating: Participantes — topo esquerdo */}
             {(() => {
@@ -1487,7 +1492,7 @@ export default function RaffleEngine() {
               {isExploding && (
                 <motion.div className="absolute inset-0 z-20 pointer-events-none"
                   initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0.7, 0] }} exit={{ opacity: 0 }}
-                  transition={{ duration: 0.7, times: [0, 0.12, 0.4, 1] }}
+                  transition={{ duration: 1.4, times: [0, 0.08, 0.4, 1] }}
                   style={{
                     background: 'radial-gradient(ellipse at 50% 55%, rgba(255,230,120,0.95) 0%, rgba(255,120,0,0.75) 35%, rgba(255,40,0,0.35) 65%, transparent 85%)',
                     mixBlendMode: 'screen',
@@ -1496,7 +1501,7 @@ export default function RaffleEngine() {
             </AnimatePresence>
 
             <motion.div className="w-full h-full"
-              style={{ paddingBottom: isWinner ? '290px' : (isTimeout || isConfirmed) ? '210px' : '20px' }}
+              style={{ marginTop: '-60px' }}
               animate={
                 isExploding ? { x: [0, -10, 10, -7, 7, -4, 4, 0], y: [0, -6, 4, -5, 3, -2, 2, 0] } :
                 isSuspense ? { scale: [1, 1.03, 1] } :
@@ -1514,8 +1519,8 @@ export default function RaffleEngine() {
             {/* Show de luzes — animação canvas durante o sorteio */}
             <RaffleAnimation active={isAnimating || isWinner} animStyle={raffleAnimationStyle} />
 
-            {/* Status overlay */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ zIndex: 25 }}>
+            {/* PREPARANDO / SELECIONANDO / número final — entre AO VIVO e o mascote */}
+            <div className="absolute left-0 right-0 flex flex-col items-center pointer-events-none" style={{ top: '90px', zIndex: 25 }}>
               <AnimatePresence mode="wait">
                 {isSuspense && (
                   <motion.div key="suspense" className="text-center"
@@ -1527,7 +1532,6 @@ export default function RaffleEngine() {
                     </motion.div>
                   </motion.div>
                 )}
-
                 {isSpinning && (
                   <motion.div key="spinning" className="text-center"
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -1538,17 +1542,25 @@ export default function RaffleEngine() {
                     <SpinAnimation effect={spinEffect} isSpinning={spinningNumber} winner={null} participants={participants} accent={accent} accentRgb={accentRgb} />
                   </motion.div>
                 )}
-
                 {(isRevealing || isWinner) && currentWinner && (
-                  <motion.div key="winner" className="text-center space-y-4 px-6 w-full max-w-md"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <motion.div key="number-reveal" className="text-center"
+                    initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4 }}>
                     <SpinAnimation effect={spinEffect} isSpinning={false} winner={currentWinner} participants={participants} accent={accent} accentRgb={accentRgb} />
-                    <AnimatePresence>
-                      {isWinner && <WinnerCard winner={currentWinner} prize={activePrize} accentRgb={accentRgb} />}
-                    </AnimatePresence>
                   </motion.div>
                 )}
+              </AnimatePresence>
+            </div>
 
+            {/* Status overlay — winner card / confirmed (centrado verticalmente) */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ zIndex: 25 }}>
+              <AnimatePresence mode="wait">
+                {isWinner && currentWinner && (
+                  <motion.div key="winner" className="text-center space-y-4 px-6 w-full max-w-md"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <WinnerCard winner={currentWinner} prize={activePrize} accentRgb={accentRgb} />
+                  </motion.div>
+                )}
 
                 {isConfirmed && currentWinner && (
                   <motion.div key="confirmed" className="text-center space-y-3"
@@ -1582,18 +1594,18 @@ export default function RaffleEngine() {
 
             {/* AÇÃO DO SORTEIO — flutua sobre o mascote */}
             <AnimatePresence>
-              {(isWinner || isTimeout || isConfirmed) && (
+              {(isWinner || isTimeout || isConfirmed || isSuspense || isSpinning) && (
                 <motion.div
                   style={{
                     position: 'absolute',
                     zIndex: 40,
-                    left: 'calc(50% - 290px)',
+                    left: '50%',
                     bottom: '20px',
                     width: '500px',
                     maxWidth: 'calc(100% - 48px)',
                     pointerEvents: 'all',
                   }}
-                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
+                  initial={{ opacity: 0, y: 16, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: 16, x: '-50%' }}
                   transition={{ duration: 0.25 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div style={{
@@ -1609,41 +1621,68 @@ export default function RaffleEngine() {
                           ⚡ AÇÃO DO SORTEIO ⚡
                         </span>
                       </div>
-                      <div style={{ display: 'flex', gap: '12px', padding: '14px 16px' }}>
-                        {(isWinner || isTimeout) && (
-                          <motion.button onClick={reroll}
-                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                            style={{
-                              flex: 1, display: 'flex', alignItems: 'center', gap: '14px',
-                              height: '80px', padding: '0 24px', borderRadius: '12px',
-                              background: 'rgba(109,40,217,0.9)', boxShadow: '0 0 22px rgba(109,40,217,0.38)',
-                              color: '#fff', border: 'none', cursor: 'pointer',
-                            }}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0, marginLeft: '4px' }}>
-                              <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                            </svg>
-                            <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', marginLeft: '2px' }}>
-                              <span className="font-orbitron" style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '0.1em', lineHeight: 1.2 }}>REROLL</span>
-                              <span className="font-rajdhani" style={{ fontSize: '11px', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.55)', marginTop: '4px' }}>GANHADOR</span>
-                            </div>
-                          </motion.button>
+                      <div style={{ display: 'flex', gap: '12px', padding: '8px 16px' }}>
+                        {(isSuspense || isSpinning) ? (
+                          <>
+                            <motion.button onClick={handleSkipAnimation}
+                              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                              style={{
+                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                                height: '40px', padding: '0 16px', borderRadius: '10px',
+                                background: `rgba(${accentRgb},0.1)`, border: `1px solid rgba(${accentRgb},0.35)`,
+                                color: accent, cursor: 'pointer',
+                              }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+                                <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+                              </svg>
+                              <span className="font-orbitron" style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em' }}>PULAR ANIMAÇÃO</span>
+                            </motion.button>
+                            <motion.button onClick={reset}
+                              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                              style={{
+                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                                height: '40px', padding: '0 16px', borderRadius: '10px',
+                                background: 'rgba(255,68,68,0.1)', border: '1px solid rgba(255,68,68,0.3)',
+                                color: '#FF4444', cursor: 'pointer',
+                              }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                              </svg>
+                              <span className="font-orbitron" style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em' }}>CANCELAR</span>
+                            </motion.button>
+                          </>
+                        ) : (
+                          <>
+                            {(isWinner || isTimeout) && (
+                              <motion.button onClick={reroll}
+                                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                                style={{
+                                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                                  height: '40px', padding: '0 16px', borderRadius: '10px',
+                                  background: 'rgba(109,40,217,0.9)', boxShadow: '0 0 22px rgba(109,40,217,0.38)',
+                                  color: '#fff', border: 'none', cursor: 'pointer',
+                                }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+                                  <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                                </svg>
+                                <span className="font-orbitron" style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em' }}>REROLL</span>
+                              </motion.button>
+                            )}
+                            <motion.button onClick={goNextPrize}
+                              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                              style={{
+                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                                height: '40px', padding: '0 16px', borderRadius: '10px',
+                                background: 'rgba(15,20,45,0.95)', border: '1px solid rgba(255,255,255,0.12)',
+                                color: '#fff', cursor: 'pointer',
+                              }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+                                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                              </svg>
+                              <span className="font-orbitron" style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.1em' }}>PULAR</span>
+                            </motion.button>
+                          </>
                         )}
-                        <motion.button onClick={goNextPrize}
-                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                          style={{
-                            flex: 1, display: 'flex', alignItems: 'center', gap: '14px',
-                            height: '80px', padding: '0 24px', borderRadius: '12px',
-                            background: 'rgba(15,20,45,0.95)', border: '1px solid rgba(255,255,255,0.12)',
-                            color: '#fff', cursor: 'pointer',
-                          }}>
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0, marginLeft: '4px' }}>
-                            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
-                          </svg>
-                          <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', marginLeft: '2px' }}>
-                            <span className="font-orbitron" style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '0.1em', lineHeight: 1.2 }}>PULAR</span>
-                            <span className="font-rajdhani" style={{ fontSize: '11px', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.55)', marginTop: '4px' }}>PRÊMIO</span>
-                          </div>
-                        </motion.button>
                       </div>
                     </div>
                     {isWinner && (
@@ -1669,7 +1708,7 @@ export default function RaffleEngine() {
           <AnimatePresence>
             {isIdle && (
               <motion.div className="absolute z-30 pointer-events-none"
-                style={{ left: '43%', transform: 'translateX(-50%)', bottom: '60px' }}
+                style={{ left: 0, right: 0, bottom: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
                 transition={{ duration: 0.25 }}>
                 {mascotDead && (
@@ -1766,27 +1805,6 @@ export default function RaffleEngine() {
             )}
           </AnimatePresence>
 
-          {/* ── ACTION BUTTONS (só durante animação) ───────────────── */}
-          {isAnimating && (
-          <div className="flex-shrink-0 px-6 py-5 flex gap-4"
-            style={{ background: 'rgba(5,8,22,0.96)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            <motion.button onClick={handleSkipAnimation}
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              className="flex-1 rounded-2xl font-rajdhani font-bold tracking-widest text-base flex items-center justify-center gap-2"
-              style={{ ...btnBase, background: `rgba(${accentRgb},0.1)`, border: `1px solid rgba(${accentRgb},0.35)`, color: accent }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
-              </svg>
-              PULAR ANIMAÇÃO
-            </motion.button>
-            <motion.button onClick={reset}
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              className="rounded-2xl font-rajdhani font-bold tracking-widest text-sm px-5"
-              style={{ ...btnBase, background: 'rgba(255,68,68,0.1)', border: '1px solid rgba(255,68,68,0.3)', color: '#FF4444' }}>
-              CANCELAR
-            </motion.button>
-          </div>
-          )}
         </div>
 
       </div>

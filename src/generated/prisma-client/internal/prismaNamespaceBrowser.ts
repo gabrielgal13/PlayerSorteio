@@ -55,6 +55,7 @@ export const ModelName = {
   PrizeList: 'PrizeList',
   PrizeListItem: 'PrizeListItem',
   PscTransaction: 'PscTransaction',
+  MarketingImage: 'MarketingImage',
   RaffleHistory: 'RaffleHistory'
 } as const
 
@@ -89,6 +90,7 @@ export const StreamerScalarFieldEnum = {
   registrationCommand: 'registrationCommand',
   claimCommand: 'claimCommand',
   validationTimeout: 'validationTimeout',
+  isAffiliate: 'isAffiliate',
   pscBalance: 'pscBalance',
   audioEnabled: 'audioEnabled',
   excelImportEnabled: 'excelImportEnabled',
@@ -149,6 +151,18 @@ export const PscTransactionScalarFieldEnum = {
 } as const
 
 export type PscTransactionScalarFieldEnum = (typeof PscTransactionScalarFieldEnum)[keyof typeof PscTransactionScalarFieldEnum]
+
+
+export const MarketingImageScalarFieldEnum = {
+  id: 'id',
+  imageData: 'imageData',
+  label: 'label',
+  active: 'active',
+  order: 'order',
+  createdAt: 'createdAt'
+} as const
+
+export type MarketingImageScalarFieldEnum = (typeof MarketingImageScalarFieldEnum)[keyof typeof MarketingImageScalarFieldEnum]
 
 
 export const RaffleHistoryScalarFieldEnum = {

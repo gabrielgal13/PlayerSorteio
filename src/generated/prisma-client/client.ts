@@ -62,6 +62,11 @@ export type PrizeListItem = Prisma.PrizeListItemModel
  */
 export type PscTransaction = Prisma.PscTransactionModel
 /**
+ * Model MarketingImage
+ * 
+ */
+export type MarketingImage = Prisma.MarketingImageModel
+/**
  * Model RaffleHistory
  * 
  */

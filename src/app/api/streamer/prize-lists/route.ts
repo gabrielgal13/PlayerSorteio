@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   if (!streamer) return NextResponse.json([]);
 
   const lists = await prisma.prizeList.findMany({
-    where: { streamerId: streamer.id },
+    where: { streamerId: streamer.id, NOT: { name: '__admin_products__' } },
     include: { items: { orderBy: { order: 'asc' } } },
     orderBy: { updatedAt: 'desc' },
   });

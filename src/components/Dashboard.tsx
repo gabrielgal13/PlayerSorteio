@@ -49,6 +49,7 @@ export default function Dashboard() {
     raffleStage, setRaffleStage,
     eventBackground,
     pscBalance,
+    isAffiliate,
   } = useStore();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -171,27 +172,29 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* PSC Balance */}
-          <motion.div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl flex-shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, rgba(0,255,163,0.08), rgba(0,229,255,0.05))',
-              border: '1px solid rgba(0,255,163,0.2)',
-              boxShadow: pscBalance > 0 ? '0 0 16px rgba(0,255,163,0.08)' : 'none',
-            }}
-            animate={pscBalance > 0 ? { boxShadow: ['0 0 8px rgba(0,255,163,0.06)', '0 0 20px rgba(0,255,163,0.12)', '0 0 8px rgba(0,255,163,0.06)'] } : {}}
-            transition={{ duration: 2.5, repeat: Infinity }}
-          >
-            <span style={{ fontSize: '14px', lineHeight: 1 }}>💠</span>
-            <div className="flex flex-col items-start">
-              <span className="font-orbitron font-bold text-neon-green" style={{ fontSize: '13px', lineHeight: 1, letterSpacing: '0.04em' }}>
-                {Math.ceil(pscBalance).toLocaleString('pt-BR')}
-              </span>
-              <span className="font-rajdhani text-white/30 tracking-widest" style={{ fontSize: '8px' }}>
-                PLAYERSKINS COINS
-              </span>
-            </div>
-          </motion.div>
+          {/* PSC Balance — only for affiliates */}
+          {isAffiliate && (
+            <motion.div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl flex-shrink-0"
+              style={{
+                background: 'linear-gradient(135deg, rgba(0,255,163,0.08), rgba(0,229,255,0.05))',
+                border: '1px solid rgba(0,255,163,0.2)',
+                boxShadow: pscBalance > 0 ? '0 0 16px rgba(0,255,163,0.08)' : 'none',
+              }}
+              animate={pscBalance > 0 ? { boxShadow: ['0 0 8px rgba(0,255,163,0.06)', '0 0 20px rgba(0,255,163,0.12)', '0 0 8px rgba(0,255,163,0.06)'] } : {}}
+              transition={{ duration: 2.5, repeat: Infinity }}
+            >
+              <span style={{ fontSize: '14px', lineHeight: 1 }}>💠</span>
+              <div className="flex flex-col items-start">
+                <span className="font-orbitron font-bold text-neon-green" style={{ fontSize: '13px', lineHeight: 1, letterSpacing: '0.04em' }}>
+                  {Math.ceil(pscBalance).toLocaleString('pt-BR')}
+                </span>
+                <span className="font-rajdhani text-white/30 tracking-widest" style={{ fontSize: '8px' }}>
+                  PLAYERSKINS COINS
+                </span>
+              </div>
+            </motion.div>
+          )}
 
           {/* Right controls */}
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -281,16 +284,18 @@ export default function Dashboard() {
                             </span>
                           )}
                         </button>
-                        <button
-                          onClick={() => { setShowUserMenu(false); setActiveTab('psc-history'); }}
-                          className="w-full flex items-center gap-3 px-4 py-3 font-rajdhani font-bold text-xs tracking-widest transition-all text-left"
-                          style={{ color: 'rgba(255,255,255,0.7)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,163,0.06)'; e.currentTarget.style.color = '#00FFA3'; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
-                        >
-                          <span style={{ fontSize: '13px', lineHeight: 1 }}>💠</span>
-                          HISTÓRICO PSC
-                        </button>
+                        {isAffiliate && (
+                          <button
+                            onClick={() => { setShowUserMenu(false); setActiveTab('psc-history'); }}
+                            className="w-full flex items-center gap-3 px-4 py-3 font-rajdhani font-bold text-xs tracking-widest transition-all text-left"
+                            style={{ color: 'rgba(255,255,255,0.7)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,163,0.06)'; e.currentTarget.style.color = '#00FFA3'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+                          >
+                            <span style={{ fontSize: '13px', lineHeight: 1 }}>💠</span>
+                            HISTÓRICO PSC
+                          </button>
+                        )}
                       </>
                     )}
                     <button

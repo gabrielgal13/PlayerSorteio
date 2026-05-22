@@ -39,7 +39,7 @@ export async function getSession(): Promise<SessionPayload | null> {
   return verifyToken(token);
 }
 
-export function sessionCookieOptions(token: string) {
+export function sessionCookieOptions(token: string, rememberMe = false) {
   return {
     name: COOKIE,
     value: token,
@@ -47,7 +47,7 @@ export function sessionCookieOptions(token: string) {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
     path: '/',
-    maxAge: EXPIRES_IN,
+    ...(rememberMe ? { maxAge: 60 * 60 * 24 * 30 } : {}),
   };
 }
 

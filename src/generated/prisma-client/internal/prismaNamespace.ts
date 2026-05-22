@@ -388,6 +388,7 @@ export const ModelName = {
   PrizeList: 'PrizeList',
   PrizeListItem: 'PrizeListItem',
   PscTransaction: 'PscTransaction',
+  MarketingImage: 'MarketingImage',
   RaffleHistory: 'RaffleHistory'
 } as const
 
@@ -404,7 +405,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "streamer" | "prizeList" | "prizeListItem" | "pscTransaction" | "raffleHistory"
+    modelProps: "streamer" | "prizeList" | "prizeListItem" | "pscTransaction" | "marketingImage" | "raffleHistory"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -704,6 +705,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    MarketingImage: {
+      payload: Prisma.$MarketingImagePayload<ExtArgs>
+      fields: Prisma.MarketingImageFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.MarketingImageFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingImagePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.MarketingImageFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingImagePayload>
+        }
+        findFirst: {
+          args: Prisma.MarketingImageFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingImagePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.MarketingImageFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingImagePayload>
+        }
+        findMany: {
+          args: Prisma.MarketingImageFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingImagePayload>[]
+        }
+        create: {
+          args: Prisma.MarketingImageCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingImagePayload>
+        }
+        createMany: {
+          args: Prisma.MarketingImageCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.MarketingImageCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingImagePayload>[]
+        }
+        delete: {
+          args: Prisma.MarketingImageDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingImagePayload>
+        }
+        update: {
+          args: Prisma.MarketingImageUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingImagePayload>
+        }
+        deleteMany: {
+          args: Prisma.MarketingImageDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.MarketingImageUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.MarketingImageUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingImagePayload>[]
+        }
+        upsert: {
+          args: Prisma.MarketingImageUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingImagePayload>
+        }
+        aggregate: {
+          args: Prisma.MarketingImageAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateMarketingImage>
+        }
+        groupBy: {
+          args: Prisma.MarketingImageGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MarketingImageGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.MarketingImageCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MarketingImageCountAggregateOutputType> | number
+        }
+      }
+    }
     RaffleHistory: {
       payload: Prisma.$RaffleHistoryPayload<ExtArgs>
       fields: Prisma.RaffleHistoryFieldRefs
@@ -832,6 +907,7 @@ export const StreamerScalarFieldEnum = {
   registrationCommand: 'registrationCommand',
   claimCommand: 'claimCommand',
   validationTimeout: 'validationTimeout',
+  isAffiliate: 'isAffiliate',
   pscBalance: 'pscBalance',
   audioEnabled: 'audioEnabled',
   excelImportEnabled: 'excelImportEnabled',
@@ -892,6 +968,18 @@ export const PscTransactionScalarFieldEnum = {
 } as const
 
 export type PscTransactionScalarFieldEnum = (typeof PscTransactionScalarFieldEnum)[keyof typeof PscTransactionScalarFieldEnum]
+
+
+export const MarketingImageScalarFieldEnum = {
+  id: 'id',
+  imageData: 'imageData',
+  label: 'label',
+  active: 'active',
+  order: 'order',
+  createdAt: 'createdAt'
+} as const
+
+export type MarketingImageScalarFieldEnum = (typeof MarketingImageScalarFieldEnum)[keyof typeof MarketingImageScalarFieldEnum]
 
 
 export const RaffleHistoryScalarFieldEnum = {
@@ -1121,6 +1209,7 @@ export type GlobalOmitConfig = {
   prizeList?: Prisma.PrizeListOmit
   prizeListItem?: Prisma.PrizeListItemOmit
   pscTransaction?: Prisma.PscTransactionOmit
+  marketingImage?: Prisma.MarketingImageOmit
   raffleHistory?: Prisma.RaffleHistoryOmit
 }
 

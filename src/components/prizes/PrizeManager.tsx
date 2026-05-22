@@ -81,7 +81,7 @@ const EMPTY_FORM: PrizeFormData = { name: '', description: '', imageUrl: '', qua
 const PRIZE_ICONS = ['🏆', '🎮', '💰', '🎁', '⚔️', '🔥', '💎', '🌟'];
 
 const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManager(_, ref) {
-  const { prizes, addPrize, updatePrize, removePrize, clearPrizes, reorderPrizes, pscBalance, excelPrizesImportEnabled, currentUser, setEventBackground } = useStore();
+  const { prizes, addPrize, updatePrize, removePrize, clearPrizes, reorderPrizes, pscBalance, isAffiliate, excelPrizesImportEnabled, currentUser, setEventBackground } = useStore();
   const [showForm, setShowForm] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -118,6 +118,12 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   // Exchange rate state
   const [usdToBrl, setUsdToBrl] = useState<number | null>(null);
   const [rateLoading, setRateLoading] = useState(false);
+
+  // Admin products (custom products assigned by admin for this streamer)
+  const [adminProducts, setAdminProducts] = useState<Array<{
+    id: string; name: string; description: string | null; imageUrl: string | null;
+    quantity: number; pscValue: number | null; skipPsc: boolean;
+  }>>([]);
 
   // Autocomplete state
   const [suggestions, setSuggestions] = useState<CS2Item[]>([]);
@@ -263,6 +269,17 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     }
   }, []);
 
+  const loadAdminProducts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/streamer/admin-products');
+      if (!res.ok) return;
+      const data = await res.json();
+      setAdminProducts(Array.isArray(data) ? data : []);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // ── Manual form ──────────────────────────────────────────────────────────────
   const fetchSavedLists = useCallback(async () => {
     if (!currentUser?.username) return;
@@ -301,6 +318,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     fetchRate();
     fetchSavedLists();
     loadMostUsedSkins();
+    loadAdminProducts();
     setTimeout(() => refreshSuggestions(''), 0);
   };
 
@@ -484,6 +502,33 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     trackUsage(item);
     setForm(f => ({ ...EMPTY_FORM, quantity: f.quantity }));
     setActiveSuggestion(-1);
+    setTimeout(() => nameInputRef.current?.focus(), 160);
+  };
+
+  const applyAdminProduct = (item: typeof adminProducts[number]) => {
+    if (!item.skipPsc && item.pscValue !== null) {
+      const newCost = item.pscValue * form.quantity;
+      if (pscBalance - alreadySpent - stagedCost - newCost < 0) {
+        setSaveError('Saldo insuficiente para adicionar este prêmio.');
+        setTimeout(() => setSaveError(null), 4000);
+        return;
+      }
+    }
+    setStaged(s => {
+      const idx = s.findIndex(p => p.name === item.name);
+      if (idx >= 0) {
+        return s.map((p, i) => i === idx ? { ...p, quantity: p.quantity + form.quantity } : p);
+      }
+      return [...s, {
+        name: item.name,
+        description: item.description ?? '',
+        imageUrl: item.imageUrl ?? '',
+        quantity: form.quantity,
+        pscValue: item.pscValue ?? undefined,
+        skipPsc: item.skipPsc,
+      }];
+    });
+    setForm(f => ({ ...EMPTY_FORM, quantity: f.quantity }));
     setTimeout(() => nameInputRef.current?.focus(), 160);
   };
 
@@ -1337,7 +1382,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
 
                   {/* Results - inline, fills available space */}
                   <AnimatePresence>
-                    {suggestions.length > 0 && (
+                    {(suggestions.length > 0 || adminProducts.length > 0) && (
                       <motion.div
                         ref={suggestionsRef}
                         initial={{ opacity: 0, y: -4 }}
@@ -1360,21 +1405,99 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                           background: 'rgba(5,8,22,0.99)',
                         }}>
                           <span className="font-orbitron" style={{ fontSize: '9px', color: 'rgba(255,255,255,0.28)', letterSpacing: '0.1em' }}>
-                            RESULTADOS ({totalMatches})
+                            RESULTADOS ({totalMatches + adminProducts.length})
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => setSortBy(s => s === 'price' ? 'name' : 'price')}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', borderRadius: '4px' }}
-                          >
-                            <span className="font-orbitron" style={{ fontSize: '9px', color: '#00E5FF', letterSpacing: '0.08em' }}>
-                              ORDENAR POR: {sortBy === 'price' ? 'PREÇO' : 'NOME'} ↕
-                            </span>
-                          </button>
+                          {suggestions.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setSortBy(s => s === 'price' ? 'name' : 'price')}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', borderRadius: '4px' }}
+                            >
+                              <span className="font-orbitron" style={{ fontSize: '9px', color: '#00E5FF', letterSpacing: '0.08em' }}>
+                                ORDENAR POR: {sortBy === 'price' ? 'PREÇO' : 'NOME'} ↕
+                              </span>
+                            </button>
+                          )}
                         </div>
 
                         {/* Result rows */}
                         <div ref={suggestionItemsRef} style={{ overflowY: 'auto', maxHeight: '400px' }}>
+
+                          {/* ── Produtos exclusivos do admin ── */}
+                          {adminProducts.map(item => (
+                            <div
+                              key={item.id}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.background = 'rgba(255,180,0,0.06)';
+                                e.currentTarget.style.borderColor = 'rgba(255,180,0,0.25)';
+                                e.currentTarget.style.boxShadow = 'inset 3px 0 0 #FFB300';
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.borderColor = 'rgba(255,180,0,0.08)';
+                                e.currentTarget.style.boxShadow = 'none';
+                              }}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: '14px',
+                                padding: '10px 14px', cursor: 'default',
+                                background: 'transparent',
+                                border: '1px solid rgba(255,180,0,0.08)',
+                                borderRadius: '10px',
+                                margin: '2px 6px',
+                                transition: 'background 0.1s, box-shadow 0.1s, border-color 0.1s',
+                              }}
+                            >
+                              <div style={{ width: '77px', height: '55px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {item.imageUrl
+                                  ? <img src={item.imageUrl} alt={item.name} style={{ maxWidth: '77px', maxHeight: '55px', objectFit: 'contain' }} />
+                                  : <span style={{ fontSize: '28px' }}>🎁</span>
+                                }
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p className="font-rajdhani font-bold" style={{ fontSize: '15px', color: 'rgba(255,255,255,0.9)', lineHeight: 1.2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                                  {item.name}
+                                </p>
+                                {item.description && (
+                                  <p className="font-rajdhani" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                                    {item.description}
+                                  </p>
+                                )}
+                                <span className="font-orbitron" style={{ fontSize: '8px', color: '#FFB300', letterSpacing: '0.12em', opacity: 0.7 }}>EXCLUSIVO</span>
+                              </div>
+                              {isAffiliate && item.pscValue !== null && !item.skipPsc && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+                                  <svg width="10" height="14" viewBox="0 0 9 12" fill="#00FFA3"><path d="M4.5 0L9 5L4.5 12L0 5Z"/></svg>
+                                  <span className="font-orbitron font-bold" style={{ fontSize: '17px', color: '#00FFA3' }}>
+                                    {item.pscValue}
+                                  </span>
+                                </div>
+                              )}
+                              {item.skipPsc && (
+                                <span className="font-orbitron" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', flexShrink: 0 }}>GRÁTIS</span>
+                              )}
+                              <button
+                                type="button"
+                                onMouseDown={e => { e.stopPropagation(); e.preventDefault(); applyAdminProduct(item); }}
+                                style={{
+                                  width: '41px', height: '41px', borderRadius: '10px', flexShrink: 0,
+                                  background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.3)',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  cursor: 'pointer',
+                                }}
+                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,180,0,0.22)')}
+                                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,180,0,0.08)')}
+                              >
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="#FFB300"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                              </button>
+                            </div>
+                          ))}
+
+                          {/* ── Divisor entre exclusivos e CS2 ── */}
+                          {adminProducts.length > 0 && suggestions.length > 0 && (
+                            <div style={{ margin: '4px 14px', borderTop: '1px solid rgba(255,255,255,0.05)' }} />
+                          )}
+
+                          {/* ── Itens CS2 ── */}
                           {[...suggestions]
                             .sort((a, b) => sortBy === 'price' ? a.min_price_usd - b.min_price_usd : a.name.localeCompare(b.name))
                             .map((item, idx) => {
@@ -1422,12 +1545,14 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                                       {wearAbbr}
                                     </span>
                                   )}
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
-                                    <svg width="10" height="14" viewBox="0 0 9 12" fill="#00E5FF"><path d="M4.5 0L9 5L4.5 12L0 5Z"/></svg>
-                                    <span className="font-orbitron font-bold" style={{ fontSize: '17px', color: '#00E5FF' }}>
-                                      {usdToBrl ? pscNum(item.min_price_usd) : `$${item.min_price_usd.toFixed(2)}`}
-                                    </span>
-                                  </div>
+                                  {isAffiliate && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+                                      <svg width="10" height="14" viewBox="0 0 9 12" fill="#00E5FF"><path d="M4.5 0L9 5L4.5 12L0 5Z"/></svg>
+                                      <span className="font-orbitron font-bold" style={{ fontSize: '17px', color: '#00E5FF' }}>
+                                        {usdToBrl ? pscNum(item.min_price_usd) : `$${item.min_price_usd.toFixed(2)}`}
+                                      </span>
+                                    </div>
+                                  )}
                                   <button
                                     type="button"
                                     onMouseDown={e => { e.stopPropagation(); e.preventDefault(); applySuggestion(item); }}
@@ -1450,15 +1575,15 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                         {/* Footer */}
                         <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <span className="font-orbitron" style={{ fontSize: '9px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.1em' }}>
-                            {totalMatches} RESULTADO{totalMatches !== 1 ? 'S' : ''}
+                            {totalMatches + adminProducts.length} RESULTADO{(totalMatches + adminProducts.length) !== 1 ? 'S' : ''}
                           </span>
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  {/* Checkbox: sortear sem PSC — só exibe quando o item tem valor em PSC */}
-                  {form.pscValue !== undefined && <label style={{
+                  {/* Checkbox: sortear sem PSC — só exibe quando o item tem valor em PSC e é afiliado */}
+                  {isAffiliate && form.pscValue !== undefined && <label style={{
                     display: 'flex', alignItems: 'flex-start', gap: '14px', cursor: 'pointer',
                     userSelect: 'none' as const,
                     padding: '16px 18px', borderRadius: '14px',
@@ -1653,7 +1778,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                                   <span className="font-rajdhani" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>Qtd: {item.quantity}</span>
-                                  {item.pscValue !== undefined && !item.skipPsc && (
+                                  {isAffiliate && item.pscValue !== undefined && !item.skipPsc && (
                                     <>
                                       <svg width="6" height="9" viewBox="0 0 8 11" fill="#00E5FF"><path d="M4 0L8 4.5L4 11L0 4.5Z"/></svg>
                                       <span className="font-orbitron font-bold" style={{ fontSize: '10px', color: '#00E5FF' }}>{item.pscValue.toLocaleString('pt-BR')}</span>
@@ -1718,6 +1843,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                         <span className="font-rajdhani text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Itens adicionados</span>
                         <span className="font-orbitron font-bold" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)' }}>{staged.reduce((sum, p) => sum + p.quantity, 0)}</span>
                       </div>
+                      {isAffiliate && (<>
                       <div style={{ height: '1px', background: 'rgba(255,255,255,0.04)' }} />
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span className="font-rajdhani text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>Valor total</span>
@@ -1738,6 +1864,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                           <svg width="8" height="11" viewBox="0 0 8 11" fill="#00FFA3"><path d="M4 0L8 4.5L4 11L0 4.5Z"/></svg>
                         </div>
                       </div>
+                      </>)}
                   </div>
 
                   {/* ── TRANSFORMAR EM LISTA RÁPIDA ── */}
@@ -2311,7 +2438,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                         )}
                         <p className="font-rajdhani text-sm text-neon-gold/50">Quantidade: {prize.quantity}</p>
                       </div>
-                      {prize.pscValue !== undefined && (
+                      {isAffiliate && prize.pscValue != null && (
                         <div className="flex-shrink-0">
                           <p className="font-orbitron text-sm" style={{ color: '#00FFA3', opacity: 0.7 }}>
                             💠 {prize.pscValue.toLocaleString('pt-BR')}

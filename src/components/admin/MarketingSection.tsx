@@ -26,8 +26,8 @@ export default function MarketingSection() {
     setError(null);
     try {
       const res = await fetch('/api/admin/marketing');
-      if (!res.ok) throw new Error(`Erro ${res.status}: ${res.statusText}`);
       const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? `Erro ${res.status}: ${res.statusText}`);
       setImages(Array.isArray(data) ? data : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro ao carregar imagens');

@@ -379,6 +379,7 @@ export default function EventConfig() {
   const [kickVerifying, setKickVerifying] = useState(false);
   const [kickError, setKickError] = useState('');
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showEfeitos, setShowEfeitos] = useState(false);
   const [hoveredSpinEffect, setHoveredSpinEffect] = useState<{ id: RaffleSpinEffect; rect: DOMRect } | null>(null);
   const [hoveredAnimStyle, setHoveredAnimStyle] = useState<{ id: RaffleAnimationStyle; rect: DOMRect } | null>(null);
   const [previewEffect, setPreviewEffect] = useState<EventEffectType>('none');
@@ -1228,121 +1229,39 @@ export default function EventConfig() {
                               </div>
                             </div>
 
-                            {/* ── Bottom: EFEITOS DO SORTEIO ── */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                              <p className="font-orbitron font-bold" style={{ fontSize: '9px', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.25)' }}>
-                                EFEITOS DO SORTEIO
-                              </p>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px', alignItems: 'start' }}>
-
-                                {/* SONOROS */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  <p className="font-orbitron font-bold" style={{ fontSize: '8px', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.18)', marginBottom: '2px' }}>SONOROS</p>
-                                  <MusicaPanel themeColor={themeColor} eventMusic={eventMusic} onSelect={playMusicPreview} />
-                                </div>
-
-                                {/* REPRODUÇÃO DO SORTEIO */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  <p className="font-orbitron font-bold" style={{ fontSize: '8px', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.18)', marginBottom: '2px' }}>REPRODUÇÃO DO SORTEIO</p>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    {SPIN_EFFECTS.map(opt => {
-                                      const active = spinEffect === opt.id;
-                                      return (
-                                        <button
-                                          key={opt.id}
-                                          onClick={() => setSpinEffect(opt.id)}
-                                          onMouseEnter={e => setHoveredSpinEffect({ id: opt.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() })}
-                                          onMouseLeave={() => setHoveredSpinEffect(null)}
-                                          style={{
-                                            display: 'flex', alignItems: 'center', gap: '10px',
-                                            padding: '10px 12px', borderRadius: '10px',
-                                            background: active ? `${themeColor}15` : 'rgba(255,255,255,0.03)',
-                                            border: active ? `1.5px solid ${themeColor}` : '1px solid rgba(255,255,255,0.06)',
-                                            cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left',
-                                          }}
-                                        >
-                                          <div style={{
-                                            width: 32, height: 32, borderRadius: 8,
-                                            background: `${themeColor}20`, border: `1px solid ${themeColor}40`,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            flexShrink: 0, fontSize: 16,
-                                          }}>
-                                            {opt.emoji}
-                                          </div>
-                                          <div style={{ flex: 1, minWidth: 0 }}>
-                                            <p className="font-orbitron font-bold" style={{ fontSize: '9px', letterSpacing: '0.1em', color: active ? '#fff' : 'rgba(255,255,255,0.55)' }}>
-                                              {opt.name}
-                                            </p>
-                                            <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.35)', lineHeight: 1.3, marginTop: 1 }}>
-                                              {opt.desc}
-                                            </p>
-                                          </div>
-                                          {active && (
-                                            <span className="font-orbitron font-bold" style={{ fontSize: 9, letterSpacing: '0.15em', color: themeColor, flexShrink: 0 }}>
-                                              ATIVO
-                                            </span>
-                                          )}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-
-                                {/* VISUAIS */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  <p className="font-orbitron font-bold" style={{ fontSize: '8px', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.18)', marginBottom: '2px' }}>VISUAIS</p>
-                                  <EfeitosPanel themeColor={themeColor} eventEffect={eventEffect} setEventEffect={setEventEffect} onPreview={triggerPreview} />
-                                </div>
-
-                                {/* SHOW DE LUZES */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  <p className="font-orbitron font-bold" style={{ fontSize: '8px', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.18)', marginBottom: '2px' }}>SHOW DE LUZES</p>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    {ANIMATION_STYLES.map(opt => {
-                                      const active = raffleAnimationStyle === opt.id;
-                                      return (
-                                        <button
-                                          key={opt.id}
-                                          onClick={() => setRaffleAnimationStyle(opt.id)}
-                                          onMouseEnter={e => setHoveredAnimStyle({ id: opt.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() })}
-                                          onMouseLeave={() => setHoveredAnimStyle(null)}
-                                          style={{
-                                            display: 'flex', alignItems: 'center', gap: '10px',
-                                            padding: '10px 12px', borderRadius: '10px',
-                                            background: active ? `${themeColor}15` : 'rgba(255,255,255,0.03)',
-                                            border: active ? `1.5px solid ${themeColor}` : '1px solid rgba(255,255,255,0.06)',
-                                            cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left',
-                                          }}
-                                        >
-                                          <div style={{
-                                            width: 32, height: 32, borderRadius: 8,
-                                            background: `${themeColor}20`, border: `1px solid ${themeColor}40`,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            flexShrink: 0, fontSize: 16,
-                                          }}>
-                                            {opt.emoji}
-                                          </div>
-                                          <div style={{ flex: 1, minWidth: 0 }}>
-                                            <p className="font-orbitron font-bold" style={{ fontSize: '9px', letterSpacing: '0.1em', color: active ? '#fff' : 'rgba(255,255,255,0.55)' }}>
-                                              {opt.name}
-                                            </p>
-                                            <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.35)', lineHeight: 1.3, marginTop: 1 }}>
-                                              {opt.desc}
-                                            </p>
-                                          </div>
-                                          {active && (
-                                            <span className="font-orbitron font-bold" style={{ fontSize: 9, letterSpacing: '0.15em', color: themeColor, flexShrink: 0 }}>
-                                              ATIVO
-                                            </span>
-                                          )}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-
+                            {/* ── Bottom: EFEITOS DO SORTEIO button ── */}
+                            <button
+                              onClick={() => setShowEfeitos(true)}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: '10px',
+                                padding: '14px 16px', borderRadius: '12px', cursor: 'pointer',
+                                background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)',
+                                transition: 'all 0.2s', textAlign: 'left', width: '100%',
+                              }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,229,255,0.04)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,229,255,0.2)'; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                            >
+                              <div style={{
+                                width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                                background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.2)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(0,229,255,0.8)">
+                                  <path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6zm-2 16a2 2 0 110-4 2 2 0 010 4z"/>
+                                </svg>
                               </div>
-                            </div>
+                              <div style={{ flex: 1 }}>
+                                <p className="font-orbitron font-bold" style={{ fontSize: '10px', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.7)' }}>
+                                  EFEITOS DO SORTEIO
+                                </p>
+                                <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
+                                  Sons, reprodução, visuais e show de luzes
+                                </p>
+                              </div>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.25)">
+                                <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/>
+                              </svg>
+                            </button>
                           </motion.div>
                         )}
 
@@ -1551,6 +1470,168 @@ export default function EventConfig() {
                   </AnimatePresence>
                 </motion.div>
               </motion.div>
+              )}
+            </AnimatePresence>,
+            document.body
+          )}
+
+          {/* Efeitos do Sorteio Modal */}
+          {mounted && createPortal(
+            <AnimatePresence>
+              {showEfeitos && (
+                <motion.div
+                  className="fixed inset-0 px-4"
+                  style={{ zIndex: 9999, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  onClick={e => { if (e.target === e.currentTarget) setShowEfeitos(false); }}
+                >
+                  <motion.div
+                    style={{
+                      position: 'relative', width: '100%', maxWidth: '960px',
+                      borderRadius: '16px', overflow: 'hidden',
+                      background: 'linear-gradient(145deg, rgba(10,14,40,0.99), rgba(5,8,22,0.99))',
+                      border: '1px solid rgba(0,229,255,0.3)',
+                      boxShadow: '0 0 60px rgba(0,229,255,0.1)',
+                    }}
+                    initial={{ scale: 0.88, opacity: 0, y: 24 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.88, opacity: 0, y: 24 }}
+                    transition={{ type: 'spring', damping: 26, stiffness: 380 }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {/* Top accent bar */}
+                    <div style={{ height: '3px', background: `linear-gradient(90deg, ${themeColor}, ${themeColor}55)` }} />
+
+                    {/* Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill={themeColor}>
+                          <path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6zm-2 16a2 2 0 110-4 2 2 0 010 4z"/>
+                        </svg>
+                        <span className="font-orbitron text-xs tracking-widest" style={{ color: themeColor }}>
+                          EFEITOS DO SORTEIO
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setShowEfeitos(false)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/70 hover:bg-white/5 transition-all"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Body */}
+                    <div style={{ padding: '0 24px 24px', overflowY: 'auto', maxHeight: 'calc(90vh - 80px)' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', alignItems: 'start' }}>
+
+                        {/* SONOROS */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <p className="font-orbitron font-bold" style={{ fontSize: '8px', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.25)', marginBottom: '4px' }}>SONOROS</p>
+                          <MusicaPanel themeColor={themeColor} eventMusic={eventMusic} onSelect={playMusicPreview} />
+                        </div>
+
+                        {/* REPRODUÇÃO DO SORTEIO */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <p className="font-orbitron font-bold" style={{ fontSize: '8px', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.25)', marginBottom: '4px' }}>REPRODUÇÃO DO SORTEIO</p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {SPIN_EFFECTS.map(opt => {
+                              const active = spinEffect === opt.id;
+                              return (
+                                <button
+                                  key={opt.id}
+                                  onClick={() => setSpinEffect(opt.id)}
+                                  onMouseEnter={e => setHoveredSpinEffect({ id: opt.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() })}
+                                  onMouseLeave={() => setHoveredSpinEffect(null)}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                    padding: '10px 12px', borderRadius: '10px',
+                                    background: active ? `${themeColor}15` : 'rgba(255,255,255,0.03)',
+                                    border: active ? `1.5px solid ${themeColor}` : '1px solid rgba(255,255,255,0.06)',
+                                    cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left',
+                                  }}
+                                >
+                                  <div style={{
+                                    width: 32, height: 32, borderRadius: 8,
+                                    background: `${themeColor}20`, border: `1px solid ${themeColor}40`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    flexShrink: 0, fontSize: 16,
+                                  }}>
+                                    {opt.emoji}
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p className="font-orbitron font-bold" style={{ fontSize: '9px', letterSpacing: '0.1em', color: active ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+                                      {opt.name}
+                                    </p>
+                                    <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.35)', lineHeight: 1.3, marginTop: 1 }}>
+                                      {opt.desc}
+                                    </p>
+                                  </div>
+                                  {active && (
+                                    <span className="font-orbitron font-bold" style={{ fontSize: 9, letterSpacing: '0.15em', color: themeColor, flexShrink: 0 }}>ATIVO</span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* VISUAIS */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <p className="font-orbitron font-bold" style={{ fontSize: '8px', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.25)', marginBottom: '4px' }}>VISUAIS</p>
+                          <EfeitosPanel themeColor={themeColor} eventEffect={eventEffect} setEventEffect={setEventEffect} onPreview={triggerPreview} />
+                        </div>
+
+                        {/* SHOW DE LUZES */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <p className="font-orbitron font-bold" style={{ fontSize: '8px', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.25)', marginBottom: '4px' }}>SHOW DE LUZES</p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {ANIMATION_STYLES.map(opt => {
+                              const active = raffleAnimationStyle === opt.id;
+                              return (
+                                <button
+                                  key={opt.id}
+                                  onClick={() => setRaffleAnimationStyle(opt.id)}
+                                  onMouseEnter={e => setHoveredAnimStyle({ id: opt.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() })}
+                                  onMouseLeave={() => setHoveredAnimStyle(null)}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                    padding: '10px 12px', borderRadius: '10px',
+                                    background: active ? `${themeColor}15` : 'rgba(255,255,255,0.03)',
+                                    border: active ? `1.5px solid ${themeColor}` : '1px solid rgba(255,255,255,0.06)',
+                                    cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left',
+                                  }}
+                                >
+                                  <div style={{
+                                    width: 32, height: 32, borderRadius: 8,
+                                    background: `${themeColor}20`, border: `1px solid ${themeColor}40`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    flexShrink: 0, fontSize: 16,
+                                  }}>
+                                    {opt.emoji}
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p className="font-orbitron font-bold" style={{ fontSize: '9px', letterSpacing: '0.1em', color: active ? '#fff' : 'rgba(255,255,255,0.55)' }}>
+                                      {opt.name}
+                                    </p>
+                                    <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.35)', lineHeight: 1.3, marginTop: 1 }}>
+                                      {opt.desc}
+                                    </p>
+                                  </div>
+                                  {active && (
+                                    <span className="font-orbitron font-bold" style={{ fontSize: 9, letterSpacing: '0.15em', color: themeColor, flexShrink: 0 }}>ATIVO</span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
               )}
             </AnimatePresence>,
             document.body

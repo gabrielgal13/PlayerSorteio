@@ -30,14 +30,14 @@ export default function CommunityBar() {
       >
         {/* Marketing image slot */}
         <div
-          className="relative flex-shrink-0 flex items-center justify-center"
-          style={{ width: '160px', background: 'rgba(0,0,0,0.45)' }}
+          className="relative flex-shrink-0 flex items-center justify-center overflow-hidden"
+          style={{ width: '160px', alignSelf: 'stretch', background: 'rgba(0,0,0,0.45)' }}
         >
           {marketingImg ? (
             <img
               src={marketingImg}
               alt="marketing"
-              style={{ maxWidth: 148, maxHeight: 84, objectFit: 'contain' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           ) : (
             <span className="font-rajdhani text-white/15 tracking-widest uppercase text-xs">

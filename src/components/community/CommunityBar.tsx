@@ -37,7 +37,7 @@ export default function CommunityBar() {
             <img
               src={marketingImg}
               alt="marketing"
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              style={{ width: '160px', height: '96px', objectFit: 'cover' }}
             />
           ) : (
             <span className="font-rajdhani text-white/15 tracking-widest uppercase text-xs">

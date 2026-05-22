@@ -6,6 +6,9 @@ import { useStore } from '@/store/useStore';
 import ParticipantImport from '@/components/participants/ParticipantImport';
 import PrizeManager, { type PrizeManagerHandle } from '@/components/prizes/PrizeManager';
 import MascotContainer from '@/components/mascots/MascotContainer';
+import MascotNakelas from '@/components/mascots/MascotNakelas';
+import MascotShadowGanjaK from '@/components/mascots/MascotShadowGanjaK';
+import StageBase from '@/components/mascots/StageBase';
 import { EventHeader, TemaPanel, FundoPanel, MusicaPanel, EfeitosPanel } from '@/components/raffle/EventActions';
 import ConfettiExplosion from '@/components/effects/ConfettiExplosion';
 import FireworksExplosion from '@/components/effects/FireworksExplosion';
@@ -1524,6 +1527,79 @@ export default function EventConfig() {
 
                     {/* Body */}
                     <div style={{ padding: '0 24px 24px', overflowY: 'auto', maxHeight: 'calc(90vh - 80px)' }}>
+
+                      {/* ── STAGE PREVIEW SCREEN ─────────────────────── */}
+                      <div style={{
+                        position: 'relative',
+                        height: '258px',
+                        borderRadius: '10px',
+                        overflow: 'hidden',
+                        background: '#000',
+                        marginBottom: '20px',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}>
+                        {/* Wallpaper */}
+                        <img
+                          src={eventBackground ?? '/fundo-stage1.png'}
+                          alt=""
+                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.55, pointerEvents: 'none' }}
+                        />
+                        {/* Gradient overlay */}
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 55%, rgba(0,0,0,0.35) 100%)', pointerEvents: 'none' }} />
+
+                        {/* Show de luzes — AnimationPreviewMini scaled to fill */}
+                        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
+                          <div style={{ transform: 'scale(4.5)', transformOrigin: 'center' }}>
+                            <AnimationPreviewMini style={raffleAnimationStyle} />
+                          </div>
+                        </div>
+
+                        {/* StageBase — scaled platform at bottom */}
+                        <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%) scale(0.32)', transformOrigin: 'bottom center', pointerEvents: 'none', zIndex: 2 }}>
+                          <div style={{ position: 'relative', width: 720, height: 460 }}>
+                            <StageBase />
+                          </div>
+                        </div>
+
+                        {/* Mascot — scaled at bottom center */}
+                        <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%) scale(0.50)', transformOrigin: 'bottom center', width: 300, height: 380, pointerEvents: 'none', zIndex: 3 }}>
+                          {currentUser?.mascot === 'careca'
+                            ? <MascotNakelas status="idle" isExploding={false} isScorched={false} winnerNumber={null} />
+                            : <MascotShadowGanjaK status="idle" isExploding={false} isScorched={false} winnerNumber={null} />
+                          }
+                        </div>
+
+                        {/* Spin effect — centered upper area */}
+                        <div style={{ position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: 5 }}>
+                          {spinEffect === 'numbers'   && <PreviewNumbers />}
+                          {spinEffect === 'name-reel' && <PreviewNameReel />}
+                          {spinEffect === 'wheel'     && <PreviewWheel />}
+                          {spinEffect === 'matrix'    && <PreviewMatrix />}
+                        </div>
+
+                        {/* SIMULAÇÃO label */}
+                        <div style={{ position: 'absolute', top: 10, left: 12, zIndex: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: 'rgba(0,0,0,0.55)', borderRadius: 5, border: '1px solid rgba(255,255,255,0.07)' }}>
+                          <motion.div
+                            animate={{ opacity: [1, 0.15, 1] }}
+                            transition={{ duration: 1.2, repeat: Infinity }}
+                            style={{ width: 5, height: 5, borderRadius: '50%', background: '#FF3A3A', boxShadow: '0 0 5px #FF3A3A' }}
+                          />
+                          <span className="font-orbitron" style={{ fontSize: 8, letterSpacing: '0.28em', color: 'rgba(255,255,255,0.38)' }}>
+                            SIMULAÇÃO AO VIVO
+                          </span>
+                        </div>
+
+                        {/* Active effect badge */}
+                        {eventEffect !== 'none' && (
+                          <div style={{ position: 'absolute', top: 10, right: 12, zIndex: 10, padding: '2px 8px', background: 'rgba(0,0,0,0.55)', borderRadius: 5, border: `1px solid ${themeColor}33` }}>
+                            <span className="font-rajdhani font-bold" style={{ fontSize: 10, color: themeColor, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                              {eventEffect === 'confetti' ? '🎊 CONFETTI' : eventEffect === 'fireworks' ? '🎆 FOGOS' : '✨ SPARKLES'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {/* ── END STAGE PREVIEW ───────────────────────── */}
+
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', alignItems: 'start' }}>
 
                         {/* SONOROS */}

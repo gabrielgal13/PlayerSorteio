@@ -590,6 +590,10 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   }, [filterWeapon, filterStatTrak, filterExteriors, filterMinPrice, filterMaxPrice]);
 
 
+  const totalPscSpent = prizes
+    .filter(p => !p.skipPsc)
+    .reduce((sum, p) => sum + (p.pscValue ?? 0) * p.quantity, 0);
+
   const alreadySpent = prizes
     .filter(p => (!editingId || p.id !== editingId) && !p.skipPsc)
     .reduce((sum, p) => sum + (p.pscValue ?? 0) * p.quantity, 0);
@@ -2442,14 +2446,19 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                           onClick={e => e.stopPropagation()}
                         >
                           <button
-                            onClick={() => updatePrize(prize.id, { quantity: Math.max(0, prize.quantity - 1) })}
+                            onClick={() => updatePrize(prize.id, { quantity: Math.max(1, prize.quantity - 1) })}
                             style={{ width: '20px', height: '20px', borderRadius: '5px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', lineHeight: 1, flexShrink: 0 }}
                           >−</button>
                           <span className="font-orbitron font-bold" style={{ fontSize: '13px', color: '#FFD166', minWidth: '22px', textAlign: 'center' }}>{prize.quantity}</span>
-                          <button
-                            onClick={() => updatePrize(prize.id, { quantity: prize.quantity + 1 })}
-                            style={{ width: '20px', height: '20px', borderRadius: '5px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', lineHeight: 1, flexShrink: 0 }}
-                          >+</button>
+                          {(() => {
+                            const canAdd = !isAffiliate || prize.skipPsc || prize.pscValue == null || pscBalance - totalPscSpent - prize.pscValue >= 0;
+                            return (
+                              <button
+                                onClick={() => { if (canAdd) updatePrize(prize.id, { quantity: prize.quantity + 1 }); }}
+                                style={{ width: '20px', height: '20px', borderRadius: '5px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: canAdd ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.15)', cursor: canAdd ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', lineHeight: 1, flexShrink: 0 }}
+                              >+</button>
+                            );
+                          })()}
                         </div>
                       </div>
                       {isAffiliate && prize.pscValue != null && (

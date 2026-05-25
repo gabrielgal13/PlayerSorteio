@@ -7,6 +7,11 @@ interface Props {
   onBack: () => void;
 }
 
+const WORLDGUESSR_URL =
+  process.env.NODE_ENV === 'production'
+    ? 'https://worldguesser.playerskins.com.br/'
+    : 'http://localhost:3002';
+
 export default function WorldGuessr({ onBack }: Props) {
   const { chatMessages, chatRegistrationActive, setChatRegistrationRequested } = useStore();
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -61,7 +66,7 @@ export default function WorldGuessr({ onBack }: Props) {
           transition={{ duration: 0.4 }}
         >
           <iframe
-            src="http://localhost:3002"
+            src={WORLDGUESSR_URL}
             title="WorldGuessr"
             className="w-full h-full border-0"
             allow="fullscreen; geolocation"

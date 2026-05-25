@@ -266,7 +266,7 @@ const SETTINGS_TABS: { id: SettingsTab; label: string; subtitle: string }[] = [
 ];
 
 export default function EventConfig() {
-  const { participants, prizes, setRaffleStage, currentUser, twitchConfig, setTwitchConfig, saveConfigToDB, setYoutubeChannel: saveYoutubeChannel, setKickChannel: saveKickChannel, excelImportEnabled, setExcelImportEnabled, excelPrizesImportEnabled, setExcelPrizesImportEnabled, autoRevealWinner, setAutoRevealWinner, spinEffect, setSpinEffect, socoChuteModeEnabled, setSocoChuteModeEnabled, raffleTriggerMode, setRaffleTriggerMode, autoRoundDelay, setAutoRoundDelay, chatTriggerCount, setChatTriggerCount, chatTriggerCommand, setChatTriggerCommand, themeColor, eventBackground, setEventBackground, eventMusic, setEventMusic, eventEffect, setEventEffect, raffleAnimationStyle, setRaffleAnimationStyle, isAffiliate } = useStore();
+  const { participants, prizes, setRaffleStage, currentUser, twitchConfig, setTwitchConfig, saveConfigToDB, setYoutubeChannel: saveYoutubeChannel, setKickChannel: saveKickChannel, excelImportEnabled, setExcelImportEnabled, excelPrizesImportEnabled, setExcelPrizesImportEnabled, autoRevealWinner, setAutoRevealWinner, spinEffect, setSpinEffect, socoChuteModeEnabled, setSocoChuteModeEnabled, raffleTriggerMode, setRaffleTriggerMode, autoRoundDelay, setAutoRoundDelay, chatTriggerCount, setChatTriggerCount, chatTriggerCommand, setChatTriggerCommand, themeColor, eventBackground, setEventBackground, eventMusic, setEventMusic, eventEffect, setEventEffect, raffleAnimationStyle, setRaffleAnimationStyle, isAffiliate, pscBalance } = useStore();
   const prizeManagerRef = useRef<PrizeManagerHandle>(null);
   const overlayMouseDownRef = useRef(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -425,6 +425,8 @@ export default function EventConfig() {
 
   useEffect(() => setMounted(true), []);
   const hasAvailablePrizes = prizes.some(p => p.quantity > 0);
+  const totalPscCost = prizes.filter(p => !p.skipPsc).reduce((sum, p) => sum + (p.pscValue ?? 0) * p.quantity, 0);
+  const hasPscOverflow = isAffiliate && totalPscCost > pscBalance;
   const canStart = participants.length > 0 && hasAvailablePrizes;
 
   const startLabel = !canStart
@@ -1839,21 +1841,24 @@ export default function EventConfig() {
               <div style={{
                 padding: '10px 14px',
                 borderRadius: '12px',
-                background: 'rgba(10,6,28,0.85)',
-                border: '1px solid rgba(160,80,255,0.35)',
-                boxShadow: '0 -4px 24px rgba(160,80,255,0.18), 0 8px 24px rgba(0,0,0,0.5)',
+                background: hasPscOverflow ? 'rgba(28,6,6,0.92)' : 'rgba(10,6,28,0.85)',
+                border: `1px solid ${hasPscOverflow ? 'rgba(255,60,60,0.5)' : 'rgba(160,80,255,0.35)'}`,
+                boxShadow: hasPscOverflow ? '0 -4px 24px rgba(255,60,60,0.18), 0 8px 24px rgba(0,0,0,0.5)' : '0 -4px 24px rgba(160,80,255,0.18), 0 8px 24px rgba(0,0,0,0.5)',
                 backdropFilter: 'blur(12px)',
               }}>
                 <div className="flex items-center justify-between">
-                  <span className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(160,80,255,0.7)' }}>
+                  <span className="font-orbitron text-xs tracking-widest" style={{ color: hasPscOverflow ? 'rgba(255,100,100,0.9)' : 'rgba(160,80,255,0.7)' }}>
                     TOTAL
                   </span>
                   <div className="flex items-center gap-1.5">
+                    {hasPscOverflow && (
+                      <span className="font-rajdhani font-bold text-xs" style={{ color: '#FF6060' }}>Saldo insuficiente</span>
+                    )}
                     <span style={{ fontSize: '13px' }}>💠</span>
-                    <span className="font-orbitron font-bold text-sm" style={{ color: '#00FFA3' }}>
-                      {prizes.reduce((sum, p) => sum + (p.pscValue ?? 0) * p.quantity, 0).toLocaleString('pt-BR')}
+                    <span className="font-orbitron font-bold text-sm" style={{ color: hasPscOverflow ? '#FF6060' : '#00FFA3' }}>
+                      {totalPscCost.toLocaleString('pt-BR')}
                     </span>
-                    <span className="font-rajdhani text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>PSC</span>
+                    <span className="font-rajdhani text-xs tracking-widest" style={{ color: hasPscOverflow ? 'rgba(255,100,100,0.5)' : 'rgba(255,255,255,0.3)' }}>PSC</span>
                   </div>
                 </div>
               </div>

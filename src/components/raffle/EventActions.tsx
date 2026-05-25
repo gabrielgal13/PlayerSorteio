@@ -129,8 +129,31 @@ function useEventActionsState(): EventActionsState {
 
 /* ─── EventHeader — the green "EVENTO ATUAL" strip ──────────────────────── */
 export function EventHeader() {
-  const { themeColor, currentUser } = useStore();
+  const { themeColor, currentUser, participants, prizes } = useStore();
   const displayName = (currentUser?.displayName || currentUser?.username || 'EVENTO').toUpperCase();
+
+  const hasParticipants = participants.length > 0;
+  const hasPrizes = prizes.some(p => p.quantity > 0);
+
+  const status = !hasParticipants
+    ? { label: 'AGUARDANDO PARTICIPANTES', color: '#FF9500', icon: (
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+          <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+        </svg>
+      )}
+    : !hasPrizes
+      ? { label: 'AGUARDANDO PRÊMIOS', color: '#A050FF', icon: (
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+            <path d="M20 12v-2h-2V8c0-1.1-.9-2-2-2h-2V4h-4v2H8C6.9 6 6 6.9 6 8v2H4v2h2v8h12v-8h2zm-6 0H10V8h4v4z"/>
+            <rect x="1" y="8" width="22" height="4" rx="1" opacity="0"/>
+            <path d="M12 2C10.3 2 8 3.5 8 6h8c0-2.5-2.3-4-4-4z"/>
+          </svg>
+        )}
+      : { label: 'TUDO PRONTO', color: '#00FFA3', icon: (
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+          </svg>
+        )};
 
   return (
     <div
@@ -175,6 +198,44 @@ export function EventHeader() {
         </h2>
         <CrownIcon color={themeColor} />
       </div>
+
+      {/* Status badge */}
+      <motion.div
+        key={status.label}
+        initial={{ opacity: 0, y: -4, scale: 0.92 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
+        className="relative flex items-center"
+        style={{
+          gap: '6px',
+          padding: '4px 12px 4px 8px',
+          borderRadius: '999px',
+          background: `${status.color}18`,
+          border: `1px solid ${status.color}45`,
+          boxShadow: hasPrizes && hasParticipants
+            ? `0 0 14px ${status.color}35, 0 0 28px ${status.color}18`
+            : `0 0 8px ${status.color}20`,
+        }}
+      >
+        {/* Pulsing dot */}
+        <motion.div
+          animate={{ opacity: [1, 0.25, 1], scale: [1, 0.8, 1] }}
+          transition={{ repeat: Infinity, duration: hasPrizes && hasParticipants ? 2 : 1.2, ease: 'easeInOut' }}
+          style={{
+            width: '6px', height: '6px',
+            borderRadius: '50%',
+            background: status.color,
+            boxShadow: `0 0 6px ${status.color}`,
+            flexShrink: 0,
+          }}
+        />
+        <span style={{ color: status.color, display: 'flex', alignItems: 'center' }}>
+          {status.icon}
+        </span>
+        <span className="font-orbitron font-bold" style={{ fontSize: '8.5px', letterSpacing: '0.08em', color: status.color }}>
+          {status.label}
+        </span>
+      </motion.div>
 
       <p className="font-rajdhani tracking-wide relative" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>
         Prepare tudo e deixe sua comunidade no hype!

@@ -7,7 +7,39 @@
       "Bash(Get-ChildItem -Path . -Recurse -Name)",
       "Bash(rtk find *)",
       "Bash(rtk ls *)",
-      "Bash(Select-String \"PrizeManager\")"
+      "Bash(Select-String \"PrizeManager\")",
+      "Bash(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\app\\\\api\\\\admin\\\\streamers\\\\[username]\")",
+      "Bash(Write-Host \"done\")",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/next build *)",
+      "Bash(node -e ' *)",
+      "Bash(node_modules/.bin/next dev *)",
+      "Bash(curl -s http://localhost:3001/api/admin/streamers)",
+      "Bash(rtk curl *)",
+      "Bash(taskkill /PID 17172 /F)",
+      "PowerShell(Stop-Process -Id 17172 -Force -ErrorAction SilentlyContinue)",
+      "Bash(mkdir -p \"c:/Users/DDK/Downloads/SorteioPlayerSKIN/raffle-app/src/app/api/admin/marketing/[id]\" && mkdir -p \"c:/Users/DDK/Downloads/SorteioPlayerSKIN/raffle-app/src/app/api/marketing/random\")",
+      "Bash(rtk npx *)",
+      "Bash(Select-String -Pattern \"EventActions\")",
+      "Bash(Get-ChildItem -Recurse -Filter \"*.ts\" -o \"*.tsx\" -o \"*.js\" -o \"*.jsx\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\DDK\\\\Downloads\\\\\" -Directory -Filter \"*pokemon*\" -ErrorAction SilentlyContinue | Select-Object FullName)",
+      "Read(//c/Users/DDK/Downloads/SorteioPlayerSKIN/pokemon-showdown-master/**)",
+      "Bash(rtk read *)",
+      "Bash(bot\")",
+      "PowerShell(node \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\pokemon-showdown-master\\\\pokemon-showdown\" start 2>&1)",
+      "Bash(node build *)",
+      "Bash(node \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\pokemon-showdown-master\\\\build\")",
+      "Bash(taskkill /F /IM node.exe /FI \"WINDOWTITLE eq pokemon*\")",
+      "Bash(node \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\pokemon-showdown-master\\\\pokemon-showdown\" start --no-watchconfig)",
+      "Bash(Start-Sleep -Seconds 3)",
+      "Bash(Get-Content \"C:\\\\Users\\\\DDK\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-DDK-Downloads-SorteioPlayerSKIN-raffle-app\\\\b2aa02b9-2fd8-4e82-b4b2-04c5c9c3f72f\\\\tasks\\\\brln2yr27.output\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -Last 5)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\streamers",
+      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\streamers\\[username]",
+      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\marketing",
+      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\pokemon-showdown-master\\server"
     ]
   }
 }

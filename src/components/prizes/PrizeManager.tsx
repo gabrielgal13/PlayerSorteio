@@ -1549,7 +1549,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
                                       <svg width="10" height="14" viewBox="0 0 9 12" fill="#00E5FF"><path d="M4.5 0L9 5L4.5 12L0 5Z"/></svg>
                                       <span className="font-orbitron font-bold" style={{ fontSize: '17px', color: '#00E5FF' }}>
-                                        {usdToBrl ? pscNum(item.min_price_usd) : `$${item.min_price_usd.toFixed(2)}`}
+                                        {usdToBrl ? pscNum(item.min_price_usd) : '...'}
                                       </span>
                                     </div>
                                   )}
@@ -2436,7 +2436,21 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                         {prize.description && (
                           <p className="font-rajdhani text-sm text-white/35 truncate">{prize.description}</p>
                         )}
-                        <p className="font-rajdhani text-sm text-neon-gold/50">Quantidade: {prize.quantity}</p>
+                        <div
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}
+                          onMouseDown={e => e.stopPropagation()}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => updatePrize(prize.id, { quantity: Math.max(0, prize.quantity - 1) })}
+                            style={{ width: '20px', height: '20px', borderRadius: '5px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', lineHeight: 1, flexShrink: 0 }}
+                          >−</button>
+                          <span className="font-orbitron font-bold" style={{ fontSize: '13px', color: '#FFD166', minWidth: '22px', textAlign: 'center' }}>{prize.quantity}</span>
+                          <button
+                            onClick={() => updatePrize(prize.id, { quantity: prize.quantity + 1 })}
+                            style={{ width: '20px', height: '20px', borderRadius: '5px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', lineHeight: 1, flexShrink: 0 }}
+                          >+</button>
+                        </div>
                       </div>
                       {isAffiliate && prize.pscValue != null && (
                         <div className="flex-shrink-0">

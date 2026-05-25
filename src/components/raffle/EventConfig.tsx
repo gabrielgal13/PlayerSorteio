@@ -197,100 +197,6 @@ function PreviewMatrix() {
   );
 }
 
-function AnimStylePopup({ style, anchorRect }: { style: RaffleAnimationStyle; anchorRect: DOMRect }) {
-  const opt    = ANIMATION_STYLES.find(s => s.id === style)!;
-  const popupW = 200;
-  const popupH = 178;
-  const gap    = 12;
-  let left = anchorRect.left - popupW - gap;
-  if (left < 8) left = anchorRect.right + gap;
-  const top = Math.min(
-    anchorRect.top + anchorRect.height / 2 - popupH / 2,
-    window.innerHeight - popupH - 8,
-  );
-
-  return createPortal(
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9, x: -8 }}
-      animate={{ opacity: 1, scale: 1, x: 0 }}
-      exit={{ opacity: 0, scale: 0.88, x: -6 }}
-      transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-      style={{
-        position: 'fixed', left, top,
-        width: popupW, height: popupH,
-        borderRadius: 16,
-        background: 'linear-gradient(145deg, rgba(10,14,40,0.98), rgba(5,8,22,0.98))',
-        border: `1px solid rgba(${ACCENT_RGB},0.3)`,
-        boxShadow: `0 0 40px rgba(${ACCENT_RGB},0.12), 0 8px 32px rgba(0,0,0,0.8)`,
-        zIndex: 9999, overflow: 'hidden',
-        backdropFilter: 'blur(12px)',
-        pointerEvents: 'none',
-        display: 'flex', flexDirection: 'column',
-      }}
-    >
-      <div style={{ height: 2, background: `linear-gradient(90deg, ${ACCENT}, rgba(${ACCENT_RGB},0.2))` }} />
-      <div style={{ background: '#000', flex: 1 }}>
-        <AnimationPreviewMini style={style} />
-      </div>
-      <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <p className="font-orbitron font-bold" style={{ fontSize: 9, letterSpacing: '0.15em', color: '#fff' }}>
-          {opt.emoji} {opt.name}
-        </p>
-        <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.35)', marginTop: 2, lineHeight: 1.3 }}>
-          {opt.desc}
-        </p>
-      </div>
-    </motion.div>,
-    document.body,
-  );
-}
-
-function SpinEffectPopup({ effect, anchorRect }: { effect: RaffleSpinEffect; anchorRect: DOMRect }) {
-  const popupW = 220;
-  const popupH = 210;
-  const gap = 12;
-  let left = anchorRect.left - popupW - gap;
-  if (left < 8) left = anchorRect.right + gap;
-  const top = Math.min(
-    anchorRect.top + anchorRect.height / 2 - popupH / 2,
-    window.innerHeight - popupH - 8
-  );
-
-  return createPortal(
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9, x: -8 }}
-      animate={{ opacity: 1, scale: 1, x: 0 }}
-      exit={{ opacity: 0, scale: 0.88, x: -6 }}
-      transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-      style={{
-        position: 'fixed',
-        left,
-        top,
-        width: popupW,
-        height: popupH,
-        borderRadius: 16,
-        background: 'linear-gradient(145deg, rgba(10,14,40,0.98), rgba(5,8,22,0.98))',
-        border: `1px solid rgba(${ACCENT_RGB},0.3)`,
-        boxShadow: `0 0 40px rgba(${ACCENT_RGB},0.12), 0 8px 32px rgba(0,0,0,0.8)`,
-        zIndex: 9999,
-        overflow: 'hidden',
-        backdropFilter: 'blur(12px)',
-        pointerEvents: 'none',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <div style={{ height: 2, background: `linear-gradient(90deg, ${ACCENT}, rgba(${ACCENT_RGB},0.2))` }} />
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {effect === 'numbers'   && <PreviewNumbers />}
-        {effect === 'name-reel' && <PreviewNameReel />}
-        {effect === 'wheel'     && <PreviewWheel />}
-        {effect === 'matrix'    && <PreviewMatrix />}
-      </div>
-    </motion.div>,
-    document.body
-  );
-}
 
 function StructureTooltip({ lines, color }: { lines: string[]; color: string }) {
   const [visible, setVisible] = useState(false);
@@ -383,9 +289,13 @@ export default function EventConfig() {
   const [kickError, setKickError] = useState('');
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showEfeitos, setShowEfeitos] = useState(false);
-  const [hoveredSpinEffect, setHoveredSpinEffect] = useState<{ id: RaffleSpinEffect; rect: DOMRect } | null>(null);
-  const [hoveredAnimStyle, setHoveredAnimStyle] = useState<{ id: RaffleAnimationStyle; rect: DOMRect } | null>(null);
   const [previewEffect, setPreviewEffect] = useState<EventEffectType>('none');
+  const [stagePreviewSpin, setStagePreviewSpin] = useState<RaffleSpinEffect | null>(null);
+  const [previewSpinKey, setPreviewSpinKey] = useState(0);
+  const [stagePreviewStyle, setStagePreviewStyle] = useState<RaffleAnimationStyle | null>(null);
+  const [previewStyleKey, setPreviewStyleKey] = useState(0);
+  const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const styleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileRef = useRef<HTMLInputElement>(null!);
   const music = useEventMusic();
 
@@ -546,20 +456,6 @@ export default function EventConfig() {
           e.target.value = '';
         }}
       />
-      {/* Spin effect hover popup */}
-      <AnimatePresence>
-        {hoveredSpinEffect && mounted && (
-          <SpinEffectPopup key={hoveredSpinEffect.id} effect={hoveredSpinEffect.id} anchorRect={hoveredSpinEffect.rect} />
-        )}
-      </AnimatePresence>
-
-      {/* Animation style hover popup */}
-      <AnimatePresence>
-        {hoveredAnimStyle && mounted && (
-          <AnimStylePopup key={hoveredAnimStyle.id} style={hoveredAnimStyle.id} anchorRect={hoveredAnimStyle.rect} />
-        )}
-      </AnimatePresence>
-
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0, position: 'relative', zIndex: 10 }}>
         <div>
@@ -1547,12 +1443,21 @@ export default function EventConfig() {
                         {/* Gradient overlay */}
                         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 55%, rgba(0,0,0,0.35) 100%)', pointerEvents: 'none' }} />
 
-                        {/* Show de luzes — AnimationPreviewMini scaled to fill */}
-                        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
-                          <div style={{ transform: 'scale(4.5)', transformOrigin: 'center' }}>
-                            <AnimationPreviewMini style={raffleAnimationStyle} />
-                          </div>
-                        </div>
+                        {/* Show de luzes — AnimationPreviewMini scaled to fill — só no hover */}
+                        <AnimatePresence>
+                          {stagePreviewStyle && (
+                            <motion.div
+                              key={previewStyleKey}
+                              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                              transition={{ duration: 0.25 }}
+                              style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}
+                            >
+                              <div style={{ transform: 'scale(4.5)', transformOrigin: 'center' }}>
+                                <AnimationPreviewMini style={stagePreviewStyle} />
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
 
                         {/* StageBase — scaled platform at bottom */}
                         <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%) scale(0.32)', transformOrigin: 'bottom center', pointerEvents: 'none', zIndex: 2 }}>
@@ -1569,13 +1474,21 @@ export default function EventConfig() {
                           }
                         </div>
 
-                        {/* Spin effect — centered upper area */}
-                        <div style={{ position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: 5 }}>
-                          {spinEffect === 'numbers'   && <PreviewNumbers />}
-                          {spinEffect === 'name-reel' && <PreviewNameReel />}
-                          {spinEffect === 'wheel'     && <PreviewWheel />}
-                          {spinEffect === 'matrix'    && <PreviewMatrix />}
-                        </div>
+                        {/* Spin effect — só no hover */}
+                        <AnimatePresence>
+                          {stagePreviewSpin && (
+                            <motion.div
+                              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              style={{ position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)', pointerEvents: 'none', zIndex: 5 }}
+                            >
+                              {stagePreviewSpin === 'numbers'   && <PreviewNumbers key={previewSpinKey} />}
+                              {stagePreviewSpin === 'name-reel' && <PreviewNameReel key={previewSpinKey} />}
+                              {stagePreviewSpin === 'wheel'     && <PreviewWheel key={previewSpinKey} />}
+                              {stagePreviewSpin === 'matrix'    && <PreviewMatrix key={previewSpinKey} />}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
 
                         {/* SIMULAÇÃO label */}
                         <div style={{ position: 'absolute', top: 10, left: 12, zIndex: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: 'rgba(0,0,0,0.55)', borderRadius: 5, border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -1618,8 +1531,16 @@ export default function EventConfig() {
                                 <button
                                   key={opt.id}
                                   onClick={() => setSpinEffect(opt.id)}
-                                  onMouseEnter={e => setHoveredSpinEffect({ id: opt.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() })}
-                                  onMouseLeave={() => setHoveredSpinEffect(null)}
+                                  onMouseEnter={() => {
+                                    if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
+                                    setPreviewSpinKey(k => k + 1);
+                                    setStagePreviewSpin(opt.id);
+                                    spinTimerRef.current = setTimeout(() => setStagePreviewSpin(null), 3000);
+                                  }}
+                                  onMouseLeave={() => {
+                                    if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
+                                    setStagePreviewSpin(null);
+                                  }}
                                   style={{
                                     display: 'flex', alignItems: 'center', gap: '10px',
                                     padding: '10px 12px', borderRadius: '10px',
@@ -1669,8 +1590,16 @@ export default function EventConfig() {
                                 <button
                                   key={opt.id}
                                   onClick={() => setRaffleAnimationStyle(opt.id)}
-                                  onMouseEnter={e => setHoveredAnimStyle({ id: opt.id, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() })}
-                                  onMouseLeave={() => setHoveredAnimStyle(null)}
+                                  onMouseEnter={() => {
+                                    if (styleTimerRef.current) clearTimeout(styleTimerRef.current);
+                                    setPreviewStyleKey(k => k + 1);
+                                    setStagePreviewStyle(opt.id);
+                                    styleTimerRef.current = setTimeout(() => setStagePreviewStyle(null), 3000);
+                                  }}
+                                  onMouseLeave={() => {
+                                    if (styleTimerRef.current) clearTimeout(styleTimerRef.current);
+                                    setStagePreviewStyle(null);
+                                  }}
                                   style={{
                                     display: 'flex', alignItems: 'center', gap: '10px',
                                     padding: '10px 12px', borderRadius: '10px',

@@ -27,7 +27,8 @@ export async function GET() {
       if (!rate2 || isNaN(rate2)) throw new Error('Fallback inválido');
       return Response.json({ rate: rate2, source: 'USD-BRL (comercial, fallback)', fetchedAt: new Date().toISOString() });
     } catch {
-      return Response.json({ error: String(err) }, { status: 500 });
+      // fallback hardcoded: retorna taxa aproximada para não deixar o cliente sem valor
+      return Response.json({ rate: 5.8, source: 'hardcoded (fallback)', fetchedAt: new Date().toISOString() });
     }
   }
 }

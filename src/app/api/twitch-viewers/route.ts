@@ -1,5 +1,7 @@
 import type { NextRequest } from 'next/server';
 
+export const runtime = 'edge';
+
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
 async function getAppToken(): Promise<string> {

@@ -1,5 +1,7 @@
 import type { NextRequest } from 'next/server';
 
+export const runtime = 'edge';
+
 export async function GET(req: NextRequest) {
   const handle = req.nextUrl.searchParams.get('handle');
   if (!handle) return Response.json({ error: 'handle required' }, { status: 400 });

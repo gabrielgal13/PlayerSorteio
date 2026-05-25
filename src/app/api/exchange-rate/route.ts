@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 // Busca cotação do dólar turismo via AwesomeAPI (BRLT = Real Turismo)
 export async function GET() {
   try {

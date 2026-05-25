@@ -46,6 +46,20 @@ export async function GET(
     return NextResponse.json(list?.items ?? []);
   }
 
+  // GET /api/admin/marketing/random — public endpoint (rewritten from /api/marketing/random)
+  if (seg0 === 'marketing' && seg1 === 'random') {
+    try {
+      const images = await prisma.$queryRaw<Array<{ id: number; imageData: string; label: string | null }>>`
+        SELECT id, "imageData", label FROM "MarketingImage" WHERE active = true
+      `;
+      if (images.length === 0) return NextResponse.json(null);
+      const random = images[Math.floor(Math.random() * images.length)];
+      return NextResponse.json(random);
+    } catch {
+      return NextResponse.json(null);
+    }
+  }
+
   // GET /api/admin/marketing
   if (seg0 === 'marketing' && !seg1) {
     try {

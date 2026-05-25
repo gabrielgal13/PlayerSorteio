@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
   },
   serverExternalPackages: ['@prisma/client', '@prisma/adapter-pg'],
   turbopack: {},
+  async rewrites() {
+    return [
+      { source: '/api/marketing/random', destination: '/api/admin/marketing/random' },
+    ];
+  },
 };
 
 export default nextConfig;

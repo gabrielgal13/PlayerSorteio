@@ -29,6 +29,15 @@ const STATUS: Record<DeliveryStatus, {
       </svg>
     ),
   },
+  aguardando_tradelink: {
+    label: 'AGUARD. TRADE LINK', sub: 'Esperando DM do vencedor',
+    color: '#A855F7', bg: 'rgba(168,85,247,0.1)', border: 'rgba(168,85,247,0.3)',
+    icon: (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+      </svg>
+    ),
+  },
   entregue: {
     label: 'ENTREGUE', sub: null,
     color: '#00FFA3', bg: 'rgba(0,255,163,0.1)', border: 'rgba(0,255,163,0.3)',
@@ -40,15 +49,16 @@ const STATUS: Record<DeliveryStatus, {
   },
 };
 
-const STATUS_ORDER: DeliveryStatus[] = ['novo', 'tradelocked', 'entregue'];
+const STATUS_ORDER: DeliveryStatus[] = ['novo', 'aguardando_tradelink', 'tradelocked', 'entregue'];
 
 type FilterKey = 'all' | DeliveryStatus;
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all',         label: 'TODOS'       },
-  { key: 'entregue',    label: 'ENTREGUES'   },
-  { key: 'tradelocked', label: 'TRADE LOCK'  },
-  { key: 'novo',        label: 'PENDENTES'   },
+  { key: 'all',                  label: 'TODOS'         },
+  { key: 'aguardando_tradelink', label: 'AGUARD. LINK'  },
+  { key: 'entregue',             label: 'ENTREGUES'     },
+  { key: 'tradelocked',          label: 'TRADE LOCK'    },
+  { key: 'novo',                 label: 'PENDENTES'     },
 ];
 
 /* ── Helpers ───────────────────────────────────────────────────────── */
@@ -228,10 +238,11 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
     });
 
   const counts: Record<FilterKey, number> = {
-    all:         dayHistory.length,
-    entregue:    dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'entregue').length,
-    tradelocked: dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'tradelocked').length,
-    novo:        dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'novo').length,
+    all:                  dayHistory.length,
+    entregue:             dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'entregue').length,
+    tradelocked:          dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'tradelocked').length,
+    aguardando_tradelink: dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'aguardando_tradelink').length,
+    novo:                 dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'novo').length,
   };
 
   const pct = dayHistory.length > 0

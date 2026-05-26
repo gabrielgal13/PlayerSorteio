@@ -583,6 +583,7 @@ export default function RaffleEngine() {
     chatTriggerCount,
     chatTriggerCommand,
     raffleAnimationStyle,
+    setPendingMarketplaceDelivery,
   } = useStore();
 
   const eventMusic = useEventMusic();
@@ -653,7 +654,7 @@ export default function RaffleEngine() {
     const fetchViewers = async () => {
       const [twitchResult, kickResult, ytResult] = await Promise.allSettled([
         hasTwitch
-          ? fetch(`/api/twitch-viewers?channel=${encodeURIComponent(twitchConfig.channel)}`).then(r => r.json())
+          ? fetch(`/api/twitch/viewers?channel=${encodeURIComponent(twitchConfig.channel)}`).then(r => r.json())
           : Promise.resolve({ isLive: false, viewerCount: 0 }),
         hasKick
           ? fetch(`/api/kick-viewers/${encodeURIComponent(kickChannel!)}`).then(r => r.json())
@@ -845,6 +846,28 @@ export default function RaffleEngine() {
       confirmed: true,
     });
     if (isAffiliate && activePrize.pscValue && !activePrize.skipPsc) deductPSC(activePrize.pscValue);
+
+    // Dispara compra automática no Waxpeer
+    const winnerName = currentWinner.name;
+    const prizeName = activePrize.name;
+    const username = currentUser?.username;
+    if (username) {
+      setPendingMarketplaceDelivery({ winnerName, prizeName, waxpeerItemId: null, status: 'buying' });
+      fetch('/api/marketplace/buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prizeName, winnerName, username }),
+      })
+        .then(r => r.json())
+        .then((data: { ok: boolean; waxpeerItemId?: string }) => {
+          if (data.ok && data.waxpeerItemId) {
+            setPendingMarketplaceDelivery({ winnerName, prizeName, waxpeerItemId: data.waxpeerItemId, status: 'waiting_tradelink' });
+          } else {
+            setPendingMarketplaceDelivery(null);
+          }
+        })
+        .catch(() => setPendingMarketplaceDelivery(null));
+    }
     const newQty = activePrize.quantity - 1;
     updatePrize(activePrize.id, { quantity: newQty });
     if (newQty <= 0) {

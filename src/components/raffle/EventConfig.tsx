@@ -334,7 +334,7 @@ export default function EventConfig() {
     setTwitchVerifying(true);
     setTwitchError('');
     try {
-      const res = await fetch(`/api/twitch-channel/${encodeURIComponent(channel)}`);
+      const res = await fetch(`/api/twitch/channel/${encodeURIComponent(channel)}`);
       const data = await res.json();
       if (!res.ok) { setTwitchError(data.error || 'Canal não encontrado'); return; }
       setTwitchConfig({ channel: data.login });

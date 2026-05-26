@@ -68,7 +68,7 @@ export type RaffleStatus =
   | 'timeout'
   | 'reroll';
 
-export type DeliveryStatus = 'novo' | 'tradelocked' | 'entregue';
+export type DeliveryStatus = 'novo' | 'tradelocked' | 'entregue' | 'aguardando_tradelink';
 
 export interface RaffleResult {
   id: string;
@@ -104,6 +104,13 @@ export interface ChatMessage {
   color: string;
   source: 'twitch' | 'kick' | 'youtube';
   timestamp: number;
+}
+
+export interface PendingMarketplaceDelivery {
+  winnerName: string;
+  prizeName: string;
+  waxpeerItemId: string | null;
+  status: 'buying' | 'waiting_tradelink' | 'withdrawing' | 'done' | 'failed';
 }
 
 export interface AppState {
@@ -154,4 +161,5 @@ export interface AppState {
   mascotDeadThisRound: boolean;
   autoRevealWinner: boolean;
   raffleAnimationStyle: RaffleAnimationStyle;
+  pendingMarketplaceDelivery: PendingMarketplaceDelivery | null;
 }

@@ -56,7 +56,8 @@ export const ModelName = {
   PrizeListItem: 'PrizeListItem',
   PscTransaction: 'PscTransaction',
   MarketingImage: 'MarketingImage',
-  RaffleHistory: 'RaffleHistory'
+  RaffleHistory: 'RaffleHistory',
+  AppConfig: 'AppConfig'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -180,10 +181,20 @@ export const RaffleHistoryScalarFieldEnum = {
   timestamp: 'timestamp',
   tradeLink: 'tradeLink',
   deliveryStatus: 'deliveryStatus',
-  tradeLockAt: 'tradeLockAt'
+  tradeLockAt: 'tradeLockAt',
+  marketplaceItemId: 'marketplaceItemId'
 } as const
 
 export type RaffleHistoryScalarFieldEnum = (typeof RaffleHistoryScalarFieldEnum)[keyof typeof RaffleHistoryScalarFieldEnum]
+
+
+export const AppConfigScalarFieldEnum = {
+  key: 'key',
+  value: 'value',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AppConfigScalarFieldEnum = (typeof AppConfigScalarFieldEnum)[keyof typeof AppConfigScalarFieldEnum]
 
 
 export const SortOrder = {

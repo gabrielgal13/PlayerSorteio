@@ -268,7 +268,7 @@ export default function TwitchPanel() {
 
         // Fetch viewer count to set mascot HP
         try {
-          const vRes = await fetch(`/api/twitch-viewers?channel=${encodeURIComponent(channel)}`);
+          const vRes = await fetch(`/api/twitch/viewers?channel=${encodeURIComponent(channel)}`);
           if (vRes.ok) {
             const vData = await vRes.json();
             initMascotHp(vData.viewerCount ?? 0);

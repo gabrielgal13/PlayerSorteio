@@ -5,12 +5,13 @@ import { useStore } from '@/store/useStore';
 import type { DeliveryStatus } from '@/types';
 
 const STATUS: Record<DeliveryStatus, { label: string; color: string; bg: string; border: string }> = {
-  novo:        { label: 'NOVO',            color: '#00E5FF', bg: 'rgba(0,229,255,0.12)',   border: 'rgba(0,229,255,0.35)'   },
-  tradelocked: { label: 'TRADE LOCK 7D',   color: '#FFD166', bg: 'rgba(255,209,102,0.12)', border: 'rgba(255,209,102,0.35)' },
-  entregue:    { label: 'ENTREGUE',        color: '#00FFA3', bg: 'rgba(0,255,163,0.12)',   border: 'rgba(0,255,163,0.35)'   },
+  novo:                 { label: 'NOVO',              color: '#00E5FF', bg: 'rgba(0,229,255,0.12)',   border: 'rgba(0,229,255,0.35)'   },
+  aguardando_tradelink: { label: 'AGUARD. TRADE LINK', color: '#A855F7', bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.35)' },
+  tradelocked:          { label: 'TRADE LOCK 7D',     color: '#FFD166', bg: 'rgba(255,209,102,0.12)', border: 'rgba(255,209,102,0.35)' },
+  entregue:             { label: 'ENTREGUE',           color: '#00FFA3', bg: 'rgba(0,255,163,0.12)',   border: 'rgba(0,255,163,0.35)'   },
 };
 
-const STATUS_ORDER: DeliveryStatus[] = ['novo', 'tradelocked', 'entregue'];
+const STATUS_ORDER: DeliveryStatus[] = ['novo', 'aguardando_tradelink', 'tradelocked', 'entregue'];
 
 interface Props {
   onClose: () => void;

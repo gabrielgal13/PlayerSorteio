@@ -47,3 +47,8 @@ export type MarketingImage = Prisma.MarketingImageModel
  * 
  */
 export type RaffleHistory = Prisma.RaffleHistoryModel
+/**
+ * Model AppConfig
+ * 
+ */
+export type AppConfig = Prisma.AppConfigModel

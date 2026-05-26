@@ -33,13 +33,21 @@
       "Bash(node \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\pokemon-showdown-master\\\\pokemon-showdown\" start --no-watchconfig)",
       "Bash(Start-Sleep -Seconds 3)",
       "Bash(Get-Content \"C:\\\\Users\\\\DDK\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-DDK-Downloads-SorteioPlayerSKIN-raffle-app\\\\b2aa02b9-2fd8-4e82-b4b2-04c5c9c3f72f\\\\tasks\\\\brln2yr27.output\" -ErrorAction SilentlyContinue)",
-      "Bash(Select-Object -Last 5)"
+      "Bash(Select-Object -Last 5)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(npx.cmd prisma *)",
+      "Bash(npx.cmd tsc *)",
+      "Bash(mkdir -p \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\app\\\\api\\\\twitch\\\\[[...path]]\")",
+      "Bash(rm -rf \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\app\\\\api\\\\twitch-viewers\")",
+      "Bash(rm -rf \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\app\\\\api\\\\twitch-channel\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\streamers",
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\streamers\\[username]",
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\marketing",
-      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\pokemon-showdown-master\\server"
+      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\pokemon-showdown-master\\server",
+      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\twitch"
     ]
   }
 }

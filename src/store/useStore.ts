@@ -5,7 +5,7 @@ import type {
   AppState, StreamerProfile, Participant, Prize,
   RaffleResult, RaffleStatus, AppTab, TwitchConfig, ChatMessage,
   EventMusicTrack, EventEffectType, RaffleSpinEffect, RaffleTriggerMode, DeliveryStatus,
-  RaffleAnimationStyle,
+  RaffleAnimationStyle, PendingMarketplaceDelivery,
 } from '@/types';
 
 interface AppActions {
@@ -64,6 +64,7 @@ interface AppActions {
   setChatTriggerCount: (n: number) => void;
   setChatTriggerCommand: (cmd: string) => void;
   setRaffleAnimationStyle: (style: RaffleAnimationStyle) => void;
+  setPendingMarketplaceDelivery: (d: PendingMarketplaceDelivery | null) => void;
 }
 
 const THEME_BY_MASCOT: Record<string, string> = {
@@ -116,6 +117,7 @@ export const useStore = create<AppState & AppActions>()(
       mascotDeadThisRound: false,
       autoRevealWinner: true,
       raffleAnimationStyle: 'balada' as RaffleAnimationStyle,
+      pendingMarketplaceDelivery: null,
       socoChuteModeEnabled: true,
       raffleTriggerMode: 'manual' as RaffleTriggerMode,
       autoRoundDelay: 30,
@@ -243,6 +245,8 @@ export const useStore = create<AppState & AppActions>()(
           }).catch(() => {});
         }
       },
+
+      setPendingMarketplaceDelivery: (pendingMarketplaceDelivery) => set({ pendingMarketplaceDelivery }),
 
       setRaffleAnimationStyle: (raffleAnimationStyle) => {
         set({ raffleAnimationStyle });

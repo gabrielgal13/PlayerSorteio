@@ -124,4 +124,13 @@ model RaffleHistory {
   tradeLink      String?
   deliveryStatus String  @default("novo")
   tradeLockAt    DateTime?
+
+  // Marketplace (Waxpeer)
+  marketplaceItemId String?
+}
+
+model AppConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

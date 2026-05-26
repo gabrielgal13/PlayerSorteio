@@ -3,6 +3,14 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { withdrawItem } from '@/lib/waxpeer';
 
+// Resolve a origin real mesmo atrás de proxy/Vercel
+function getOrigin(req: NextRequest): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+  const proto = req.headers.get('x-forwarded-proto') ?? 'https';
+  const host  = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? 'localhost:3000';
+  return `${proto}://${host}`;
+}
+
 // ─── Twitch App Token (cached) ───────────────────────────────────────────────
 let cachedAppToken: { value: string; expiresAt: number } | null = null;
 
@@ -93,7 +101,7 @@ export async function GET(
 
   // ── EventSub OAuth start ──────────────────────────────────────────────────
   if (seg0 === 'eventsub' && seg1 === 'auth') {
-    const origin = req.nextUrl.origin;
+    const origin = getOrigin(req);
     const authUrl = new URL('https://id.twitch.tv/oauth2/authorize');
     authUrl.searchParams.set('client_id', process.env.TWITCH_CLIENT_ID!);
     authUrl.searchParams.set('redirect_uri', `${origin}/api/twitch/eventsub/callback`);
@@ -108,7 +116,7 @@ export async function GET(
     const code = req.nextUrl.searchParams.get('code');
     if (!code) return NextResponse.json({ error: 'OAuth cancelado' }, { status: 400 });
 
-    const origin = req.nextUrl.origin;
+    const origin = getOrigin(req);
     const tokenRes = await fetch('https://id.twitch.tv/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -173,7 +181,7 @@ export async function POST(
     const secret = process.env.TWITCH_EVENTSUB_SECRET;
     if (!secret) return NextResponse.json({ error: 'TWITCH_EVENTSUB_SECRET não configurada' }, { status: 503 });
 
-    const callbackUrl = `${req.nextUrl.origin}/api/twitch/eventsub`;
+    const callbackUrl = `${getOrigin(req)}/api/twitch/eventsub`;
 
     const subRes = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
       method: 'POST',

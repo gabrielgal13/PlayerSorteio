@@ -151,8 +151,12 @@ export async function GET(
       `<!DOCTYPE html><html><body style="font-family:monospace;padding:2rem;background:#0a0a0a;color:#00E5FF">
       <h2>✅ Bot conectado!</h2>
       <p>Conta: <strong>${bot.display_name}</strong> (${bot.login})</p>
-      <p>Agora acesse <code>POST /api/twitch/eventsub/setup</code> no painel admin para registrar o webhook.</p>
-      <p><a href="/api/twitch/eventsub/setup" style="color:#00FFA3">Clique aqui para registrar automaticamente →</a></p>
+      <p>Clique no botão abaixo para registrar o webhook EventSub:</p>
+      <form method="POST" action="/api/twitch/eventsub/setup">
+        <button type="submit" style="background:#00FFA3;color:#000;font-family:monospace;font-weight:bold;padding:0.75rem 1.5rem;border:none;border-radius:6px;cursor:pointer;font-size:1rem;">
+          Registrar Webhook →
+        </button>
+      </form>
       </body></html>`,
       { headers: { 'Content-Type': 'text/html' } },
     );

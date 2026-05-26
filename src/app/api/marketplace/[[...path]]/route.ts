@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma';
 import { checkStock, buyItem, withdrawItem } from '@/lib/waxpeer';
 
 // GET  /api/marketplace/stock?item=AK-47%20%7C%20Redline%20(Field-Tested)
-// GET  /api/marketplace/bot-config
 // POST /api/marketplace/buy      { prizeName, winnerName, username }
 // POST /api/marketplace/withdraw { waxpeerItemId, tradeLink, username, winnerName }
 
@@ -23,16 +22,6 @@ export async function GET(
     } catch (e) {
       return NextResponse.json({ ok: false, error: String(e) }, { status: 502 });
     }
-  }
-
-  if (route === 'bot-config') {
-    // Retorna credenciais do bot Twitch para o client criar a conexão de whispers
-    const username = req.headers.get('x-session-username');
-    if (!username) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-    return NextResponse.json({
-      botUsername: process.env.TWITCH_BOT_USERNAME ?? '',
-      botToken: process.env.TWITCH_BOT_TOKEN ?? '',
-    });
   }
 
   return NextResponse.json({ error: 'Not found' }, { status: 404 });

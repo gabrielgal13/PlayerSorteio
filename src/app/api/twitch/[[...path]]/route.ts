@@ -178,20 +178,22 @@ export async function POST(
   // ── Criar assinatura EventSub (chamado uma vez pelo admin) ────────────────
   if (seg0 === 'eventsub' && seg1 === 'setup') {
     const bot = await getBotConfig();
-    if (!bot.token || !bot.userId) {
+    if (!bot.userId) {
       return NextResponse.json({ error: 'Bot não autenticado. Acesse /api/twitch/eventsub/auth primeiro.' }, { status: 400 });
     }
 
     const secret = process.env.TWITCH_EVENTSUB_SECRET;
     if (!secret) return NextResponse.json({ error: 'TWITCH_EVENTSUB_SECRET não configurada' }, { status: 503 });
 
+    // EventSub webhook subscriptions requerem App Access Token (client credentials), não user token
+    const appToken = await getAppToken();
     const callbackUrl = `${getOrigin(req)}/api/twitch/eventsub`;
 
     const subRes = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
       method: 'POST',
       headers: {
         'Client-Id': process.env.TWITCH_CLIENT_ID!,
-        Authorization: `Bearer ${bot.token}`,
+        Authorization: `Bearer ${appToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

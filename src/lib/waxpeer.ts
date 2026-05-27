@@ -58,11 +58,29 @@ function extractPrice(r: Record<string, unknown>): number {
   return 0;
 }
 
+const WEAR_STRINGS: Record<string, string> = {
+  FN: '(Factory New)',
+  MW: '(Minimal Wear)',
+  FT: '(Field-Tested)',
+  WW: '(Well-Worn)',
+  BS: '(Battle-Scarred)',
+};
+
 /** Busca items no marketplace com o mais barato por nome (para browse/autocomplete).
- *  minPriceMilli: preço mínimo em milli-dólares (ex: 3000 = $3.00). */
-export async function browseItems(search: string, limit = 200, minPriceMilli = 0): Promise<WaxpeerPriceItem[]> {
+ *  Preços em milli-dólares: 1000 = $1.00 = 1 PSC. */
+export async function browseItems(
+  search: string,
+  limit = 200,
+  minPriceMilli = 0,
+  maxPriceMilli = 0,
+  wears: string[] = [],
+  weaponType = '',
+  statTrakOnly = false,
+): Promise<WaxpeerPriceItem[]> {
   const params: Record<string, string> = { game: 'csgo', sort: 'price', order: 'asc' };
-  if (search) params.search = search;
+  // Passa weapon type ou search para a Waxpeer tentar filtrar no lado deles
+  const waxpeerSearch = weaponType || search;
+  if (waxpeerSearch) params.search = waxpeerSearch;
   const res = await fetch(url('/prices', params));
   if (!res.ok) return [];
   const data = await res.json() as { success?: boolean; items?: unknown };
@@ -83,21 +101,35 @@ export async function browseItems(search: string, limit = 200, minPriceMilli = 0
     }));
   }
 
-  // Deduplica por nome mantendo o mais barato, filtra só armas e preço mínimo
+  // Deduplica por nome mantendo o mais barato, aplica filtros de preço
   const map = new Map<string, WaxpeerPriceItem>();
   for (const item of raw) {
     if (!isWeaponSkin(item.name)) continue;
     if (minPriceMilli > 0 && item.price < minPriceMilli) continue;
+    if (maxPriceMilli > 0 && item.price > maxPriceMilli) continue;
     const ex = map.get(item.name);
     if (!ex || item.price < ex.price) map.set(item.name, item);
   }
 
   let results = Array.from(map.values()).sort((a, b) => a.price - b.price);
 
-  // Filtro substring garantido no servidor (funciona mesmo se a Waxpeer ignorar search)
+  // Filtros garantidos no servidor (não dependem do suporte da Waxpeer)
   if (search) {
     const q = search.toLowerCase();
     results = results.filter(item => item.name.toLowerCase().includes(q));
+  }
+  if (weaponType && weaponType !== 'Todos') {
+    results = results.filter(item => {
+      const clean = item.name.startsWith('StatTrak™ ') ? item.name.slice(10) : item.name;
+      const base = clean.startsWith('★ ') ? clean.slice(2) : clean;
+      return base.startsWith(weaponType + ' |') || base === weaponType;
+    });
+  }
+  if (wears.length > 0) {
+    results = results.filter(item => wears.some(w => item.name.includes(WEAR_STRINGS[w] ?? '')));
+  }
+  if (statTrakOnly) {
+    results = results.filter(item => item.name.startsWith('StatTrak™ ') || item.name.includes('★ StatTrak™'));
   }
 
   return results.slice(0, limit);

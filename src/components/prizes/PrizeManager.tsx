@@ -109,10 +109,6 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   // Create saved list modal
   const [showCreateListModal, setShowCreateListModal] = useState(false);
 
-  // Exchange rate state
-  const [usdToBrl, setUsdToBrl] = useState<number | null>(null);
-  const [rateLoading, setRateLoading] = useState(false);
-
   // Admin products (custom products assigned by admin for this streamer)
   const [adminProducts, setAdminProducts] = useState<Array<{
     id: string; name: string; description: string | null; imageUrl: string | null;
@@ -137,6 +133,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   const filterBtnRef = useRef<HTMLDivElement>(null);
   const isSavingRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const basePoolRef = useRef<CS2Item[]>([]);
 
   // Filter state
   const [showFilters, setShowFilters] = useState(false);
@@ -252,21 +249,6 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     e.target.value = '';
   };
 
-  // ── Exchange rate ─────────────────────────────────────────────────────────────
-  const fetchRate = useCallback(async () => {
-    setRateLoading(true);
-    try {
-      const res = await fetch('/api/exchange-rate');
-      if (!res.ok) throw new Error('HTTP error');
-      const data = await res.json() as { rate?: number; error?: string };
-      if (data.rate) setUsdToBrl(data.rate);
-    } catch {
-      // mantém cotação anterior se já tinha uma
-    } finally {
-      setRateLoading(false);
-    }
-  }, []);
-
   const loadAdminProducts = useCallback(async () => {
     try {
       const res = await fetch('/api/streamer/admin-products');
@@ -310,7 +292,6 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     setQuickListDismissed(false);
     setConfirmClearStaged(false);
     setShowForm(true);
-    fetchRate();
     fetchSavedLists();
     loadMostUsedSkins();
     loadAdminProducts();
@@ -337,22 +318,9 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
       pscValue: prize.pscValue,
       skipPsc: prize.skipPsc ?? false,
     });
-    setWaxpeerPool([]);
     setSuggestions([]);
     setShowForm(true);
-    fetchRate();
     fetchSavedLists();
-    if (prize.name.length >= 2) {
-      setTimeout(async () => {
-        setWaxpeerLoading(true);
-        try {
-          const res = await fetch(`/api/marketplace/browse?search=${encodeURIComponent(prize.name)}`);
-          const data = await res.json() as { ok: boolean; items?: CS2Item[] };
-          setWaxpeerPool(data.ok ? (data.items ?? []) : []);
-        } catch { setWaxpeerPool([]); }
-        finally { setWaxpeerLoading(false); }
-      }, 0);
-    }
   };
 
   useImperativeHandle(ref, () => ({ openAdd, openEdit }));
@@ -449,15 +417,14 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     if (filterExteriors.length > 0) {
       items = items.filter(item => filterExteriors.includes(parseItemName(item.name).wearAbbr));
     }
-    if (usdToBrl) {
-      const minP = filterMinPrice !== '' ? Number(filterMinPrice) : 0;
-      const maxP = filterMaxPrice !== '' ? Number(filterMaxPrice) : Infinity;
-      if (minP > 0 || maxP < Infinity) {
-        items = items.filter(item => {
-          const psc = Math.ceil((item.price / 1000) * usdToBrl);
-          return psc >= minP && psc <= maxP;
-        });
-      }
+    // PSC = USD: 1 PSC = $1 = 1000 milli-dólares
+    const minP = filterMinPrice !== '' ? Number(filterMinPrice) : 0;
+    const maxP = filterMaxPrice !== '' ? Number(filterMaxPrice) : Infinity;
+    if (minP > 0 || maxP < Infinity) {
+      items = items.filter(item => {
+        const psc = Math.ceil(item.price / 1000);
+        return psc >= minP && psc <= maxP;
+      });
     }
     if (query.trim().length > 0) {
       const q = query.toLowerCase();
@@ -465,7 +432,26 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     }
     setTotalMatches(items.length);
     setSuggestions(items.slice(0, 200));
-  }, [waxpeerPool, filterWeapon, filterStatTrak, filterExteriors, filterMinPrice, filterMaxPrice, usdToBrl]);
+  }, [waxpeerPool, filterWeapon, filterStatTrak, filterExteriors, filterMinPrice, filterMaxPrice]);
+
+  const fetchWithFilters = useCallback(async (query: string) => {
+    setWaxpeerLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', '200');
+      const minMilli = filterMinPrice !== '' ? Math.max(3000, Number(filterMinPrice) * 1000) : 3000;
+      params.set('min_price', String(minMilli));
+      if (filterMaxPrice !== '') params.set('max_price', String(Number(filterMaxPrice) * 1000));
+      if (filterWeapon !== 'Todos') params.set('weapon_type', filterWeapon);
+      if (query) params.set('search', query);
+      filterExteriors.forEach(w => params.append('wears', w));
+      if (filterStatTrak) params.set('stattrak', 'true');
+      const res = await fetch(`/api/marketplace/browse?${params}`);
+      const data = await res.json() as { ok: boolean; items?: CS2Item[] };
+      if (data.ok && data.items) setWaxpeerPool(data.items);
+    } catch { /* mantém pool atual */ }
+    finally { setWaxpeerLoading(false); }
+  }, [filterWeapon, filterMinPrice, filterMaxPrice, filterExteriors, filterStatTrak]);
 
   const handleNameChange = (value: string) => {
     setForm(f => ({ ...f, name: value, imageUrl: '', pscValue: undefined }));
@@ -481,33 +467,23 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     const localResults = waxpeerPool.filter(item => item.name.toLowerCase().includes(q));
     setSuggestions(localResults.slice(0, 200));
     setTotalMatches(localResults.length);
-    // Busca na API em paralelo para resultados mais completos
-    debounceRef.current = setTimeout(async () => {
-      setWaxpeerLoading(true);
-      try {
-        const res = await fetch(`/api/marketplace/browse?search=${encodeURIComponent(value)}&min_price=3000`);
-        const data = await res.json() as { ok: boolean; items?: CS2Item[] };
-        if (data.ok && data.items) setWaxpeerPool(data.items);
-      } catch { /* mantém resultados locais */ }
-      finally { setWaxpeerLoading(false); }
-    }, 400);
+    // Busca na API com todos os filtros ativos (atualiza pool após debounce)
+    debounceRef.current = setTimeout(() => fetchWithFilters(value), 400);
   };
 
   const handleNameFocus = () => { /* fetch is triggered on change, not focus */ };
 
-  const pscNum = (usd: number) => Math.ceil(usd * (usdToBrl ?? 1));
-  // Waxpeer /v1/prices retorna preço em milli-dólares (28650 = $28.65), por isso /1000
-  const pscFromCents = (milliUsd: number) => Math.ceil((milliUsd / 1000) * (usdToBrl ?? 1));
+  const pscNum = (usd: number) => Math.ceil(usd); // 1 PSC = $1 USD
+  // Waxpeer /v1/prices retorna milli-dólares (28650 = $28.65 = 29 PSC)
+  const pscFromMilliUsd = (milliUsd: number) => Math.ceil(milliUsd / 1000);
 
   const applySuggestion = (item: CS2Item) => {
-    const computed = usdToBrl ? pscFromCents(item.price) : undefined;
-    if (computed !== undefined) {
-      const newCost = computed * form.quantity;
-      if (pscBalance - alreadySpent - stagedCost - newCost < 0) {
-        setSaveError('Saldo insuficiente para adicionar este prêmio.');
-        setTimeout(() => setSaveError(null), 4000);
-        return;
-      }
+    const computed = pscFromMilliUsd(item.price);
+    const newCost = computed * form.quantity;
+    if (pscBalance - alreadySpent - stagedCost - newCost < 0) {
+      setSaveError('Saldo insuficiente para adicionar este prêmio.');
+      setTimeout(() => setSaveError(null), 4000);
+      return;
     }
     setStaged(s => {
       const idx = s.findIndex(p => p.name === item.name);
@@ -610,6 +586,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
         const data = await res.json() as { ok: boolean; items?: CS2Item[] };
         if (!cancelled && data.ok && data.items?.length) {
           const shuffled = [...data.items].sort(() => Math.random() - 0.5);
+          basePoolRef.current = shuffled;
           setWaxpeerPool(shuffled);
         }
       } catch { /* silencioso */ }
@@ -1135,7 +1112,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
                               {mostUsedSkins.slice(0, mostUsedVisible).map((item, idx) => {
                                 const { weapon, skin, wearAbbr } = parseItemName(item.name);
-                                const psc = usdToBrl ? pscFromCents(item.price) : null;
+                                const psc = pscFromMilliUsd(item.price);
                                 const sz = ROW_SIZE[Math.min(Math.floor(idx / 4), ROW_SIZE.length - 1)];
                                 return (
                                   <div
@@ -1398,7 +1375,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                               {activeFilterCount > 0 && (
                                 <button
                                   type="button"
-                                  onClick={() => { setFilterWeapon('Todos'); setFilterMinPrice(''); setFilterMaxPrice(''); setFilterExteriors([]); setFilterStatTrak(false); }}
+                                  onClick={() => { setFilterWeapon('Todos'); setFilterMinPrice(''); setFilterMaxPrice(''); setFilterExteriors([]); setFilterStatTrak(false); if (basePoolRef.current.length > 0) setWaxpeerPool(basePoolRef.current); }}
                                   style={{
                                     padding: '6px 12px', borderRadius: '8px', cursor: 'pointer',
                                     background: 'transparent', border: '1px solid rgba(255,255,255,0.12)',
@@ -1411,7 +1388,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                               )}
                               <button
                                 type="button"
-                                onClick={() => { setShowFilters(false); if (!form.imageUrl) refreshSuggestions(form.name); }}
+                                onClick={() => { setShowFilters(false); setFilterPopupPos(null); fetchWithFilters(form.name); }}
                                 style={{
                                   padding: '6px 14px', borderRadius: '8px', cursor: 'pointer',
                                   background: 'rgba(0,229,255,0.15)', border: '1px solid rgba(0,229,255,0.4)',
@@ -1600,7 +1577,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
                                       <svg width="10" height="14" viewBox="0 0 9 12" fill="#00E5FF"><path d="M4.5 0L9 5L4.5 12L0 5Z"/></svg>
                                       <span className="font-orbitron font-bold" style={{ fontSize: '17px', color: '#00E5FF' }}>
-                                        {usdToBrl ? pscFromCents(item.price) : '...'}
+                                        {pscFromMilliUsd(item.price)}
                                       </span>
                                     </div>
                                   )}
@@ -2147,7 +2124,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                     {activeFilterCount > 0 && (
                       <button
                         type="button"
-                        onClick={() => { setFilterWeapon('Todos'); setFilterMinPrice(''); setFilterMaxPrice(''); setFilterExteriors([]); setFilterStatTrak(false); }}
+                        onClick={() => { setFilterWeapon('Todos'); setFilterMinPrice(''); setFilterMaxPrice(''); setFilterExteriors([]); setFilterStatTrak(false); if (basePoolRef.current.length > 0) setWaxpeerPool(basePoolRef.current); }}
                         style={{ padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontFamily: 'var(--font-orbitron)', letterSpacing: '0.08em' }}
                       >
                         LIMPAR TUDO

@@ -77,11 +77,15 @@ export async function GET(
     const search = req.nextUrl.searchParams.get('search') ?? '';
     const limit = req.nextUrl.searchParams.get('limit') ? Number(req.nextUrl.searchParams.get('limit')) : 200;
     const minPrice = req.nextUrl.searchParams.get('min_price') ? Number(req.nextUrl.searchParams.get('min_price')) : 0;
+    const maxPrice = req.nextUrl.searchParams.get('max_price') ? Number(req.nextUrl.searchParams.get('max_price')) : 0;
+    const wears = req.nextUrl.searchParams.getAll('wears');
+    const weaponType = req.nextUrl.searchParams.get('weapon_type') ?? '';
+    const statTrakOnly = req.nextUrl.searchParams.get('stattrak') === 'true';
     if (!process.env.WAXPEER_API_KEY) {
       return NextResponse.json({ ok: false, items: [], error: 'WAXPEER_API_KEY não configurada' });
     }
     try {
-      const items = await browseItems(search, limit, minPrice);
+      const items = await browseItems(search, limit, minPrice, maxPrice, wears, weaponType, statTrakOnly);
       return NextResponse.json({ ok: true, items }, {
         headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' },
       });

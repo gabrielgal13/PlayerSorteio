@@ -309,8 +309,6 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     setSaveError(null);
     setQuickListDismissed(false);
     setConfirmClearStaged(false);
-    setSuggestions([]);
-    setTotalMatches(0);
     setShowForm(true);
     fetchRate();
     fetchSavedLists();
@@ -606,7 +604,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
         const res = await fetch('/api/marketplace/browse?search=&limit=100');
         const data = await res.json() as { ok: boolean; items?: CS2Item[] };
         if (!cancelled && data.ok && data.items?.length) {
-          const shuffled = [...data.items].sort(() => Math.random() - 0.5).slice(0, 30);
+          const shuffled = [...data.items].sort(() => Math.random() - 0.5);
           setWaxpeerPool(shuffled);
         }
       } catch { /* silencioso */ }
@@ -620,6 +618,12 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     refreshSuggestions(form.name);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [waxpeerPool, filterWeapon, filterStatTrak, filterExteriors, filterMinPrice, filterMaxPrice]);
+
+  // Quando o modal abre, popula sugestões com o pool já carregado
+  useEffect(() => {
+    if (showForm) refreshSuggestions(form.name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showForm]);
 
 
   const totalPscSpent = prizes

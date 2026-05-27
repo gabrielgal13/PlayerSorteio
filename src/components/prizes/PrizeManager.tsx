@@ -309,7 +309,6 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     setSaveError(null);
     setQuickListDismissed(false);
     setConfirmClearStaged(false);
-    setWaxpeerPool([]);
     setSuggestions([]);
     setTotalMatches(0);
     setShowForm(true);
@@ -317,20 +316,6 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     fetchSavedLists();
     loadMostUsedSkins();
     loadAdminProducts();
-    // Pré-carrega 30 skins aleatórias para não iniciar vazio
-    setTimeout(async () => {
-      setWaxpeerLoading(true);
-      try {
-        const res = await fetch('/api/marketplace/browse?search=&limit=100');
-        const data = await res.json() as { ok: boolean; items?: CS2Item[] };
-        if (data.ok && data.items?.length) {
-          // Embaralha e pega 30 aleatórios
-          const shuffled = [...data.items].sort(() => Math.random() - 0.5).slice(0, 30);
-          setWaxpeerPool(shuffled);
-        }
-      } catch { /* silencioso */ }
-      finally { setWaxpeerLoading(false); }
-    }, 0);
   };
 
   const closeForm = () => {
@@ -612,6 +597,23 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   useEffect(() => {
     fetchSavedLists();
   }, [fetchSavedLists]);
+
+  // Pré-carrega pool do Waxpeer no mount para que o modal abra já com skins
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/marketplace/browse?search=&limit=100');
+        const data = await res.json() as { ok: boolean; items?: CS2Item[] };
+        if (!cancelled && data.ok && data.items?.length) {
+          const shuffled = [...data.items].sort(() => Math.random() - 0.5).slice(0, 30);
+          setWaxpeerPool(shuffled);
+        }
+      } catch { /* silencioso */ }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Re-filtra quando o pool muda (novo fetch) ou quando filtros mudam
   useEffect(() => {

@@ -508,7 +508,8 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   const handleNameFocus = () => { /* fetch is triggered on change, not focus */ };
 
   const pscNum = (usd: number) => Math.ceil(usd * (usdToBrl ?? 1));
-  const pscFromCents = (cents: number) => Math.ceil((cents / 100) * (usdToBrl ?? 1));
+  // Waxpeer /v1/prices retorna preço em milli-dólares (28650 = $28.65), por isso /1000
+  const pscFromCents = (milliUsd: number) => Math.ceil((milliUsd / 1000) * (usdToBrl ?? 1));
 
   const applySuggestion = (item: CS2Item) => {
     const computed = usdToBrl ? pscFromCents(item.price) : undefined;

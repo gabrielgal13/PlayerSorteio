@@ -564,6 +564,11 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     fetchSavedLists();
   }, [fetchSavedLists]);
 
+  // Pré-carrega produtos exclusivos quando o usuário loga
+  useEffect(() => {
+    if (currentUser?.username) loadAdminProducts();
+  }, [currentUser?.username, loadAdminProducts]);
+
   // Pré-carrega pool do Waxpeer no mount para que o modal abra já com skins
   useEffect(() => {
     let cancelled = false;

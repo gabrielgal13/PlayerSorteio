@@ -857,8 +857,13 @@ export default function RaffleEngine() {
       fetch('/api/twitch/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel, winnerName }),
-      }).catch(() => {});
+        body: JSON.stringify({ channel, winnerName, prizeName }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (!data?.ok) console.warn('[twitch/notify] bot não enviou:', data);
+        })
+        .catch(err => console.warn('[twitch/notify] erro de rede:', err));
     }
 
     // Dispara compra automática no Waxpeer (apenas afiliados)

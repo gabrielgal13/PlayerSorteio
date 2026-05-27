@@ -218,7 +218,7 @@ export async function POST(
 
   // ── Notificar ganhador no chat ────────────────────────────────────────────
   if (seg0 === 'notify' && !seg1) {
-    const { channel, winnerName } = await req.json() as { channel: string; winnerName: string };
+    const { channel, winnerName, prizeName } = await req.json() as { channel: string; winnerName: string; prizeName?: string };
     if (!channel || !winnerName) {
       return NextResponse.json({ ok: false, error: 'channel e winnerName são obrigatórios' }, { status: 400 });
     }
@@ -243,6 +243,15 @@ export async function POST(
       return NextResponse.json({ ok: false, error: `Canal "${channel}" não encontrado` });
     }
 
+    // Varia o conteúdo pra escapar do filtro anti-duplicata da Twitch (drop silencioso de mensagens similares em sequência)
+    const greetings = ['parabéns', 'gg', 'level up', 'show de bola', 'topzera', 'mandou bem', 'que sorte hein', 'boa demais'];
+    const emojis = ['🎉', '🏆', '🎁', '⭐', '🔥', '💎', '🚀', '👑'];
+    const g = greetings[Math.floor(Math.random() * greetings.length)];
+    const e1 = emojis[Math.floor(Math.random() * emojis.length)];
+    const e2 = emojis[Math.floor(Math.random() * emojis.length)];
+    const prizePart = prizeName ? ` levou ${prizeName.replace(/\s*\(.*?\)/g, '').trim()}` : '';
+    const message = `${e1} @${winnerName} ${g}!${prizePart} ${e2}`;
+
     const msgRes = await fetch('https://api.twitch.tv/helix/chat/messages', {
       method: 'POST',
       headers: {
@@ -250,10 +259,15 @@ export async function POST(
         Authorization: `Bearer ${botToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: botUserId, message: `@${winnerName} parabéns!` }),
+      body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: botUserId, message }),
     });
-    const msgData = await msgRes.json();
-    return NextResponse.json({ ok: msgRes.ok, twitchResponse: msgData });
+    const msgData = await msgRes.json() as { data?: { is_sent?: boolean; drop_reason?: { code?: string; message?: string } }[] };
+    const sent = msgData.data?.[0];
+    // Twitch retorna 200 mesmo quando dropa — precisa checar is_sent
+    if (msgRes.ok && sent && sent.is_sent === false) {
+      return NextResponse.json({ ok: false, dropped: true, reason: sent.drop_reason, message, twitchResponse: msgData });
+    }
+    return NextResponse.json({ ok: msgRes.ok, sent: sent?.is_sent ?? null, message, twitchResponse: msgData });
   }
 
   // ── Criar assinatura EventSub (chamado uma vez pelo admin) ────────────────

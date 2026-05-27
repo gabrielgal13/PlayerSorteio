@@ -455,14 +455,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   const handleNameChange = (value: string) => {
     setForm(f => ({ ...f, name: value, imageUrl: '', pscValue: undefined }));
     setActiveSuggestion(-1);
-    // Pool completo já carregado — só filtrar local, sem chamada à API
-    const q = value.toLowerCase().trim();
-    const pool = basePoolRef.current.length > 0 ? basePoolRef.current : waxpeerPool;
-    const results = q.length === 0
-      ? pool
-      : pool.filter(item => item.name.toLowerCase().includes(q));
-    setSuggestions(results.slice(0, 200));
-    setTotalMatches(results.length);
+    refreshSuggestions(value);
   };
 
   const handleNameFocus = () => { /* fetch is triggered on change, not focus */ };

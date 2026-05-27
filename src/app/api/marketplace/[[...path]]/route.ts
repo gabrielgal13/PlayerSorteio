@@ -75,11 +75,12 @@ export async function GET(
 
   if (route === 'browse') {
     const search = req.nextUrl.searchParams.get('search') ?? '';
+    const limit = req.nextUrl.searchParams.get('limit') ? Number(req.nextUrl.searchParams.get('limit')) : 200;
     if (!process.env.WAXPEER_API_KEY) {
       return NextResponse.json({ ok: false, items: [], error: 'WAXPEER_API_KEY não configurada' });
     }
     try {
-      const items = await browseItems(search);
+      const items = await browseItems(search, limit);
       return NextResponse.json({ ok: true, items }, {
         headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' },
       });

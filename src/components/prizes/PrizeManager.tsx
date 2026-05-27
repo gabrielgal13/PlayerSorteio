@@ -317,6 +317,16 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     fetchSavedLists();
     loadMostUsedSkins();
     loadAdminProducts();
+    // Pré-carrega 30 skins baratas para não iniciar vazio
+    setTimeout(async () => {
+      setWaxpeerLoading(true);
+      try {
+        const res = await fetch('/api/marketplace/browse?search=&limit=30');
+        const data = await res.json() as { ok: boolean; items?: CS2Item[] };
+        if (data.ok && data.items?.length) setWaxpeerPool(data.items);
+      } catch { /* silencioso */ }
+      finally { setWaxpeerLoading(false); }
+    }, 0);
   };
 
   const closeForm = () => {
@@ -475,9 +485,9 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     setActiveSuggestion(-1);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (value.length < 2) {
-      setWaxpeerPool([]);
-      setSuggestions([]);
-      setTotalMatches(0);
+      // Volta para o pool pré-carregado
+      setSuggestions(waxpeerPool.slice(0, 200));
+      setTotalMatches(waxpeerPool.length);
       return;
     }
     debounceRef.current = setTimeout(async () => {

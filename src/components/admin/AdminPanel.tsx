@@ -1908,7 +1908,6 @@ export default function AdminPanel() {
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-6"
             style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
-            onClick={e => { if (e.target === e.currentTarget) setShowAnimModal(false); }}
           >
             <motion.div
               key="anim-modal"

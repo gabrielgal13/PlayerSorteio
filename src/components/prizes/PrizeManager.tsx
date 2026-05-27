@@ -701,7 +701,6 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             style={{ background: 'rgba(0,0,0,0.7)' }}
-            onClick={() => setShowSaveModal(false)}
           >
             <motion.div
               className="relative w-full max-w-md mx-4 rounded-2xl"
@@ -781,7 +780,6 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             style={{ background: 'rgba(0,0,0,0.7)' }}
-            onClick={() => setShowLoadModal(false)}
           >
             <motion.div
               className="relative w-full max-w-lg mx-4 rounded-2xl"
@@ -915,7 +913,6 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             style={{ background: 'rgba(0,0,0,0.7)' }}
-            onClick={closeForm}
           >
             <motion.div
               className="relative w-full max-w-[1144px] mx-4 rounded-2xl"
@@ -1945,11 +1942,8 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
         <AnimatePresence>
           {showFilters && filterPopupPos && (
             <>
-              {/* backdrop — closes popup on outside click */}
-              <div
-                style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
-                onClick={() => { setShowFilters(false); setFilterPopupPos(null); }}
-              />
+              {/* backdrop — sem fechar ao clicar fora */}
+              <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} />
               <motion.div
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}

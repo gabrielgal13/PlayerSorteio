@@ -507,8 +507,6 @@ export default function EventConfig() {
                 className="fixed inset-0 px-4"
                 style={{ zIndex: 9999, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', alignContent: 'center' }}
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onMouseDown={(e) => { overlayMouseDownRef.current = e.target === e.currentTarget; }}
-                onClick={() => { if (overlayMouseDownRef.current) { saveConfigToDB(); setShowSettings(false); } }}
               >
                 <motion.div
                   style={{
@@ -1384,7 +1382,6 @@ export default function EventConfig() {
                   className="fixed inset-0 px-4"
                   style={{ zIndex: 9999, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  onClick={e => { if (e.target === e.currentTarget) setShowEfeitos(false); }}
                 >
                   <motion.div
                     style={{

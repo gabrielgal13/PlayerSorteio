@@ -64,8 +64,8 @@ export async function browseItems(search: string, limit = 200): Promise<WaxpeerP
   if (search) params.search = search;
   const res = await fetch(url('/prices', params));
   if (!res.ok) return [];
-  const data = await res.json() as { success: boolean; items?: unknown };
-  if (!data.success || !data.items) return [];
+  const data = await res.json() as { success?: boolean; items?: unknown };
+  if (!data.items) return [];
 
   let raw: WaxpeerPriceItem[];
   if (Array.isArray(data.items)) {

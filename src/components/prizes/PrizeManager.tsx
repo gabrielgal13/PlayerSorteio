@@ -317,13 +317,17 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     fetchSavedLists();
     loadMostUsedSkins();
     loadAdminProducts();
-    // Pré-carrega 30 skins baratas para não iniciar vazio
+    // Pré-carrega 30 skins aleatórias para não iniciar vazio
     setTimeout(async () => {
       setWaxpeerLoading(true);
       try {
-        const res = await fetch('/api/marketplace/browse?search=&limit=30');
+        const res = await fetch('/api/marketplace/browse?search=&limit=100');
         const data = await res.json() as { ok: boolean; items?: CS2Item[] };
-        if (data.ok && data.items?.length) setWaxpeerPool(data.items);
+        if (data.ok && data.items?.length) {
+          // Embaralha e pega 30 aleatórios
+          const shuffled = [...data.items].sort(() => Math.random() - 0.5).slice(0, 30);
+          setWaxpeerPool(shuffled);
+        }
       } catch { /* silencioso */ }
       finally { setWaxpeerLoading(false); }
     }, 0);

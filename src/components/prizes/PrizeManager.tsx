@@ -582,7 +582,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/marketplace/browse?search=&limit=200&min_price=3000');
+        const res = await fetch('/api/marketplace/browse?search=&limit=9999&min_price=3000');
         const data = await res.json() as { ok: boolean; items?: CS2Item[] };
         if (!cancelled && data.ok && data.items?.length) {
           const shuffled = [...data.items].sort(() => Math.random() - 0.5);

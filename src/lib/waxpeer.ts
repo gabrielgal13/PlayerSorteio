@@ -58,8 +58,9 @@ function extractPrice(r: Record<string, unknown>): number {
   return 0;
 }
 
-/** Busca items no marketplace com o mais barato por nome (para browse/autocomplete). */
-export async function browseItems(search: string, limit = 200): Promise<WaxpeerPriceItem[]> {
+/** Busca items no marketplace com o mais barato por nome (para browse/autocomplete).
+ *  minPriceMilli: preço mínimo em milli-dólares (ex: 3000 = $3.00). */
+export async function browseItems(search: string, limit = 200, minPriceMilli = 0): Promise<WaxpeerPriceItem[]> {
   const params: Record<string, string> = { game: 'csgo', sort: 'price', order: 'asc' };
   if (search) params.search = search;
   const res = await fetch(url('/prices', params));
@@ -82,14 +83,24 @@ export async function browseItems(search: string, limit = 200): Promise<WaxpeerP
     }));
   }
 
-  // Deduplica por nome mantendo o mais barato, filtra só armas
+  // Deduplica por nome mantendo o mais barato, filtra só armas e preço mínimo
   const map = new Map<string, WaxpeerPriceItem>();
   for (const item of raw) {
     if (!isWeaponSkin(item.name)) continue;
+    if (minPriceMilli > 0 && item.price < minPriceMilli) continue;
     const ex = map.get(item.name);
     if (!ex || item.price < ex.price) map.set(item.name, item);
   }
-  return Array.from(map.values()).sort((a, b) => a.price - b.price).slice(0, limit);
+
+  let results = Array.from(map.values()).sort((a, b) => a.price - b.price);
+
+  // Filtro substring garantido no servidor (funciona mesmo se a Waxpeer ignorar search)
+  if (search) {
+    const q = search.toLowerCase();
+    results = results.filter(item => item.name.toLowerCase().includes(q));
+  }
+
+  return results.slice(0, limit);
 }
 
 export interface WaxpeerSearchResult {

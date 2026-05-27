@@ -454,7 +454,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
       const maxP = filterMaxPrice !== '' ? Number(filterMaxPrice) : Infinity;
       if (minP > 0 || maxP < Infinity) {
         items = items.filter(item => {
-          const psc = Math.ceil((item.price / 100) * usdToBrl);
+          const psc = Math.ceil((item.price / 1000) * usdToBrl);
           return psc >= minP && psc <= maxP;
         });
       }
@@ -472,18 +472,23 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     setActiveSuggestion(-1);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (value.length < 2) {
-      // Volta para o pool pré-carregado
       setSuggestions(waxpeerPool.slice(0, 200));
       setTotalMatches(waxpeerPool.length);
       return;
     }
+    // Filtra imediatamente do pool local (resposta instantânea)
+    const q = value.toLowerCase();
+    const localResults = waxpeerPool.filter(item => item.name.toLowerCase().includes(q));
+    setSuggestions(localResults.slice(0, 200));
+    setTotalMatches(localResults.length);
+    // Busca na API em paralelo para resultados mais completos
     debounceRef.current = setTimeout(async () => {
       setWaxpeerLoading(true);
       try {
-        const res = await fetch(`/api/marketplace/browse?search=${encodeURIComponent(value)}`);
+        const res = await fetch(`/api/marketplace/browse?search=${encodeURIComponent(value)}&min_price=3000`);
         const data = await res.json() as { ok: boolean; items?: CS2Item[] };
-        setWaxpeerPool(data.ok ? (data.items ?? []) : []);
-      } catch { setWaxpeerPool([]); }
+        if (data.ok && data.items) setWaxpeerPool(data.items);
+      } catch { /* mantém resultados locais */ }
       finally { setWaxpeerLoading(false); }
     }, 400);
   };
@@ -601,7 +606,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/marketplace/browse?search=&limit=100');
+        const res = await fetch('/api/marketplace/browse?search=&limit=200&min_price=3000');
         const data = await res.json() as { ok: boolean; items?: CS2Item[] };
         if (!cancelled && data.ok && data.items?.length) {
           const shuffled = [...data.items].sort(() => Math.random() - 0.5);

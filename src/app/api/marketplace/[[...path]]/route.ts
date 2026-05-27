@@ -17,7 +17,7 @@ async function getAppToken(): Promise<string> {
 }
 
 // Envia mensagem no chat via bot avisando o ganhador de mandar trade link via whisper
-async function notifyWinnerViaChat(twitchChannel: string, winnerName: string, prizeName: string) {
+async function notifyWinnerViaChat(twitchChannel: string, winnerName: string) {
   try {
     const rows = await prisma.appConfig.findMany({
       where: { key: { in: ['twitch_bot_user_token', 'twitch_bot_user_id'] } },
@@ -126,17 +126,24 @@ export async function POST(
       }
 
       const cheapest = listings[0];
+
+      // Busca o canal antes do buy para poder notificar mesmo se falhar
+      const streamerRow = await prisma.streamer.findUnique({ where: { username }, select: { twitchChannel: true } });
+      const twitchChannel = streamerRow?.twitchChannel ?? null;
+
       const buyResult = await buyItem(cheapest);
+
+      // Notifica sempre, independente do resultado da compra
+      if (twitchChannel) {
+        notifyWinnerViaChat(twitchChannel, winnerName).catch(() => {});
+      }
 
       if (!buyResult.success) {
         return NextResponse.json({ ok: false, error: buyResult.msg });
       }
 
-      // Atualiza o history entry e notifica o ganhador no chat (paralelo, best-effort)
-      const twitchChannel = await updateHistoryMarketplace(username, winnerName, prizeName, buyResult.id);
-      if (twitchChannel) {
-        notifyWinnerViaChat(twitchChannel, winnerName, prizeName).catch(() => {});
-      }
+      // Atualiza o history entry
+      await updateHistoryMarketplace(username, winnerName, prizeName, buyResult.id);
 
       return NextResponse.json({ ok: true, waxpeerItemId: buyResult.id, price: cheapest.price });
     } catch (e) {

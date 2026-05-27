@@ -119,34 +119,33 @@ export async function POST(
       return NextResponse.json({ ok: false, error: 'WAXPEER_API_KEY não configurada' }, { status: 503 });
     }
 
+    const streamerRow = await prisma.streamer.findUnique({ where: { username }, select: { twitchChannel: true } });
+    const twitchChannel = streamerRow?.twitchChannel ?? null;
+    const doNotify = () => {
+      if (twitchChannel) notifyWinnerViaChat(twitchChannel, winnerName).catch(() => {});
+    };
+
     try {
       const listings = await checkStock(prizeName);
       if (!listings.length) {
+        doNotify();
         return NextResponse.json({ ok: false, error: 'Item não encontrado no Waxpeer' });
       }
 
       const cheapest = listings[0];
-
-      // Busca o canal antes do buy para poder notificar mesmo se falhar
-      const streamerRow = await prisma.streamer.findUnique({ where: { username }, select: { twitchChannel: true } });
-      const twitchChannel = streamerRow?.twitchChannel ?? null;
-
       const buyResult = await buyItem(cheapest);
 
-      // Notifica sempre, independente do resultado da compra
-      if (twitchChannel) {
-        notifyWinnerViaChat(twitchChannel, winnerName).catch(() => {});
-      }
+      doNotify();
 
       if (!buyResult.success) {
         return NextResponse.json({ ok: false, error: buyResult.msg });
       }
 
-      // Atualiza o history entry
       await updateHistoryMarketplace(username, winnerName, prizeName, buyResult.id);
 
       return NextResponse.json({ ok: true, waxpeerItemId: buyResult.id, price: cheapest.price });
     } catch (e) {
+      doNotify();
       return NextResponse.json({ ok: false, error: String(e) }, { status: 502 });
     }
   }

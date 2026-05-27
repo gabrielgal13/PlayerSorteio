@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkStock, buyItem, withdrawItem } from '@/lib/waxpeer';
+import { checkStock, buyItem, withdrawItem, browseItems } from '@/lib/waxpeer';
 
 // ─── App token cache (igual ao twitch route) ─────────────────────────────────
 let cachedAppToken: { value: string; expiresAt: number } | null = null;
@@ -70,6 +70,21 @@ export async function GET(
       return NextResponse.json({ ok: true, listings, available: listings.length > 0 });
     } catch (e) {
       return NextResponse.json({ ok: false, error: String(e) }, { status: 502 });
+    }
+  }
+
+  if (route === 'browse') {
+    const search = req.nextUrl.searchParams.get('search') ?? '';
+    if (!process.env.WAXPEER_API_KEY) {
+      return NextResponse.json({ ok: false, items: [], error: 'WAXPEER_API_KEY não configurada' });
+    }
+    try {
+      const items = await browseItems(search);
+      return NextResponse.json({ ok: true, items }, {
+        headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' },
+      });
+    } catch (e) {
+      return NextResponse.json({ ok: false, items: [], error: String(e) }, { status: 502 });
     }
   }
 

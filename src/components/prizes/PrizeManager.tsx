@@ -4,13 +4,12 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import type { Prize, SavedPrizeList } from '@/types';
-import cs2Items from '@/data/cs2_items.json';
 import CreateSavedListModal from './CreateSavedListModal';
 
 interface CS2Item {
   name: string;
-  min_price_usd: number;
-  image_url: string;
+  price: number;   // centavos USD (Waxpeer)
+  image: string;
 }
 
 
@@ -29,18 +28,13 @@ function parseItemName(name: string) {
   return { weapon, skin, wearFull, wearAbbr };
 }
 
-const ALL_WEAPON_TYPES = (() => {
-  const weapons = new Set<string>();
-  (cs2Items as CS2Item[]).forEach(item => {
-    const pipeIdx = item.name.indexOf(' | ');
-    if (pipeIdx >= 0) {
-      let w = item.name.slice(0, pipeIdx);
-      if (w.startsWith('StatTrak™ ')) w = w.slice('StatTrak™ '.length);
-      weapons.add(w);
-    }
-  });
-  return ['Todos', ...Array.from(weapons).sort()];
-})();
+const ALL_WEAPON_TYPES = [
+  'Todos', 'AK-47', 'AWP', 'M4A4', 'M4A1-S', 'Desert Eagle', 'USP-S', 'Glock-18',
+  'P250', 'Five-SeveN', 'Tec-9', 'CZ75-Auto', 'P2000', 'Dual Berettas', 'R8 Revolver',
+  'MP9', 'MAC-10', 'PP-Bizon', 'P90', 'MP5-SD', 'MP7', 'UMP-45',
+  'Nova', 'XM1014', 'MAG-7', 'Sawed-Off', 'M249', 'Negev',
+  'FAMAS', 'Galil AR', 'AUG', 'SG 553', 'SSG 08', 'SCAR-20', 'G3SG1',
+];
 
 const EXTERIOR_LABELS: Record<string, string> = {
   FN: 'Factory New (FN)',
@@ -132,6 +126,9 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   const [sortBy, setSortBy] = useState<'price' | 'name'>('price');
   const [mostUsedSkins, setMostUsedSkins] = useState<CS2Item[]>([]);
   const [mostUsedVisible, setMostUsedVisible] = useState(4);
+  const [waxpeerPool, setWaxpeerPool] = useState<CS2Item[]>([]);
+  const [waxpeerLoading, setWaxpeerLoading] = useState(false);
+
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const suggestionItemsRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -139,6 +136,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   const filterRowRef = useRef<HTMLDivElement>(null);
   const filterBtnRef = useRef<HTMLDivElement>(null);
   const isSavingRef = useRef(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Filter state
   const [showFilters, setShowFilters] = useState(false);
@@ -297,12 +295,9 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
 
   const loadMostUsedSkins = useCallback(() => {
     try {
-      const stored = localStorage.getItem('ps_most_used_skins');
-      const top: { name: string; count: number }[] = stored ? JSON.parse(stored) : [];
-      const found = top.slice(0, 12)
-        .map(t => (cs2Items as CS2Item[]).find(i => i.name === t.name))
-        .filter(Boolean) as CS2Item[];
-      setMostUsedSkins(found);
+      const stored = localStorage.getItem('ps_most_used_skins_v2');
+      const top: CS2Item[] = stored ? JSON.parse(stored) : [];
+      setMostUsedSkins(top.slice(0, 12));
     } catch {}
   }, []);
 
@@ -314,12 +309,14 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     setSaveError(null);
     setQuickListDismissed(false);
     setConfirmClearStaged(false);
+    setWaxpeerPool([]);
+    setSuggestions([]);
+    setTotalMatches(0);
     setShowForm(true);
     fetchRate();
     fetchSavedLists();
     loadMostUsedSkins();
     loadAdminProducts();
-    setTimeout(() => refreshSuggestions(''), 0);
   };
 
   const closeForm = () => {
@@ -343,10 +340,22 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
       pscValue: prize.pscValue,
       skipPsc: prize.skipPsc ?? false,
     });
+    setWaxpeerPool([]);
+    setSuggestions([]);
     setShowForm(true);
     fetchRate();
     fetchSavedLists();
-    setTimeout(() => refreshSuggestions(prize.name), 0);
+    if (prize.name.length >= 2) {
+      setTimeout(async () => {
+        setWaxpeerLoading(true);
+        try {
+          const res = await fetch(`/api/marketplace/browse?search=${encodeURIComponent(prize.name)}`);
+          const data = await res.json() as { ok: boolean; items?: CS2Item[] };
+          setWaxpeerPool(data.ok ? (data.items ?? []) : []);
+        } catch { setWaxpeerPool([]); }
+        finally { setWaxpeerLoading(false); }
+      }, 0);
+    }
   };
 
   useImperativeHandle(ref, () => ({ openAdd, openEdit }));
@@ -429,7 +438,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   };
 
   const refreshSuggestions = useCallback((query: string) => {
-    let items = cs2Items as CS2Item[];
+    let items = waxpeerPool;
     if (filterWeapon !== 'Todos') {
       items = items.filter(item => {
         const { weapon } = parseItemName(item.name);
@@ -448,7 +457,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
       const maxP = filterMaxPrice !== '' ? Number(filterMaxPrice) : Infinity;
       if (minP > 0 || maxP < Infinity) {
         items = items.filter(item => {
-          const psc = Math.ceil(item.min_price_usd * usdToBrl);
+          const psc = Math.ceil((item.price / 100) * usdToBrl);
           return psc >= minP && psc <= maxP;
         });
       }
@@ -459,24 +468,36 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     }
     setTotalMatches(items.length);
     setSuggestions(items.slice(0, 200));
-  }, [filterWeapon, filterStatTrak, filterExteriors, filterMinPrice, filterMaxPrice, usdToBrl]);
+  }, [waxpeerPool, filterWeapon, filterStatTrak, filterExteriors, filterMinPrice, filterMaxPrice, usdToBrl]);
 
   const handleNameChange = (value: string) => {
     setForm(f => ({ ...f, name: value, imageUrl: '', pscValue: undefined }));
     setActiveSuggestion(-1);
-    refreshSuggestions(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.length < 2) {
+      setWaxpeerPool([]);
+      setSuggestions([]);
+      setTotalMatches(0);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      setWaxpeerLoading(true);
+      try {
+        const res = await fetch(`/api/marketplace/browse?search=${encodeURIComponent(value)}`);
+        const data = await res.json() as { ok: boolean; items?: CS2Item[] };
+        setWaxpeerPool(data.ok ? (data.items ?? []) : []);
+      } catch { setWaxpeerPool([]); }
+      finally { setWaxpeerLoading(false); }
+    }, 400);
   };
 
-  const handleNameFocus = () => {
-    if (!form.imageUrl) {
-      refreshSuggestions(form.name);
-    }
-  };
+  const handleNameFocus = () => { /* fetch is triggered on change, not focus */ };
 
   const pscNum = (usd: number) => Math.ceil(usd * (usdToBrl ?? 1));
+  const pscFromCents = (cents: number) => Math.ceil((cents / 100) * (usdToBrl ?? 1));
 
   const applySuggestion = (item: CS2Item) => {
-    const computed = usdToBrl ? pscNum(item.min_price_usd) : undefined;
+    const computed = usdToBrl ? pscFromCents(item.price) : undefined;
     if (computed !== undefined) {
       const newCost = computed * form.quantity;
       if (pscBalance - alreadySpent - stagedCost - newCost < 0) {
@@ -493,7 +514,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
       return [...s, {
         name: item.name,
         description: '',
-        imageUrl: item.image_url,
+        imageUrl: item.image,
         quantity: form.quantity,
         pscValue: computed,
         skipPsc: false,
@@ -534,17 +555,10 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
 
   const trackUsage = useCallback((item: CS2Item) => {
     try {
-      const stored = localStorage.getItem('ps_most_used_skins');
-      const current: { name: string; count: number }[] = stored ? JSON.parse(stored) : [];
-      const existing = current.find(i => i.name === item.name);
-      let updated: { name: string; count: number }[];
-      if (existing) {
-        updated = current.map(i => i.name === item.name ? { ...i, count: i.count + 1 } : i);
-      } else {
-        updated = [...current, { name: item.name, count: 1 }];
-      }
-      updated.sort((a, b) => b.count - a.count);
-      localStorage.setItem('ps_most_used_skins', JSON.stringify(updated.slice(0, 20)));
+      const stored = localStorage.getItem('ps_most_used_skins_v2');
+      const current: CS2Item[] = stored ? JSON.parse(stored) : [];
+      const updated = [item, ...current.filter(i => i.name !== item.name)];
+      localStorage.setItem('ps_most_used_skins_v2', JSON.stringify(updated.slice(0, 20)));
     } catch {}
   }, []);
 
@@ -584,10 +598,11 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     fetchSavedLists();
   }, [fetchSavedLists]);
 
+  // Re-filtra quando o pool muda (novo fetch) ou quando filtros mudam
   useEffect(() => {
-    if (suggestions.length > 0) refreshSuggestions(form.name);
+    refreshSuggestions(form.name);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterWeapon, filterStatTrak, filterExteriors, filterMinPrice, filterMaxPrice]);
+  }, [waxpeerPool, filterWeapon, filterStatTrak, filterExteriors, filterMinPrice, filterMaxPrice]);
 
 
   const totalPscSpent = prizes
@@ -1094,7 +1109,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
                               {mostUsedSkins.slice(0, mostUsedVisible).map((item, idx) => {
                                 const { weapon, skin, wearAbbr } = parseItemName(item.name);
-                                const psc = usdToBrl ? pscNum(item.min_price_usd) : null;
+                                const psc = usdToBrl ? pscFromCents(item.price) : null;
                                 const sz = ROW_SIZE[Math.min(Math.floor(idx / 4), ROW_SIZE.length - 1)];
                                 return (
                                   <div
@@ -1118,7 +1133,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                                       e.currentTarget.style.boxShadow = 'none';
                                     }}
                                   >
-                                    <img src={item.image_url} alt={item.name} style={{ width: sz.imgW, height: sz.imgH, objectFit: 'contain', flexShrink: 0 }} />
+                                    <img src={item.image} alt={item.name} style={{ width: sz.imgW, height: sz.imgH, objectFit: 'contain', flexShrink: 0 }} />
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0, flex: 1 }}>
                                       <span className="font-rajdhani font-bold" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {weapon}
@@ -1501,9 +1516,15 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                             <div style={{ margin: '4px 14px', borderTop: '1px solid rgba(255,255,255,0.05)' }} />
                           )}
 
-                          {/* ── Itens CS2 ── */}
+                          {/* ── Itens CS2 (Waxpeer live) ── */}
+                          {waxpeerLoading && suggestions.length === 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: '10px' }}>
+                              <motion.div className="w-4 h-4 rounded-full border-2 border-neon-cyan/20 border-t-neon-cyan" animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} />
+                              <span className="font-rajdhani text-white/30 text-sm tracking-widest">Buscando no Waxpeer...</span>
+                            </div>
+                          )}
                           {[...suggestions]
-                            .sort((a, b) => sortBy === 'price' ? a.min_price_usd - b.min_price_usd : a.name.localeCompare(b.name))
+                            .sort((a, b) => sortBy === 'price' ? a.price - b.price : a.name.localeCompare(b.name))
                             .map((item, idx) => {
                               const { weapon, skin, wearAbbr } = parseItemName(item.name);
                               return (
@@ -1531,7 +1552,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                                   }}
                                 >
                                   <div style={{ width: '77px', height: '55px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <img src={item.image_url} alt={item.name} style={{ maxWidth: '77px', maxHeight: '55px', objectFit: 'contain' }} />
+                                    <img src={item.image} alt={item.name} style={{ maxWidth: '77px', maxHeight: '55px', objectFit: 'contain' }} />
                                   </div>
                                   <div style={{ flex: 1, minWidth: 0 }}>
                                     <p className="font-rajdhani font-bold" style={{ fontSize: '15px', color: 'rgba(255,255,255,0.9)', lineHeight: 1.2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
@@ -1553,7 +1574,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
                                       <svg width="10" height="14" viewBox="0 0 9 12" fill="#00E5FF"><path d="M4.5 0L9 5L4.5 12L0 5Z"/></svg>
                                       <span className="font-orbitron font-bold" style={{ fontSize: '17px', color: '#00E5FF' }}>
-                                        {usdToBrl ? pscNum(item.min_price_usd) : '...'}
+                                        {usdToBrl ? pscFromCents(item.price) : '...'}
                                       </span>
                                     </div>
                                   )}

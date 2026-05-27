@@ -40,7 +40,11 @@
       "Bash(npx.cmd tsc *)",
       "Bash(mkdir -p \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\app\\\\api\\\\twitch\\\\[[...path]]\")",
       "Bash(rm -rf \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\app\\\\api\\\\twitch-viewers\")",
-      "Bash(rm -rf \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\app\\\\api\\\\twitch-channel\")"
+      "Bash(rm -rf \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\app\\\\api\\\\twitch-channel\")",
+      "WebSearch",
+      "WebFetch(domain:docs.dmarket.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:support.dmarket.com)"
     ],
     "additionalDirectories": [
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\streamers",

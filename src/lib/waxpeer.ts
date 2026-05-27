@@ -17,6 +17,38 @@ export interface WaxpeerListing {
   image: string;
 }
 
+export interface WaxpeerPriceItem {
+  name: string;
+  price: number;  // centavos USD
+  image: string;
+}
+
+/** Busca items no marketplace com o mais barato por nome (para browse/autocomplete). */
+export async function browseItems(search: string): Promise<WaxpeerPriceItem[]> {
+  const res = await fetch(
+    url('/prices', { game: 'csgo', search, sort: 'price', order: 'asc' }),
+  );
+  if (!res.ok) return [];
+  const data = await res.json() as {
+    success: boolean;
+    items?: Array<{ name: string; price: number; img: string }> | Record<string, { price: number; img: string }>;
+  };
+  if (!data.success || !data.items) return [];
+
+  const raw: WaxpeerPriceItem[] = Array.isArray(data.items)
+    ? data.items.map(i => ({ name: i.name, price: i.price, image: i.img }))
+    : Object.entries(data.items as Record<string, { price: number; img: string }>)
+        .map(([name, i]) => ({ name, price: i.price, image: i.img }));
+
+  // Deduplica por nome mantendo o mais barato
+  const map = new Map<string, WaxpeerPriceItem>();
+  for (const item of raw) {
+    const ex = map.get(item.name);
+    if (!ex || item.price < ex.price) map.set(item.name, item);
+  }
+  return Array.from(map.values()).sort((a, b) => a.price - b.price).slice(0, 200);
+}
+
 export interface WaxpeerSearchResult {
   success: boolean;
   items: WaxpeerListing[];

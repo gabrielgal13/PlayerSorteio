@@ -2,54 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkStock, buyItem, withdrawItem, browseItems } from '@/lib/waxpeer';
 
-// ─── App token cache (igual ao twitch route) ─────────────────────────────────
-let cachedAppToken: { value: string; expiresAt: number } | null = null;
-async function getAppToken(): Promise<string> {
-  if (cachedAppToken && Date.now() < cachedAppToken.expiresAt) return cachedAppToken.value;
-  const res = await fetch(
-    `https://id.twitch.tv/oauth2/token?client_id=${process.env.TWITCH_CLIENT_ID}&client_secret=${process.env.TWITCH_CLIENT_SECRET}&grant_type=client_credentials`,
-    { method: 'POST' },
-  );
-  if (!res.ok) throw new Error('Falha ao obter app token Twitch');
-  const data = await res.json() as { access_token: string; expires_in: number };
-  cachedAppToken = { value: data.access_token, expiresAt: Date.now() + (data.expires_in - 300) * 1000 };
-  return cachedAppToken.value;
-}
-
-// Envia mensagem no chat via bot avisando o ganhador de mandar trade link via whisper
-async function notifyWinnerViaChat(twitchChannel: string, winnerName: string) {
-  try {
-    const rows = await prisma.appConfig.findMany({
-      where: { key: { in: ['twitch_bot_user_token', 'twitch_bot_user_id'] } },
-    });
-    const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
-    const botToken = map['twitch_bot_user_token'];
-    const botUserId = map['twitch_bot_user_id'];
-    if (!botToken || !botUserId) return;
-
-    const appToken = await getAppToken();
-    const userRes = await fetch(
-      `https://api.twitch.tv/helix/users?login=${encodeURIComponent(twitchChannel)}`,
-      { headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${appToken}` } },
-    );
-    if (!userRes.ok) return;
-    const userData = await userRes.json() as { data?: { id: string }[] };
-    const broadcasterId = userData.data?.[0]?.id;
-    if (!broadcasterId) return;
-
-    const message = `@${winnerName} parabéns!`;
-
-    await fetch('https://api.twitch.tv/helix/chat/messages', {
-      method: 'POST',
-      headers: {
-        'Client-Id': process.env.TWITCH_CLIENT_ID!,
-        Authorization: `Bearer ${botToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: botUserId, message }),
-    });
-  } catch { /* notificação é best-effort, não bloqueia o buy */ }
-}
 
 // GET  /api/marketplace/stock?item=AK-47%20%7C%20Redline%20(Field-Tested)
 // POST /api/marketplace/buy      { prizeName, winnerName, username }
@@ -119,23 +71,14 @@ export async function POST(
       return NextResponse.json({ ok: false, error: 'WAXPEER_API_KEY não configurada' }, { status: 503 });
     }
 
-    const streamerRow = await prisma.streamer.findUnique({ where: { username }, select: { twitchChannel: true } });
-    const twitchChannel = streamerRow?.twitchChannel ?? null;
-    const doNotify = () => {
-      if (twitchChannel) notifyWinnerViaChat(twitchChannel, winnerName).catch(() => {});
-    };
-
     try {
       const listings = await checkStock(prizeName);
       if (!listings.length) {
-        doNotify();
         return NextResponse.json({ ok: false, error: 'Item não encontrado no Waxpeer' });
       }
 
       const cheapest = listings[0];
       const buyResult = await buyItem(cheapest);
-
-      doNotify();
 
       if (!buyResult.success) {
         return NextResponse.json({ ok: false, error: buyResult.msg });
@@ -145,7 +88,6 @@ export async function POST(
 
       return NextResponse.json({ ok: true, waxpeerItemId: buyResult.id, price: cheapest.price });
     } catch (e) {
-      doNotify();
       return NextResponse.json({ ok: false, error: String(e) }, { status: 502 });
     }
   }

@@ -60,6 +60,46 @@ export async function GET(
   const { path } = await params;
   const [seg0, seg1] = path ?? [];
 
+  // ── test-chat ─────────────────────────────────────────────────────────────
+  // GET /api/twitch/test-chat?channel=liminhag0d&winner=alguem
+  if (seg0 === 'test-chat') {
+    const channel = req.nextUrl.searchParams.get('channel');
+    const winner  = req.nextUrl.searchParams.get('winner') ?? 'Teste123';
+    if (!channel) return Response.json({ error: 'channel required' }, { status: 400 });
+
+    const rows = await prisma.appConfig.findMany({
+      where: { key: { in: ['twitch_bot_user_token', 'twitch_bot_user_id'] } },
+    });
+    const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
+    const botToken = map['twitch_bot_user_token'];
+    const botUserId = map['twitch_bot_user_id'];
+    if (!botToken || !botUserId) {
+      return Response.json({ ok: false, step: 'bot_config', error: 'Token ou ID do bot não encontrado no banco. Faça /api/twitch/eventsub/auth primeiro.' });
+    }
+
+    const appToken = await getAppToken();
+    const userRes = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(channel)}`, {
+      headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${appToken}` },
+    });
+    const userData = await userRes.json() as { data?: { id: string }[] };
+    const broadcasterId = userData.data?.[0]?.id;
+    if (!broadcasterId) {
+      return Response.json({ ok: false, step: 'broadcaster_lookup', error: `Canal "${channel}" não encontrado na Twitch`, userData });
+    }
+
+    const msgRes = await fetch('https://api.twitch.tv/helix/chat/messages', {
+      method: 'POST',
+      headers: {
+        'Client-Id': process.env.TWITCH_CLIENT_ID!,
+        Authorization: `Bearer ${botToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: botUserId, message: `@${winner} parabéns! (mensagem de teste)` }),
+    });
+    const msgData = await msgRes.json();
+    return Response.json({ ok: msgRes.ok, status: msgRes.status, twitchResponse: msgData, botUserId, broadcasterId });
+  }
+
   // ── viewers ──────────────────────────────────────────────────────────────
   if (!seg0 || seg0 === 'viewers') {
     const channel = req.nextUrl.searchParams.get('channel');
@@ -166,6 +206,7 @@ export async function GET(
 }
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
+// POST /api/twitch/notify           → envia mensagem de ganhador no chat
 // POST /api/twitch/eventsub/setup   → cria a assinatura EventSub
 // POST /api/twitch/eventsub         → webhook da Twitch (challenge + notificações)
 export async function POST(
@@ -174,6 +215,46 @@ export async function POST(
 ) {
   const { path } = await params;
   const [seg0, seg1] = path ?? [];
+
+  // ── Notificar ganhador no chat ────────────────────────────────────────────
+  if (seg0 === 'notify' && !seg1) {
+    const { channel, winnerName } = await req.json() as { channel: string; winnerName: string };
+    if (!channel || !winnerName) {
+      return NextResponse.json({ ok: false, error: 'channel e winnerName são obrigatórios' }, { status: 400 });
+    }
+
+    const rows = await prisma.appConfig.findMany({
+      where: { key: { in: ['twitch_bot_user_token', 'twitch_bot_user_id'] } },
+    });
+    const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
+    const botToken = map['twitch_bot_user_token'];
+    const botUserId = map['twitch_bot_user_id'];
+    if (!botToken || !botUserId) {
+      return NextResponse.json({ ok: false, error: 'Bot não autenticado' });
+    }
+
+    const appToken = await getAppToken();
+    const userRes = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(channel)}`, {
+      headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${appToken}` },
+    });
+    const userData = await userRes.json() as { data?: { id: string }[] };
+    const broadcasterId = userData.data?.[0]?.id;
+    if (!broadcasterId) {
+      return NextResponse.json({ ok: false, error: `Canal "${channel}" não encontrado` });
+    }
+
+    const msgRes = await fetch('https://api.twitch.tv/helix/chat/messages', {
+      method: 'POST',
+      headers: {
+        'Client-Id': process.env.TWITCH_CLIENT_ID!,
+        Authorization: `Bearer ${botToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: botUserId, message: `@${winnerName} parabéns!` }),
+    });
+    const msgData = await msgRes.json();
+    return NextResponse.json({ ok: msgRes.ok, twitchResponse: msgData });
+  }
 
   // ── Criar assinatura EventSub (chamado uma vez pelo admin) ────────────────
   if (seg0 === 'eventsub' && seg1 === 'setup') {
@@ -257,31 +338,38 @@ export async function POST(
       }
       const tradeLink = text;
 
-      // Busca entrega pendente para este vencedor
+      // Busca entrega pendente — inclui afiliados (aguardando_tradelink) e não-afiliados (novo/sem status)
       const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000); // últimas 6h
       const entry = await prisma.raffleHistory.findFirst({
         where: {
           winnerName: { equals: senderLogin, mode: 'insensitive' },
-          deliveryStatus: 'aguardando_tradelink',
-          marketplaceItemId: { not: null },
+          deliveryStatus: { notIn: ['entregue', 'tradelocked'] },
+          tradeLink: null, // não reprocessar se já foi salvo
           timestamp: { gte: cutoff },
         },
         orderBy: { timestamp: 'desc' },
       });
 
-      if (!entry || !entry.marketplaceItemId) {
+      if (!entry) {
         return new NextResponse('ok', { status: 200 });
       }
 
-      try {
-        const result = await withdrawItem(entry.marketplaceItemId, tradeLink);
-        if (result.success) {
+      // Salva o trade link sempre, independente de ser afiliado ou não
+      await prisma.raffleHistory.update({
+        where: { id: entry.id },
+        data: { tradeLink },
+      });
+
+      // Só chama Waxpeer se o item foi comprado via marketplace (afiliados)
+      if (entry.marketplaceItemId) {
+        try {
+          const result = await withdrawItem(entry.marketplaceItemId, tradeLink);
           await prisma.raffleHistory.update({
             where: { id: entry.id },
-            data: { tradeLink, deliveryStatus: 'entregue' },
+            data: { deliveryStatus: result.success ? 'entregue' : 'tradelocked' },
           });
-        }
-      } catch { /* log seria ideal aqui */ }
+        } catch { /* log seria ideal aqui */ }
+      }
 
       return new NextResponse('ok', { status: 200 });
     }

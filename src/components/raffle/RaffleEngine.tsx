@@ -847,11 +847,22 @@ export default function RaffleEngine() {
     });
     if (isAffiliate && activePrize.pscValue && !activePrize.skipPsc) deductPSC(activePrize.pscValue);
 
-    // Dispara compra automática no Waxpeer
     const winnerName = currentWinner.name;
     const prizeName = activePrize.name;
     const username = currentUser?.username;
-    if (username) {
+
+    // Notifica ganhador no chat imediatamente ao confirmar
+    const channel = twitchConfig.channel || currentUser?.twitchChannel;
+    if (channel) {
+      fetch('/api/twitch/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel, winnerName }),
+      }).catch(() => {});
+    }
+
+    // Dispara compra automática no Waxpeer (apenas afiliados)
+    if (isAffiliate && username) {
       setPendingMarketplaceDelivery({ winnerName, prizeName, waxpeerItemId: null, status: 'buying' });
       fetch('/api/marketplace/buy', {
         method: 'POST',

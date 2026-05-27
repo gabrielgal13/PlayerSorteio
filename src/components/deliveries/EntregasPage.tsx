@@ -220,12 +220,15 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
     setTradeDraft(prev => {
       const next = { ...prev };
       for (const r of myHistory) {
-        if (!(r.id in next)) next[r.id] = r.tradeLink ?? '';
+        // Só sobrescreve se o campo estiver vazio no draft mas preenchido no DB (update do bot)
+        if (!(r.id in next) || (next[r.id] === '' && r.tradeLink)) {
+          next[r.id] = r.tradeLink ?? '';
+        }
       }
       return next;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history.length]);
+  }, [history]);
 
   useEffect(() => { setFilter('all'); setSearch(''); }, [selectedDate]);
 
@@ -286,11 +289,24 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
       } else if (currentUser) {
         const res = await fetch(`/api/streamer/history?username=${currentUser.username}`);
         const data = await res.json();
-        if (Array.isArray(data)) useStore.setState({ history: data });
+        if (Array.isArray(data)) {
+          useStore.setState({ history: data });
+          setTradeDraft(Object.fromEntries(data.map((r: RaffleResult) => [r.id, r.tradeLink ?? ''])));
+        }
       }
     } catch {}
     setRefreshing(false);
   };
+
+  // Auto-polling quando há itens aguardando trade link (bot pode receber a qualquer momento)
+  useEffect(() => {
+    if (!selectedDate) return;
+    const hasWaiting = dayHistory.some(r => (r.deliveryStatus ?? 'novo') === 'aguardando_tradelink');
+    if (!hasWaiting) return;
+    const interval = setInterval(() => { refreshHistory(); }, 15_000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, counts.aguardando_tradelink]);
 
   const displayDate = selectedDate
     ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })

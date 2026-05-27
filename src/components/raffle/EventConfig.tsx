@@ -268,7 +268,6 @@ const SETTINGS_TABS: { id: SettingsTab; label: string; subtitle: string }[] = [
 export default function EventConfig() {
   const { participants, prizes, setRaffleStage, currentUser, twitchConfig, setTwitchConfig, saveConfigToDB, setYoutubeChannel: saveYoutubeChannel, setKickChannel: saveKickChannel, excelImportEnabled, setExcelImportEnabled, excelPrizesImportEnabled, setExcelPrizesImportEnabled, autoRevealWinner, setAutoRevealWinner, spinEffect, setSpinEffect, socoChuteModeEnabled, setSocoChuteModeEnabled, raffleTriggerMode, setRaffleTriggerMode, autoRoundDelay, setAutoRoundDelay, chatTriggerCount, setChatTriggerCount, chatTriggerCommand, setChatTriggerCommand, themeColor, eventBackground, setEventBackground, eventMusic, setEventMusic, eventEffect, setEventEffect, raffleAnimationStyle, setRaffleAnimationStyle, isAffiliate, pscBalance } = useStore();
   const prizeManagerRef = useRef<PrizeManagerHandle>(null);
-  const overlayMouseDownRef = useRef(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('plataformas');
   const [mounted, setMounted] = useState(false);
@@ -512,7 +511,11 @@ export default function EventConfig() {
                   style={{
                     position: 'relative',
                     width: '100%',
-                    maxWidth: '800px',
+                    maxWidth: '920px',
+                    maxHeight: '90vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
                     borderRadius: '16px',
                     background: 'linear-gradient(145deg, rgba(10,14,40,0.99), rgba(5,8,22,0.99))',
                     border: '1px solid rgba(0,229,255,0.3)',
@@ -564,7 +567,7 @@ export default function EventConfig() {
                   </div>
 
                   {/* Body: nav esquerda + conteúdo direita */}
-                  <div style={{ display: 'flex', gap: 0, padding: '16px 0 0' }}>
+                  <div style={{ display: 'flex', gap: 0, padding: '16px 0 0', flex: 1, minHeight: 0 }}>
 
                     {/* Nav esquerda */}
                     <div style={{ width: '148px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '2px', padding: '0 12px 24px 16px', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
@@ -592,8 +595,8 @@ export default function EventConfig() {
                     </div>
 
                     {/* Conteúdo da aba */}
-                    <div style={{ flex: 1, minWidth: 0, padding: '0 24px 24px' }}>
-                      <AnimatePresence mode="sync">
+                    <div style={{ flex: 1, minWidth: 0, padding: '0 24px 24px', overflowY: 'auto', overflowX: 'hidden' }}>
+                      <AnimatePresence mode="wait">
                         {settingsTab === 'plataformas' && (
                           <motion.div key="plataformas"
                             initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }}
@@ -601,12 +604,12 @@ export default function EventConfig() {
                             style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
                           >
                             {/* Platform boxes */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' }}>
 
                               {/* TWITCH */}
                               <div style={{
                                 display: 'flex', flexDirection: 'column', gap: '12px',
-                                padding: '14px 12px', borderRadius: '12px',
+                                padding: '14px 12px', borderRadius: '12px', overflow: 'hidden',
                                 background: twitchConnectedUI ? 'rgba(145,71,255,0.09)' : 'rgba(255,255,255,0.03)',
                                 border: `1px solid ${twitchConnectedUI ? 'rgba(145,71,255,0.4)' : 'rgba(255,255,255,0.08)'}`,
                                 transition: 'all 0.25s',
@@ -670,12 +673,12 @@ export default function EventConfig() {
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                                   <span style={{
                                     fontSize: '8px', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
-                                    letterSpacing: '0.1em', padding: '3px 7px', borderRadius: '6px',
+                                    letterSpacing: '0.1em', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap',
                                     background: twitchConnectedUI ? 'rgba(0,220,100,0.12)' : 'rgba(255,255,255,0.05)',
                                     border: `1px solid ${twitchConnectedUI ? 'rgba(0,220,100,0.45)' : 'rgba(255,255,255,0.1)'}`,
                                     color: twitchConnectedUI ? '#00DC64' : 'rgba(255,255,255,0.3)',
                                     boxShadow: twitchConnectedUI ? '0 0 8px rgba(0,220,100,0.3)' : 'none',
-                                    transition: 'all 0.25s', whiteSpace: 'nowrap',
+                                    transition: 'all 0.25s',
                                   }}>
                                     {twitchConnectedUI ? 'CONECTADO' : 'DESCONECTADO'}
                                   </span>
@@ -684,8 +687,8 @@ export default function EventConfig() {
                                     disabled={twitchVerifying}
                                     style={{
                                       fontSize: '8px', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
-                                      letterSpacing: '0.1em', padding: '4px 9px', borderRadius: '6px',
-                                      cursor: twitchVerifying ? 'wait' : 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
+                                      letterSpacing: '0.1em', padding: '4px 9px', borderRadius: '6px', whiteSpace: 'nowrap',
+                                      cursor: twitchVerifying ? 'wait' : 'pointer', transition: 'all 0.2s',
                                       background: twitchConnectedUI ? 'rgba(255,255,255,0.06)' : 'rgba(145,71,255,0.2)',
                                       color: twitchConnectedUI ? 'rgba(255,255,255,0.35)' : '#9147FF',
                                       border: `1px solid ${twitchConnectedUI ? 'rgba(255,255,255,0.1)' : 'rgba(145,71,255,0.4)'}`,
@@ -700,7 +703,7 @@ export default function EventConfig() {
                               {/* YOUTUBE */}
                               <div style={{
                                 display: 'flex', flexDirection: 'column', gap: '12px',
-                                padding: '14px 12px', borderRadius: '12px',
+                                padding: '14px 12px', borderRadius: '12px', overflow: 'hidden',
                                 background: youtubeConnectedUI ? 'rgba(255,60,60,0.07)' : 'rgba(255,255,255,0.03)',
                                 border: `1px solid ${youtubeConnectedUI ? 'rgba(255,60,60,0.4)' : 'rgba(255,255,255,0.08)'}`,
                                 transition: 'all 0.25s',
@@ -763,12 +766,12 @@ export default function EventConfig() {
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                                   <span style={{
                                     fontSize: '8px', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
-                                    letterSpacing: '0.1em', padding: '3px 7px', borderRadius: '6px',
+                                    letterSpacing: '0.1em', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap',
                                     background: youtubeConnectedUI ? 'rgba(0,220,100,0.12)' : 'rgba(255,255,255,0.05)',
                                     border: `1px solid ${youtubeConnectedUI ? 'rgba(0,220,100,0.45)' : 'rgba(255,255,255,0.1)'}`,
                                     color: youtubeConnectedUI ? '#00DC64' : 'rgba(255,255,255,0.3)',
                                     boxShadow: youtubeConnectedUI ? '0 0 8px rgba(0,220,100,0.3)' : 'none',
-                                    transition: 'all 0.25s', whiteSpace: 'nowrap',
+                                    transition: 'all 0.25s',
                                   }}>
                                     {youtubeConnectedUI ? 'CONECTADO' : 'DESCONECTADO'}
                                   </span>
@@ -779,8 +782,8 @@ export default function EventConfig() {
                                     disabled={youtubeVerifying}
                                     style={{
                                       fontSize: '8px', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
-                                      letterSpacing: '0.1em', padding: '4px 9px', borderRadius: '6px',
-                                      cursor: youtubeVerifying ? 'wait' : 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
+                                      letterSpacing: '0.1em', padding: '4px 9px', borderRadius: '6px', whiteSpace: 'nowrap',
+                                      cursor: youtubeVerifying ? 'wait' : 'pointer', transition: 'all 0.2s',
                                       background: youtubeConnectedUI ? 'rgba(255,255,255,0.06)' : 'rgba(255,60,60,0.18)',
                                       color: youtubeConnectedUI ? 'rgba(255,255,255,0.35)' : '#FF3C3C',
                                       border: `1px solid ${youtubeConnectedUI ? 'rgba(255,255,255,0.1)' : 'rgba(255,60,60,0.4)'}`,
@@ -795,7 +798,7 @@ export default function EventConfig() {
                               {/* KICK */}
                               <div style={{
                                 display: 'flex', flexDirection: 'column', gap: '12px',
-                                padding: '14px 12px', borderRadius: '12px',
+                                padding: '14px 12px', borderRadius: '12px', overflow: 'hidden',
                                 background: kickConnectedUI ? 'rgba(83,252,28,0.05)' : 'rgba(255,255,255,0.03)',
                                 border: `1px solid ${kickConnectedUI ? 'rgba(83,252,28,0.35)' : 'rgba(255,255,255,0.08)'}`,
                                 transition: 'all 0.25s',
@@ -835,12 +838,12 @@ export default function EventConfig() {
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                                   <span style={{
                                     fontSize: '8px', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
-                                    letterSpacing: '0.1em', padding: '3px 7px', borderRadius: '6px',
+                                    letterSpacing: '0.1em', padding: '3px 7px', borderRadius: '6px', whiteSpace: 'nowrap',
                                     background: kickConnectedUI ? 'rgba(0,220,100,0.12)' : 'rgba(255,255,255,0.05)',
                                     border: `1px solid ${kickConnectedUI ? 'rgba(0,220,100,0.45)' : 'rgba(255,255,255,0.1)'}`,
                                     color: kickConnectedUI ? '#00DC64' : 'rgba(255,255,255,0.3)',
                                     boxShadow: kickConnectedUI ? '0 0 8px rgba(0,220,100,0.3)' : 'none',
-                                    transition: 'all 0.25s', whiteSpace: 'nowrap',
+                                    transition: 'all 0.25s',
                                   }}>
                                     {kickConnectedUI ? 'CONECTADO' : 'DESCONECTADO'}
                                   </span>
@@ -851,8 +854,8 @@ export default function EventConfig() {
                                     disabled={kickVerifying}
                                     style={{
                                       fontSize: '8px', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,
-                                      letterSpacing: '0.1em', padding: '4px 9px', borderRadius: '6px',
-                                      cursor: kickVerifying ? 'wait' : 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
+                                      letterSpacing: '0.1em', padding: '4px 9px', borderRadius: '6px', whiteSpace: 'nowrap',
+                                      cursor: kickVerifying ? 'wait' : 'pointer', transition: 'all 0.2s',
                                       background: kickConnectedUI ? 'rgba(255,255,255,0.06)' : 'rgba(83,252,28,0.12)',
                                       color: kickConnectedUI ? 'rgba(255,255,255,0.35)' : '#53FC1C',
                                       border: `1px solid ${kickConnectedUI ? 'rgba(255,255,255,0.1)' : 'rgba(83,252,28,0.35)'}`,
@@ -1316,59 +1319,67 @@ export default function EventConfig() {
                     </motion.button>
                   </div>
 
-                  <AnimatePresence>
-                    {showCancelConfirm && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          borderRadius: '16px',
-                          background: 'rgba(5,8,22,0.92)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '20px',
-                          zIndex: 10,
-                        }}
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', textAlign: 'center', padding: '0 32px' }}>
-                          <svg width="28" height="28" viewBox="0 0 24 24" fill="#FFD166">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-                          </svg>
-                          <p className="font-orbitron font-bold text-sm tracking-widest" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                            Tem certeza?
-                          </p>
-                          <p className="font-rajdhani text-sm" style={{ color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
-                            Todas as alterações serão descartadas.
-                          </p>
-                        </div>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                          <button
-                            onClick={() => setShowCancelConfirm(false)}
-                            className="font-rajdhani font-bold tracking-widest"
-                            style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '13px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}
-                          >
-                            CONTINUAR EDITANDO
-                          </button>
-                          <button
-                            onClick={cancelSettings}
-                            className="font-rajdhani font-bold tracking-widest"
-                            style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '13px', background: 'rgba(255,68,68,0.15)', border: '1px solid rgba(255,68,68,0.4)', color: '#FF4444', cursor: 'pointer' }}
-                          >
-                            SIM, CANCELAR
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </motion.div>
               </motion.div>
+              )}
+            </AnimatePresence>,
+            document.body
+          )}
+
+          {/* Confirm cancel — portal próprio */}
+          {mounted && createPortal(
+            <AnimatePresence>
+              {showCancelConfirm && (
+                <motion.div
+                  className="fixed inset-0"
+                  style={{ zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)' }}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <motion.div
+                    initial={{ scale: 0.88, opacity: 0, y: 16 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.88, opacity: 0, y: 16 }}
+                    transition={{ type: 'spring', damping: 26, stiffness: 380 }}
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                      width: '100%', maxWidth: '400px', margin: '0 16px',
+                      borderRadius: '16px', overflow: 'hidden',
+                      background: 'linear-gradient(145deg, rgba(10,14,40,0.99), rgba(5,8,22,0.99))',
+                      border: '1px solid rgba(255,209,102,0.25)',
+                      boxShadow: '0 0 40px rgba(0,0,0,0.6)',
+                    }}
+                  >
+                    <div style={{ height: '3px', background: 'linear-gradient(90deg, #FFD166, #FFD16655)' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '28px 32px 24px', textAlign: 'center' }}>
+                      <svg width="30" height="30" viewBox="0 0 24 24" fill="#FFD166">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                      </svg>
+                      <p className="font-orbitron font-bold tracking-widest" style={{ fontSize: '14px', color: 'rgba(255,255,255,0.92)' }}>
+                        Tem certeza?
+                      </p>
+                      <p className="font-rajdhani text-sm" style={{ color: 'rgba(255,255,255,0.38)', lineHeight: 1.6 }}>
+                        Todas as alterações serão descartadas.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', padding: '0 24px 24px' }}>
+                      <button
+                        onClick={() => setShowCancelConfirm(false)}
+                        className="font-rajdhani font-bold tracking-widest"
+                        style={{ flex: 1, padding: '11px', borderRadius: '10px', fontSize: '13px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.45)', cursor: 'pointer' }}
+                      >
+                        CONTINUAR EDITANDO
+                      </button>
+                      <button
+                        onClick={cancelSettings}
+                        className="font-rajdhani font-bold tracking-widest"
+                        style={{ flex: 1, padding: '11px', borderRadius: '10px', fontSize: '13px', background: 'rgba(255,68,68,0.15)', border: '1px solid rgba(255,68,68,0.4)', color: '#FF4444', cursor: 'pointer' }}
+                      >
+                        SIM, CANCELAR
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
               )}
             </AnimatePresence>,
             document.body

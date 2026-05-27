@@ -57,6 +57,7 @@ export const ModelName = {
   PscTransaction: 'PscTransaction',
   MarketingImage: 'MarketingImage',
   RaffleHistory: 'RaffleHistory',
+  BotCommand: 'BotCommand',
   AppConfig: 'AppConfig'
 } as const
 
@@ -106,6 +107,7 @@ export const StreamerScalarFieldEnum = {
   chatTriggerCount: 'chatTriggerCount',
   chatTriggerCommand: 'chatTriggerCommand',
   raffleAnimationStyle: 'raffleAnimationStyle',
+  forcePasswordChange: 'forcePasswordChange',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -186,6 +188,17 @@ export const RaffleHistoryScalarFieldEnum = {
 } as const
 
 export type RaffleHistoryScalarFieldEnum = (typeof RaffleHistoryScalarFieldEnum)[keyof typeof RaffleHistoryScalarFieldEnum]
+
+
+export const BotCommandScalarFieldEnum = {
+  id: 'id',
+  streamerId: 'streamerId',
+  command: 'command',
+  response: 'response',
+  createdAt: 'createdAt'
+} as const
+
+export type BotCommandScalarFieldEnum = (typeof BotCommandScalarFieldEnum)[keyof typeof BotCommandScalarFieldEnum]
 
 
 export const AppConfigScalarFieldEnum = {

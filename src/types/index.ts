@@ -162,4 +162,5 @@ export interface AppState {
   autoRevealWinner: boolean;
   raffleAnimationStyle: RaffleAnimationStyle;
   pendingMarketplaceDelivery: PendingMarketplaceDelivery | null;
+  forcePasswordChange: boolean;
 }

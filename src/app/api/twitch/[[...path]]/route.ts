@@ -207,6 +207,7 @@ export async function GET(
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
 // POST /api/twitch/notify           → envia mensagem de ganhador no chat
+// POST /api/twitch/send             → envia mensagem genérica no chat (comandos do bot)
 // POST /api/twitch/eventsub/setup   → cria a assinatura EventSub
 // POST /api/twitch/eventsub         → webhook da Twitch (challenge + notificações)
 export async function POST(
@@ -215,6 +216,43 @@ export async function POST(
 ) {
   const { path } = await params;
   const [seg0, seg1] = path ?? [];
+
+  // ── Enviar mensagem genérica (bot commands) ───────────────────────────────
+  if (seg0 === 'send' && !seg1) {
+    const { channel, message } = await req.json() as { channel: string; message: string };
+    if (!channel || !message?.trim())
+      return NextResponse.json({ ok: false, error: 'channel e message são obrigatórios' }, { status: 400 });
+
+    const rows = await prisma.appConfig.findMany({
+      where: { key: { in: ['twitch_bot_user_token', 'twitch_bot_user_id'] } },
+    });
+    const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
+    const botToken = map['twitch_bot_user_token'];
+    const botUserId = map['twitch_bot_user_id'];
+    if (!botToken || !botUserId)
+      return NextResponse.json({ ok: false, error: 'Bot não autenticado' });
+
+    const appToken = await getAppToken();
+    const userRes = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(channel)}`, {
+      headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${appToken}` },
+    });
+    const userData = await userRes.json() as { data?: { id: string }[] };
+    const broadcasterId = userData.data?.[0]?.id;
+    if (!broadcasterId)
+      return NextResponse.json({ ok: false, error: `Canal "${channel}" não encontrado` });
+
+    const msgRes = await fetch('https://api.twitch.tv/helix/chat/messages', {
+      method: 'POST',
+      headers: {
+        'Client-Id': process.env.TWITCH_CLIENT_ID!,
+        Authorization: `Bearer ${botToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: botUserId, message: message.trim() }),
+    });
+    const msgData = await msgRes.json() as { data?: { is_sent?: boolean }[] };
+    return NextResponse.json({ ok: msgRes.ok, sent: msgData.data?.[0]?.is_sent ?? null });
+  }
 
   // ── Notificar ganhador no chat ────────────────────────────────────────────
   if (seg0 === 'notify' && !seg1) {

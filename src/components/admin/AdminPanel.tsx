@@ -8,6 +8,7 @@ import type { RaffleResult, DeliveryStatus } from '@/types';
 
 interface StreamerRow { username: string; displayName: string | null; pscBalance: number; isAffiliate: boolean; }
 interface AdminProduct { id: string; name: string; description: string | null; imageUrl: string | null; quantity: number; pscValue: number | null; skipPsc: boolean; }
+interface EditProfile { displayName: string; newPassword: string; twitchChannel: string; kickChannel: string; youtubeChannel: string; themeColor: string; forceFirstAccess: boolean; currentForcePasswordChange: boolean; }
 type Section = 'psc' | 'criar-streamer' | 'entregas' | 'editar-streamer' | 'marketing';
 
 const COLOR_PRESETS = ['#BF5AF2', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#00E5FF', '#00FFA3'];
@@ -287,6 +288,15 @@ export default function AdminPanel() {
   const [newProd, setNewProd] = useState({ name: '', description: '', quantity: 1, pscValue: '', skipPsc: false });
   const [addingProd, setAddingProd] = useState(false);
 
+  const [botCommands, setBotCommands] = useState<{ id: string; command: string; response: string }[]>([]);
+  const [botCmdLoading, setBotCmdLoading] = useState(false);
+  const [newBotCmd, setNewBotCmd] = useState({ command: '', response: '' });
+  const [addingBotCmd, setAddingBotCmd] = useState(false);
+
+  const [editProfile, setEditProfile] = useState<EditProfile>({ displayName: '', newPassword: '', twitchChannel: '', kickChannel: '', youtubeChannel: '', themeColor: '#00E5FF', forceFirstAccess: false, currentForcePasswordChange: false });
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  const [editProfileLoading, setEditProfileLoading] = useState(false);
+
   // Entregas admin state
   const [entregasStreamer, setEntregasStreamer] = useState<string>('');
   const [entregasHistory, setEntregasHistory] = useState<RaffleResult[]>([]);
@@ -351,13 +361,47 @@ export default function AdminPanel() {
     setProdLoading(false);
   }, []);
 
-  const loadEditStreamer = useCallback((username: string) => {
+  const loadBotCommands = useCallback(async (username: string) => {
+    if (!username) return;
+    setBotCmdLoading(true);
+    try {
+      const res = await fetch(`/api/admin/streamers/${username}/bot-commands`);
+      const data = await res.json();
+      if (Array.isArray(data)) setBotCommands(data);
+    } catch {}
+    setBotCmdLoading(false);
+  }, []);
+
+  const loadEditStreamer = useCallback(async (username: string) => {
     const row = streamers.find(s => s.username === username) ?? null;
     setEditData(row);
     setEditPscInput(row ? String(row.pscBalance) : '');
     setAdminProducts([]);
-    if (username) loadAdminProducts(username);
-  }, [streamers, loadAdminProducts]);
+    setBotCommands([]);
+    setEditProfile({ displayName: '', newPassword: '', twitchChannel: '', kickChannel: '', youtubeChannel: '', themeColor: '#00E5FF', forceFirstAccess: false, currentForcePasswordChange: false });
+    if (username) {
+      loadAdminProducts(username);
+      loadBotCommands(username);
+      setEditProfileLoading(true);
+      try {
+        const res = await fetch(`/api/admin/streamers/${username}`);
+        const fullData = await res.json();
+        if (!fullData.error) {
+          setEditProfile({
+            displayName: fullData.displayName ?? '',
+            newPassword: '',
+            twitchChannel: fullData.twitchChannel ?? '',
+            kickChannel: fullData.kickChannel ?? '',
+            youtubeChannel: fullData.youtubeChannel ?? '',
+            themeColor: fullData.themeColor ?? '#00E5FF',
+            forceFirstAccess: false,
+            currentForcePasswordChange: fullData.forcePasswordChange ?? false,
+          });
+        }
+      } catch {}
+      setEditProfileLoading(false);
+    }
+  }, [streamers, loadAdminProducts, loadBotCommands]);
 
   const handleEditSelectStreamer = (username: string) => {
     setEditStreamer(username);
@@ -365,53 +409,65 @@ export default function AdminPanel() {
     setEditFeedback(null);
   };
 
-  const handleToggleAffiliate = async () => {
+  const handleToggleAffiliate = () => {
     if (!editData) return;
-    setEditSaving(true);
-    try {
-      const res = await fetch(`/api/admin/streamers/${editData.username}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isAffiliate: !editData.isAffiliate }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setEditFeedback({ type: 'error', msg: data.error ?? 'Erro ao atualizar.' });
-      } else {
-        setEditData(data);
-        setStreamers(prev => prev.map(s => s.username === data.username ? { ...s, isAffiliate: data.isAffiliate } : s));
-        setEditFeedback({ type: 'success', msg: data.isAffiliate ? 'Afiliado ativado.' : 'Afiliado desativado.' });
-      }
-    } catch {
-      setEditFeedback({ type: 'error', msg: 'Erro de conexão.' });
-    } finally {
-      setEditSaving(false);
-      setTimeout(() => setEditFeedback(null), 3000);
-    }
+    setEditData(d => d ? { ...d, isAffiliate: !d.isAffiliate } : d);
   };
 
-  const handleSavePsc = async () => {
+  const handleSaveAll = async () => {
     if (!editData) return;
-    const value = Number(editPscInput);
-    if (isNaN(value) || value < 0) {
+    const pscValue = Number(editPscInput);
+    if (isNaN(pscValue) || pscValue < 0) {
       setEditFeedback({ type: 'error', msg: 'Valor PSC inválido.' });
       setTimeout(() => setEditFeedback(null), 3000);
       return;
     }
     setEditSaving(true);
     try {
+      const body: Record<string, unknown> = {
+        isAffiliate: editData.isAffiliate,
+        pscBalance: pscValue,
+        themeColor: editProfile.themeColor,
+        twitchChannel: editProfile.twitchChannel || null,
+        kickChannel: editProfile.kickChannel || null,
+        youtubeChannel: editProfile.youtubeChannel || null,
+        displayName: editProfile.displayName.trim() || null,
+      };
+      if (editProfile.forceFirstAccess) {
+        body.forcePasswordChange = true;
+      } else if (editProfile.newPassword.trim()) {
+        body.password = editProfile.newPassword.trim();
+      }
       const res = await fetch(`/api/admin/streamers/${editData.username}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pscBalance: value }),
+        body: JSON.stringify(body),
       });
-      const data = await res.json();
+      let data: Record<string, unknown>;
+      try {
+        data = await res.json();
+      } catch {
+        setEditFeedback({ type: 'error', msg: `Erro no servidor (HTTP ${res.status}).` });
+        return;
+      }
       if (!res.ok) {
-        setEditFeedback({ type: 'error', msg: data.error ?? 'Erro ao atualizar PSC.' });
+        setEditFeedback({ type: 'error', msg: (data.error as string) ?? 'Erro ao salvar.' });
       } else {
-        setEditData(data);
-        setStreamers(prev => prev.map(s => s.username === data.username ? { ...s, pscBalance: data.pscBalance } : s));
-        setEditFeedback({ type: 'success', msg: `PSC atualizado para ${value.toLocaleString('pt-BR')}.` });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setEditData(data as any);
+        setEditPscInput(String(data.pscBalance));
+        setStreamers(prev => prev.map(s => s.username === editData.username
+          ? { ...s, displayName: data.displayName as string | null, pscBalance: data.pscBalance as number, isAffiliate: data.isAffiliate as boolean }
+          : s
+        ));
+        setEditProfile(p => ({
+          ...p,
+          newPassword: '',
+          forceFirstAccess: false,
+          currentForcePasswordChange: (data.forcePasswordChange as boolean | undefined) ?? p.currentForcePasswordChange,
+          displayName: (data.displayName as string | null | undefined) ?? p.displayName,
+        }));
+        setEditFeedback({ type: 'success', msg: 'Alterações salvas com sucesso.' });
       }
     } catch {
       setEditFeedback({ type: 'error', msg: 'Erro de conexão.' });
@@ -457,6 +513,39 @@ export default function AdminPanel() {
     try {
       await fetch(`/api/admin/streamers/${editData.username}/products?itemId=${itemId}`, { method: 'DELETE' });
       setAdminProducts(prev => prev.filter(p => p.id !== itemId));
+    } catch {}
+  };
+
+  const handleAddBotCmd = async () => {
+    if (!editData || !newBotCmd.command.trim() || !newBotCmd.response.trim()) return;
+    setAddingBotCmd(true);
+    try {
+      const res = await fetch(`/api/admin/streamers/${editData.username}/bot-commands`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: newBotCmd.command.trim(), response: newBotCmd.response.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditFeedback({ type: 'error', msg: data.error ?? 'Erro ao adicionar comando.' });
+      } else {
+        setBotCommands(prev => [...prev, data]);
+        setNewBotCmd({ command: '', response: '' });
+        setEditFeedback({ type: 'success', msg: `Comando "${data.command}" adicionado.` });
+      }
+    } catch {
+      setEditFeedback({ type: 'error', msg: 'Erro de conexão.' });
+    } finally {
+      setAddingBotCmd(false);
+      setTimeout(() => setEditFeedback(null), 3000);
+    }
+  };
+
+  const handleDeleteBotCmd = async (id: string) => {
+    if (!editData) return;
+    try {
+      await fetch(`/api/admin/streamers/${editData.username}/bot-commands?id=${id}`, { method: 'DELETE' });
+      setBotCommands(prev => prev.filter(c => c.id !== id));
     } catch {}
   };
 
@@ -1452,20 +1541,60 @@ export default function AdminPanel() {
                       <path d="M7 10l5 5 5-5z"/>
                     </svg>
                   </div>
-                  {editFeedback && (
-                    <motion.div
-                      initial={{ opacity: 0, x: 8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+
+                  {/* Feedback */}
+                  <AnimatePresence>
+                    {editFeedback && (
+                      <motion.div
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                        style={{
+                          background: editFeedback.type === 'success' ? 'rgba(74,222,128,0.1)' : 'rgba(239,68,68,0.1)',
+                          border: `1px solid ${editFeedback.type === 'success' ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                        }}
+                      >
+                        <span className="font-rajdhani text-xs font-semibold" style={{ color: editFeedback.type === 'success' ? 'rgba(74,222,128,0.9)' : 'rgba(239,68,68,0.9)' }}>
+                          {editFeedback.msg}
+                        </span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Botão SALVAR unificado */}
+                  {editStreamer && (
+                    <button
+                      onClick={handleSaveAll}
+                      disabled={editSaving}
+                      className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-orbitron text-xs font-bold tracking-widest transition-all ml-auto"
                       style={{
-                        background: editFeedback.type === 'success' ? 'rgba(74,222,128,0.1)' : 'rgba(239,68,68,0.1)',
-                        border: `1px solid ${editFeedback.type === 'success' ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                        background: editSaving ? 'rgba(255,255,255,0.04)' : 'linear-gradient(135deg, rgba(191,90,242,0.25), rgba(120,50,200,0.15))',
+                        border: `1px solid ${editSaving ? 'rgba(255,255,255,0.08)' : 'rgba(191,90,242,0.5)'}`,
+                        color: editSaving ? 'rgba(255,255,255,0.25)' : 'rgba(191,90,242,1)',
+                        cursor: editSaving ? 'not-allowed' : 'pointer',
+                        boxShadow: editSaving ? 'none' : '0 0 20px rgba(191,90,242,0.15)',
                       }}
                     >
-                      <span className="font-rajdhani text-xs font-semibold" style={{ color: editFeedback.type === 'success' ? 'rgba(74,222,128,0.9)' : 'rgba(239,68,68,0.9)' }}>
-                        {editFeedback.msg}
-                      </span>
-                    </motion.div>
+                      {editSaving ? (
+                        <>
+                          <motion.span
+                            className="inline-block w-3 h-3 border-2 rounded-full"
+                            style={{ borderColor: 'rgba(255,255,255,0.15)', borderTopColor: 'rgba(255,255,255,0.4)' }}
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                          />
+                          SALVANDO...
+                        </>
+                      ) : (
+                        <>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+                          </svg>
+                          SALVAR
+                        </>
+                      )}
+                    </button>
                   )}
                 </div>
 
@@ -1487,6 +1616,223 @@ export default function AdminPanel() {
                   </div>
                 ) : (
                   <div className="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-6">
+
+                    {/* ── INFORMAÇÕES DO STREAMER ── */}
+                    <div
+                      className="rounded-2xl p-6 flex flex-col gap-6"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    >
+                      <div>
+                        <span className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                          INFORMAÇÕES DO STREAMER
+                        </span>
+                        <p className="font-rajdhani text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          Perfil, visual e integrações
+                        </p>
+                      </div>
+
+                      {editProfileLoading ? (
+                        <div className="flex items-center gap-2 py-2">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(0,229,255,0.5)" style={{ animation: 'spin 1s linear infinite' }}>
+                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                          </svg>
+                          <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Carregando perfil...</span>
+                        </div>
+                      ) : (
+                        <>
+                          {/* IDENTIDADE */}
+                          <div className="flex flex-col gap-3">
+                            <span className="font-orbitron font-bold tracking-widest" style={{ fontSize: 10, color: 'rgba(191,90,242,0.7)' }}>IDENTIDADE</span>
+                            <div className="flex gap-3">
+                              <div className="flex-1 flex flex-col gap-1.5">
+                                <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>NOME DE EXIBIÇÃO</label>
+                                <input
+                                  type="text"
+                                  value={editProfile.displayName}
+                                  onChange={e => setEditProfile(p => ({ ...p, displayName: e.target.value }))}
+                                  placeholder="Nome de exibição..."
+                                  className="rounded-xl font-rajdhani text-sm outline-none px-4 py-3"
+                                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                                />
+                              </div>
+                              <div className="flex-1 flex flex-col gap-1.5">
+                                <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>
+                                  {editProfile.forceFirstAccess ? 'PRIMEIRO ACESSO (ativado)' : 'NOVA SENHA (opcional)'}
+                                </label>
+                                {editProfile.forceFirstAccess ? (
+                                  /* Primeiro acesso ativo */
+                                  <div className="flex flex-col gap-2">
+                                    <div
+                                      className="w-full rounded-xl px-4 py-3 flex items-center gap-2"
+                                      style={{ background: 'rgba(191,90,242,0.08)', border: '1px solid rgba(191,90,242,0.35)' }}
+                                    >
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(191,90,242,0.9)">
+                                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                                      </svg>
+                                      <span className="font-rajdhani text-xs" style={{ color: 'rgba(191,90,242,0.9)' }}>
+                                        Senha será <strong>123</strong> — alteração obrigatória no 1º login
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditProfile(p => ({ ...p, forceFirstAccess: false }))}
+                                      className="text-left font-rajdhani text-xs tracking-wide transition-opacity opacity-50 hover:opacity-80"
+                                      style={{ color: 'rgba(255,255,255,0.6)' }}
+                                    >
+                                      ↩ Cancelar
+                                    </button>
+                                  </div>
+                                ) : (
+                                  /* Campo de senha normal + botão primeiro acesso */
+                                  <div className="flex flex-col gap-2">
+                                    {editProfile.currentForcePasswordChange && (
+                                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: 'rgba(191,90,242,0.06)', border: '1px solid rgba(191,90,242,0.2)' }}>
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(191,90,242,0.7)">
+                                          <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                        </svg>
+                                        <span className="font-rajdhani" style={{ fontSize: 10, color: 'rgba(191,90,242,0.75)' }}>Aguardando 1º acesso do streamer</span>
+                                      </div>
+                                    )}
+                                    <div className="relative">
+                                      <input
+                                        type={showEditPassword ? 'text' : 'password'}
+                                        value={editProfile.newPassword}
+                                        onChange={e => setEditProfile(p => ({ ...p, newPassword: e.target.value }))}
+                                        placeholder="••••••••"
+                                        className="w-full rounded-xl font-rajdhani text-sm outline-none px-4 py-3 pr-12"
+                                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowEditPassword(p => !p)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 transition-all"
+                                        style={{ color: showEditPassword ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)' }}
+                                      >
+                                        {showEditPassword ? (
+                                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                            <line x1="1" y1="1" x2="23" y2="23"/>
+                                          </svg>
+                                        ) : (
+                                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                            <circle cx="12" cy="12" r="3"/>
+                                          </svg>
+                                        )}
+                                      </button>
+                                    </div>
+                                    {/* Separator + Primeiro Acesso button */}
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditProfile(p => ({ ...p, newPassword: '', forceFirstAccess: true }))}
+                                      className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all group"
+                                      style={{ background: 'rgba(191,90,242,0.06)', border: '1px solid rgba(191,90,242,0.2)' }}
+                                    >
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(191,90,242,0.7)">
+                                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                                      </svg>
+                                      <span className="font-orbitron font-bold tracking-widest group-hover:opacity-90" style={{ fontSize: 9, color: 'rgba(191,90,242,0.75)' }}>
+                                        PRIMEIRO ACESSO
+                                      </span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* VISUAL */}
+                          <div className="flex flex-col gap-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 20 }}>
+                            <span className="font-orbitron font-bold tracking-widest" style={{ fontSize: 10, color: 'rgba(191,90,242,0.7)' }}>VISUAL</span>
+                            <div className="flex flex-col gap-2">
+                              <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>COR DE TEMA</label>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {COLOR_PRESETS.map(c => (
+                                  <button
+                                    key={c}
+                                    onClick={() => setEditProfile(p => ({ ...p, themeColor: c }))}
+                                    className="relative rounded-full flex items-center justify-center flex-shrink-0 transition-all"
+                                    style={{
+                                      width: 28, height: 28,
+                                      background: c,
+                                      border: editProfile.themeColor === c ? '2px solid white' : '2px solid transparent',
+                                      boxShadow: editProfile.themeColor === c ? `0 0 10px ${c}99` : 'none',
+                                    }}
+                                  >
+                                    {editProfile.themeColor === c && (
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                      </svg>
+                                    )}
+                                  </button>
+                                ))}
+                                <input
+                                  type="color"
+                                  value={editProfile.themeColor}
+                                  onChange={e => setEditProfile(p => ({ ...p, themeColor: e.target.value }))}
+                                  title="Cor personalizada"
+                                  className="rounded-full cursor-pointer flex-shrink-0"
+                                  style={{ width: 28, height: 28, border: '1px dashed rgba(255,255,255,0.2)', padding: 2, background: 'rgba(255,255,255,0.05)' }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* INTEGRAÇÕES */}
+                          <div className="flex flex-col gap-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 20 }}>
+                            <span className="font-orbitron font-bold tracking-widest" style={{ fontSize: 10, color: 'rgba(191,90,242,0.7)' }}>INTEGRAÇÕES</span>
+                            <div className="flex gap-3">
+                              <div className="flex-1 flex flex-col items-center gap-2 px-4 py-4 rounded-xl"
+                                style={{ background: 'rgba(145,70,255,0.06)', border: '1px solid rgba(145,70,255,0.2)' }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="#9146FF">
+                                  <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
+                                </svg>
+                                <span className="font-orbitron font-bold tracking-wide" style={{ fontSize: 10, color: 'rgba(145,70,255,0.85)' }}>TWITCH</span>
+                                <input
+                                  type="text"
+                                  value={editProfile.twitchChannel}
+                                  onChange={e => setEditProfile(p => ({ ...p, twitchChannel: e.target.value }))}
+                                  placeholder="canal"
+                                  className="w-full rounded-lg font-rajdhani text-sm outline-none px-3 py-2 text-center"
+                                  style={{ background: 'rgba(145,70,255,0.1)', border: '1px solid rgba(145,70,255,0.25)', color: 'rgba(255,255,255,0.8)' }}
+                                />
+                              </div>
+                              <div className="flex-1 flex flex-col items-center gap-2 px-4 py-4 rounded-xl"
+                                style={{ background: 'rgba(83,252,20,0.04)', border: '1px solid rgba(83,252,20,0.2)' }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="#53FC14">
+                                  <path d="M2 2h6v8.5l4-4.5h7l-6 7 6 7H12l-4-4.5V22H2V2z"/>
+                                </svg>
+                                <span className="font-orbitron font-bold tracking-wide" style={{ fontSize: 10, color: 'rgba(83,252,20,0.85)' }}>KICK</span>
+                                <input
+                                  type="text"
+                                  value={editProfile.kickChannel}
+                                  onChange={e => setEditProfile(p => ({ ...p, kickChannel: e.target.value }))}
+                                  placeholder="canal"
+                                  className="w-full rounded-lg font-rajdhani text-sm outline-none px-3 py-2 text-center"
+                                  style={{ background: 'rgba(83,252,20,0.08)', border: '1px solid rgba(83,252,20,0.25)', color: 'rgba(255,255,255,0.8)' }}
+                                />
+                              </div>
+                              <div className="flex-1 flex flex-col items-center gap-2 px-4 py-4 rounded-xl"
+                                style={{ background: 'rgba(255,0,0,0.04)', border: '1px solid rgba(255,60,60,0.2)' }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="#FF0000">
+                                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                                </svg>
+                                <span className="font-orbitron font-bold tracking-wide" style={{ fontSize: 10, color: 'rgba(255,80,80,0.85)' }}>YOUTUBE</span>
+                                <input
+                                  type="text"
+                                  value={editProfile.youtubeChannel}
+                                  onChange={e => setEditProfile(p => ({ ...p, youtubeChannel: e.target.value }))}
+                                  placeholder="@canal"
+                                  className="w-full rounded-lg font-rajdhani text-sm outline-none px-3 py-2 text-center"
+                                  style={{ background: 'rgba(255,0,0,0.08)', border: '1px solid rgba(255,60,60,0.25)', color: 'rgba(255,255,255,0.8)' }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                        </>
+                      )}
+                    </div>
 
                     {/* ── AFILIADO TOGGLE ── */}
                     <div
@@ -1518,15 +1864,14 @@ export default function AdminPanel() {
                       </div>
                       <button
                         onClick={handleToggleAffiliate}
-                        disabled={editSaving || !editData}
+                        disabled={!editData}
                         className="relative flex-shrink-0 rounded-full transition-all"
                         style={{
                           width: 56,
                           height: 30,
                           background: editData?.isAffiliate ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)',
                           border: `2px solid ${editData?.isAffiliate ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,0.15)'}`,
-                          opacity: editSaving ? 0.6 : 1,
-                          cursor: editSaving ? 'not-allowed' : 'pointer',
+                          cursor: !editData ? 'not-allowed' : 'pointer',
                         }}
                       >
                         <div
@@ -1561,30 +1906,15 @@ export default function AdminPanel() {
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="number"
-                          min="0"
-                          value={editPscInput}
-                          onChange={e => setEditPscInput(e.target.value)}
-                          placeholder="Novo saldo..."
-                          className="flex-1 rounded-xl font-orbitron text-sm outline-none px-4 py-3"
-                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
-                        />
-                        <button
-                          onClick={handleSavePsc}
-                          disabled={editSaving || !editData}
-                          className="px-5 py-3 rounded-xl font-orbitron text-xs font-bold tracking-widest transition-all"
-                          style={{
-                            background: editSaving ? 'rgba(255,255,255,0.04)' : 'rgba(0,229,255,0.12)',
-                            border: `1px solid ${editSaving ? 'rgba(255,255,255,0.08)' : 'rgba(0,229,255,0.35)'}`,
-                            color: editSaving ? 'rgba(255,255,255,0.25)' : 'rgba(0,229,255,0.9)',
-                            cursor: editSaving ? 'not-allowed' : 'pointer',
-                          }}
-                        >
-                          {editSaving ? 'SALVANDO...' : 'SALVAR'}
-                        </button>
-                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editPscInput}
+                        onChange={e => setEditPscInput(e.target.value)}
+                        placeholder="Novo saldo..."
+                        className="rounded-xl font-orbitron text-sm outline-none px-4 py-3"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                      />
                       <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
                         Define o saldo absoluto. A diferença será registrada como transação PSC.
                       </p>
@@ -1761,6 +2091,129 @@ export default function AdminPanel() {
                             {addingProd ? 'ADICIONANDO...' : 'ADICIONAR'}
                           </button>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* ── COMANDOS DO BOT ── */}
+                    <div
+                      className="rounded-2xl p-6 flex flex-col gap-5"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                            COMANDOS DO BOT
+                          </span>
+                          <p className="font-rajdhani text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                            Respostas automáticas do bot no chat ao digitar um comando
+                          </p>
+                        </div>
+                        <div className="px-2 py-1 rounded-lg" style={{ background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.18)' }}>
+                          <span className="font-orbitron text-xs font-bold" style={{ color: 'rgba(0,229,255,0.7)' }}>
+                            {botCommands.length} cmd{botCommands.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Command list */}
+                      {botCmdLoading ? (
+                        <div className="flex items-center gap-2 py-2">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(0,229,255,0.5)" style={{ animation: 'spin 1s linear infinite' }}>
+                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                          </svg>
+                          <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Carregando comandos...</span>
+                        </div>
+                      ) : botCommands.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          {botCommands.map(cmd => (
+                            <div
+                              key={cmd.id}
+                              className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+                            >
+                              <div className="flex-1 min-w-0 flex items-center gap-3">
+                                <span
+                                  className="font-mono font-bold flex-shrink-0 px-2 py-0.5 rounded"
+                                  style={{ fontSize: 12, color: '#00E5FF', background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.2)' }}
+                                >
+                                  {cmd.command}
+                                </span>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.2)" className="flex-shrink-0">
+                                  <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/>
+                                </svg>
+                                <span className="font-rajdhani text-sm truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                                  {cmd.response}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteBotCmd(cmd.id)}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+                                style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: 'rgba(239,68,68,0.6)' }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.2)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(239,68,68,0.9)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.08)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(239,68,68,0.6)'; }}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="font-rajdhani text-xs py-2" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                          Nenhum comando cadastrado.
+                        </p>
+                      )}
+
+                      {/* Add new command form */}
+                      <div
+                        className="flex flex-col gap-3 pt-4"
+                        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+                      >
+                        <p className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                          ADICIONAR COMANDO
+                        </p>
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="text"
+                            value={newBotCmd.command}
+                            onChange={e => setNewBotCmd(p => ({ ...p, command: e.target.value }))}
+                            placeholder="!comando"
+                            className="rounded-xl font-mono text-sm outline-none px-4 py-2.5"
+                            style={{ width: 140, flexShrink: 0, background: 'rgba(0,229,255,0.04)', border: '1px solid rgba(0,229,255,0.2)', color: '#00E5FF' }}
+                          />
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.2)" className="flex-shrink-0">
+                            <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/>
+                          </svg>
+                          <input
+                            type="text"
+                            value={newBotCmd.response}
+                            onChange={e => setNewBotCmd(p => ({ ...p, response: e.target.value }))}
+                            onKeyDown={e => e.key === 'Enter' && handleAddBotCmd()}
+                            placeholder="Resposta do bot..."
+                            className="flex-1 rounded-xl font-rajdhani text-sm outline-none px-4 py-2.5"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                          />
+                          <button
+                            onClick={handleAddBotCmd}
+                            disabled={addingBotCmd || !newBotCmd.command.trim() || !newBotCmd.response.trim()}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-orbitron text-xs font-bold tracking-widest transition-all flex-shrink-0"
+                            style={{
+                              background: addingBotCmd || !newBotCmd.command.trim() || !newBotCmd.response.trim() ? 'rgba(255,255,255,0.04)' : 'rgba(0,229,255,0.12)',
+                              border: `1px solid ${addingBotCmd || !newBotCmd.command.trim() || !newBotCmd.response.trim() ? 'rgba(255,255,255,0.08)' : 'rgba(0,229,255,0.35)'}`,
+                              color: addingBotCmd || !newBotCmd.command.trim() || !newBotCmd.response.trim() ? 'rgba(255,255,255,0.2)' : 'rgba(0,229,255,0.9)',
+                              cursor: addingBotCmd || !newBotCmd.command.trim() || !newBotCmd.response.trim() ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                            </svg>
+                            {addingBotCmd ? 'ADICIONANDO...' : 'ADICIONAR'}
+                          </button>
+                        </div>
+                        <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                          O bot responde somente na Twitch. Use <span style={{ color: 'rgba(0,229,255,0.5)', fontFamily: 'monospace' }}>!comando</span> exato (case insensitive).
+                        </p>
                       </div>
                     </div>
 

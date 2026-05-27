@@ -390,6 +390,7 @@ export const ModelName = {
   PscTransaction: 'PscTransaction',
   MarketingImage: 'MarketingImage',
   RaffleHistory: 'RaffleHistory',
+  BotCommand: 'BotCommand',
   AppConfig: 'AppConfig'
 } as const
 
@@ -406,7 +407,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "streamer" | "prizeList" | "prizeListItem" | "pscTransaction" | "marketingImage" | "raffleHistory" | "appConfig"
+    modelProps: "streamer" | "prizeList" | "prizeListItem" | "pscTransaction" | "marketingImage" | "raffleHistory" | "botCommand" | "appConfig"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -854,6 +855,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    BotCommand: {
+      payload: Prisma.$BotCommandPayload<ExtArgs>
+      fields: Prisma.BotCommandFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.BotCommandFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotCommandPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.BotCommandFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotCommandPayload>
+        }
+        findFirst: {
+          args: Prisma.BotCommandFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotCommandPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.BotCommandFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotCommandPayload>
+        }
+        findMany: {
+          args: Prisma.BotCommandFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotCommandPayload>[]
+        }
+        create: {
+          args: Prisma.BotCommandCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotCommandPayload>
+        }
+        createMany: {
+          args: Prisma.BotCommandCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.BotCommandCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotCommandPayload>[]
+        }
+        delete: {
+          args: Prisma.BotCommandDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotCommandPayload>
+        }
+        update: {
+          args: Prisma.BotCommandUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotCommandPayload>
+        }
+        deleteMany: {
+          args: Prisma.BotCommandDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.BotCommandUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.BotCommandUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotCommandPayload>[]
+        }
+        upsert: {
+          args: Prisma.BotCommandUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BotCommandPayload>
+        }
+        aggregate: {
+          args: Prisma.BotCommandAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateBotCommand>
+        }
+        groupBy: {
+          args: Prisma.BotCommandGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BotCommandGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.BotCommandCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BotCommandCountAggregateOutputType> | number
+        }
+      }
+    }
     AppConfig: {
       payload: Prisma.$AppConfigPayload<ExtArgs>
       fields: Prisma.AppConfigFieldRefs
@@ -997,6 +1072,7 @@ export const StreamerScalarFieldEnum = {
   chatTriggerCount: 'chatTriggerCount',
   chatTriggerCommand: 'chatTriggerCommand',
   raffleAnimationStyle: 'raffleAnimationStyle',
+  forcePasswordChange: 'forcePasswordChange',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -1077,6 +1153,17 @@ export const RaffleHistoryScalarFieldEnum = {
 } as const
 
 export type RaffleHistoryScalarFieldEnum = (typeof RaffleHistoryScalarFieldEnum)[keyof typeof RaffleHistoryScalarFieldEnum]
+
+
+export const BotCommandScalarFieldEnum = {
+  id: 'id',
+  streamerId: 'streamerId',
+  command: 'command',
+  response: 'response',
+  createdAt: 'createdAt'
+} as const
+
+export type BotCommandScalarFieldEnum = (typeof BotCommandScalarFieldEnum)[keyof typeof BotCommandScalarFieldEnum]
 
 
 export const AppConfigScalarFieldEnum = {
@@ -1296,6 +1383,7 @@ export type GlobalOmitConfig = {
   pscTransaction?: Prisma.PscTransactionOmit
   marketingImage?: Prisma.MarketingImageOmit
   raffleHistory?: Prisma.RaffleHistoryOmit
+  botCommand?: Prisma.BotCommandOmit
   appConfig?: Prisma.AppConfigOmit
 }
 

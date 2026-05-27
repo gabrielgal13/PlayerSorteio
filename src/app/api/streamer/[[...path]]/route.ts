@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 
 const ADMIN_LIST_NAME = '__admin_products__';
@@ -8,6 +9,7 @@ const ADMIN_LIST_NAME = '__admin_products__';
 // GET /api/streamer/psc-history?username=xxx&days=30
 // GET /api/streamer/prize-lists?username=xxx
 // GET /api/streamer/admin-products  (header: x-session-username)
+// GET /api/streamer/bot-commands?username=xxx
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ path?: string[] }> },
@@ -120,11 +122,24 @@ export async function GET(
     return NextResponse.json(list?.items ?? []);
   }
 
+  if (route === 'bot-commands') {
+    const username = req.nextUrl.searchParams.get('username');
+    if (!username) return NextResponse.json({ error: 'username required' }, { status: 400 });
+    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true } });
+    if (!streamer) return NextResponse.json([]);
+    const commands = await prisma.botCommand.findMany({
+      where: { streamerId: streamer.id },
+      select: { id: true, command: true, response: true },
+    });
+    return NextResponse.json(commands);
+  }
+
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
 // POST /api/streamer/history
 // POST /api/streamer/prize-lists
+// POST /api/streamer/change-password
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ path?: string[] }> },
@@ -151,6 +166,20 @@ export async function POST(
         confirmed: result.confirmed,
         timestamp: new Date(result.timestamp),
       },
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (route === 'change-password') {
+    const { username, newPassword } = await req.json();
+    if (!username || !newPassword?.trim())
+      return NextResponse.json({ error: 'Dados inválidos.' }, { status: 400 });
+    const streamer = await prisma.streamer.findUnique({ where: { username } });
+    if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
+    const passwordHash = await bcrypt.hash(newPassword.trim(), 10);
+    await prisma.streamer.update({
+      where: { username },
+      data: { passwordHash, forcePasswordChange: false },
     });
     return NextResponse.json({ ok: true });
   }

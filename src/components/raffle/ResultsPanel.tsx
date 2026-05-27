@@ -30,6 +30,7 @@ export default function ResultsPanel() {
     sessionStartTimestamp, sessionDuration, sessionParticipantCount,
     participants, liveViewerCount, twitchConfig, twitchConnected,
     setRaffleStage, setActiveTab,
+    clearPrizes, setParticipants,
   } = useStore();
 
   const hasAnyPlatform = twitchConnected || Boolean(currentUser?.kickChannel) || Boolean(currentUser?.youtubeChannel);
@@ -332,7 +333,7 @@ export default function ResultsPanel() {
 
         {/* Novo Sorteio */}
         <motion.button
-          onClick={() => { setRaffleStage(1); setActiveTab('raffle'); }}
+          onClick={() => { clearPrizes(); setParticipants([]); setRaffleStage(1); setActiveTab('raffle'); }}
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
           className="flex-[1.4] flex items-center justify-center gap-2.5 rounded-xl font-orbitron font-bold tracking-widest text-sm"
           style={{

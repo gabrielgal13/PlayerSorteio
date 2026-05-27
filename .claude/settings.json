@@ -44,7 +44,9 @@
       "WebSearch",
       "WebFetch(domain:docs.dmarket.com)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:support.dmarket.com)"
+      "WebFetch(domain:support.dmarket.com)",
+      "Bash(dir \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\components\" /s /b)",
+      "Bash(node_modules\\\\.bin\\\\prisma db *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\streamers",

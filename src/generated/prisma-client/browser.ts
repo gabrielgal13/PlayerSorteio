@@ -48,6 +48,11 @@ export type MarketingImage = Prisma.MarketingImageModel
  */
 export type RaffleHistory = Prisma.RaffleHistoryModel
 /**
+ * Model BotCommand
+ * 
+ */
+export type BotCommand = Prisma.BotCommandModel
+/**
  * Model AppConfig
  * 
  */

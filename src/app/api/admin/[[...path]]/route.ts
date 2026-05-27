@@ -46,6 +46,32 @@ export async function GET(
     return NextResponse.json(list?.items ?? []);
   }
 
+  // GET /api/admin/streamers/[username]/bot-commands
+  if (seg0 === 'streamers' && seg1 && seg2 === 'bot-commands') {
+    const username = seg1;
+    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true } });
+    if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
+    const commands = await prisma.botCommand.findMany({
+      where: { streamerId: streamer.id },
+      orderBy: { createdAt: 'asc' },
+    });
+    return NextResponse.json(commands);
+  }
+
+  // GET /api/admin/streamers/[username]
+  if (seg0 === 'streamers' && seg1 && !seg2) {
+    const streamer = await prisma.streamer.findUnique({
+      where: { username: seg1 },
+      select: {
+        username: true, displayName: true, pscBalance: true, isAffiliate: true,
+        themeColor: true, twitchChannel: true, kickChannel: true, youtubeChannel: true,
+        forcePasswordChange: true,
+      },
+    });
+    if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
+    return NextResponse.json(streamer);
+  }
+
   // GET /api/admin/marketing/random — public endpoint (rewritten from /api/marketing/random)
   if (seg0 === 'marketing' && seg1 === 'random') {
     try {
@@ -134,6 +160,24 @@ export async function POST(
     return NextResponse.json({ username: streamer.username }, { status: 201 });
   }
 
+  // POST /api/admin/streamers/[username]/bot-commands
+  if (seg0 === 'streamers' && seg1 && seg2 === 'bot-commands') {
+    const username = seg1;
+    const { command, response } = await req.json();
+    if (!command?.trim() || !response?.trim())
+      return NextResponse.json({ error: 'Comando e resposta são obrigatórios.' }, { status: 400 });
+    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true } });
+    if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
+    const cmd = await prisma.botCommand.create({
+      data: {
+        streamerId: streamer.id,
+        command: command.trim(),
+        response: response.trim(),
+      },
+    });
+    return NextResponse.json(cmd, { status: 201 });
+  }
+
   // POST /api/admin/streamers/[username]/products
   if (seg0 === 'streamers' && seg1 && seg2 === 'products') {
     const username = seg1;
@@ -193,37 +237,58 @@ export async function PATCH(
 
   // PATCH /api/admin/streamers/[username]
   if (seg0 === 'streamers' && seg1 && !seg2) {
-    const username = seg1;
-    const body = await req.json();
-    const streamer = await prisma.streamer.findUnique({
-      where: { username },
-      select: { id: true, pscBalance: true },
-    });
-    if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
-    const data: Record<string, unknown> = {};
-    if (typeof body.isAffiliate === 'boolean') data.isAffiliate = body.isAffiliate;
-    if (typeof body.pscBalance === 'number' && body.pscBalance >= 0) {
-      data.pscBalance = body.pscBalance;
-      const delta = body.pscBalance - streamer.pscBalance;
-      if (delta !== 0) {
-        await prisma.pscTransaction.create({
-          data: {
-            streamerId: streamer.id,
-            type: delta > 0 ? 'credit' : 'debit',
-            amount: Math.abs(delta),
-            description: body.pscDescription ?? 'Ajuste manual (admin)',
-          },
-        });
+    try {
+      const username = seg1;
+      const body = await req.json();
+      const streamer = await prisma.streamer.findUnique({
+        where: { username },
+        select: { id: true, pscBalance: true },
+      });
+      if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
+      const updateData: {
+        isAffiliate?: boolean; pscBalance?: number; displayName?: string | null;
+        passwordHash?: string; forcePasswordChange?: boolean; themeColor?: string;
+        twitchChannel?: string | null; kickChannel?: string | null; youtubeChannel?: string | null;
+      } = {};
+      if (typeof body.isAffiliate === 'boolean') updateData.isAffiliate = body.isAffiliate;
+      if (typeof body.pscBalance === 'number' && body.pscBalance >= 0) {
+        updateData.pscBalance = body.pscBalance;
+        const delta = body.pscBalance - streamer.pscBalance;
+        if (delta !== 0) {
+          await prisma.pscTransaction.create({
+            data: {
+              streamerId: streamer.id,
+              type: delta > 0 ? 'credit' : 'debit',
+              amount: Math.abs(delta),
+              description: body.pscDescription ?? 'Ajuste manual (admin)',
+            },
+          });
+        }
       }
+      if (body.displayName !== undefined) updateData.displayName = body.displayName || null;
+      if (body.forcePasswordChange === true) {
+        updateData.passwordHash = await bcrypt.hash('123', 10);
+        updateData.forcePasswordChange = true;
+      } else if (typeof body.password === 'string' && body.password.trim()) {
+        updateData.passwordHash = await bcrypt.hash(body.password.trim(), 10);
+        updateData.forcePasswordChange = false;
+      }
+      if (typeof body.themeColor === 'string' && body.themeColor) updateData.themeColor = body.themeColor;
+      if (body.twitchChannel !== undefined) updateData.twitchChannel = body.twitchChannel || null;
+      if (body.kickChannel !== undefined) updateData.kickChannel = body.kickChannel || null;
+      if (body.youtubeChannel !== undefined) updateData.youtubeChannel = body.youtubeChannel || null;
+      if (Object.keys(updateData).length === 0)
+        return NextResponse.json({ error: 'Nenhum campo válido para atualizar.' }, { status: 400 });
+      const updated = await prisma.streamer.update({
+        where: { username },
+        data: updateData,
+        select: { username: true, displayName: true, pscBalance: true, isAffiliate: true, themeColor: true, twitchChannel: true, kickChannel: true, youtubeChannel: true, forcePasswordChange: true },
+      });
+      return NextResponse.json(updated);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return NextResponse.json({ error: msg }, { status: 500 });
     }
-    if (Object.keys(data).length === 0)
-      return NextResponse.json({ error: 'Nenhum campo válido para atualizar.' }, { status: 400 });
-    const updated = await prisma.streamer.update({
-      where: { username },
-      data,
-      select: { username: true, displayName: true, pscBalance: true, isAffiliate: true },
-    });
-    return NextResponse.json(updated);
   }
 
   // PATCH /api/admin/marketing/[id]
@@ -258,6 +323,21 @@ export async function DELETE(
 ) {
   const { path } = await params;
   const [seg0, seg1, seg2] = path ?? [];
+
+  // DELETE /api/admin/streamers/[username]/bot-commands?id=xxx
+  if (seg0 === 'streamers' && seg1 && seg2 === 'bot-commands') {
+    const username = seg1;
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'id é obrigatório.' }, { status: 400 });
+    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true } });
+    if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
+    const cmd = await prisma.botCommand.findUnique({ where: { id } });
+    if (!cmd || cmd.streamerId !== streamer.id)
+      return NextResponse.json({ error: 'Comando não encontrado.' }, { status: 404 });
+    await prisma.botCommand.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  }
 
   // DELETE /api/admin/streamers/[username]/products?itemId=xxx
   if (seg0 === 'streamers' && seg1 && seg2 === 'products') {

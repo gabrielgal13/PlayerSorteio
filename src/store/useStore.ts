@@ -65,6 +65,7 @@ interface AppActions {
   setChatTriggerCommand: (cmd: string) => void;
   setRaffleAnimationStyle: (style: RaffleAnimationStyle) => void;
   setPendingMarketplaceDelivery: (d: PendingMarketplaceDelivery | null) => void;
+  setForcePasswordChange: (v: boolean) => void;
 }
 
 const THEME_BY_MASCOT: Record<string, string> = {
@@ -118,6 +119,7 @@ export const useStore = create<AppState & AppActions>()(
       autoRevealWinner: true,
       raffleAnimationStyle: 'balada' as RaffleAnimationStyle,
       pendingMarketplaceDelivery: null,
+      forcePasswordChange: false,
       socoChuteModeEnabled: true,
       raffleTriggerMode: 'manual' as RaffleTriggerMode,
       autoRoundDelay: 30,
@@ -286,6 +288,7 @@ export const useStore = create<AppState & AppActions>()(
         set({
           isLoggedIn: true,
           currentUser: streamerProfile,
+          forcePasswordChange: data.forcePasswordChange ?? false,
           twitchConfig: data.twitchConfig,
           eventBackground: data.mascot === 'dreads' ? '/fundo-ganja.png' : null,
           raffleStage: 1,
@@ -316,11 +319,14 @@ export const useStore = create<AppState & AppActions>()(
         }
       },
 
+      setForcePasswordChange: (forcePasswordChange) => set({ forcePasswordChange }),
+
       logout: () => {
         fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
         set({
           isLoggedIn: false,
           currentUser: null,
+          forcePasswordChange: false,
           participants: [],
           prizes: [],
           history: [],

@@ -55,6 +55,8 @@ export default function TwitchPanel() {
   const claimCommandRef = useRef(twitchConfig.claimCommand);
   const raffleStageRef = useRef(raffleStage);
 
+  const botCommandsRef = useRef<{ command: string; response: string }[]>([]);
+
   // Chat-game guess tracking
   const acceptingGuessesRef = useRef(false);
   const chatGameParticipantsRef = useRef(new Set<string>());
@@ -66,6 +68,15 @@ export default function TwitchPanel() {
   useEffect(() => { currentWinnerRef.current = currentWinner; }, [currentWinner]);
   useEffect(() => { claimCommandRef.current = twitchConfig.claimCommand; }, [twitchConfig.claimCommand]);
   useEffect(() => { raffleStageRef.current = raffleStage; }, [raffleStage]);
+
+  useEffect(() => {
+    const username = currentUser?.username;
+    if (!username) return;
+    fetch(`/api/streamer/bot-commands?username=${encodeURIComponent(username)}`)
+      .then(r => r.json())
+      .then((cmds: { command: string; response: string }[]) => { botCommandsRef.current = cmds; })
+      .catch(() => {});
+  }, [currentUser?.username]);
 
   const channel = twitchConfig.channel || currentUser?.twitchChannel || '';
   const hasKick = Boolean(currentUser?.kickChannel || currentUser?.kickChatroomId);
@@ -138,6 +149,18 @@ export default function TwitchPanel() {
       if (stage === 2 && status === 'idle' && socoChuteModeEnabled) {
         if (msgTrimmed === '!soco') triggerMascotSoco();
         else triggerMascotChute();
+      }
+    }
+
+    const matchedCmd = botCommandsRef.current.find(c => c.command.trim().toLowerCase() === msgTrimmed);
+    if (matchedCmd && source === 'twitch') {
+      const twitchChannel = useStore.getState().twitchConfig.channel || useStore.getState().currentUser?.twitchChannel;
+      if (twitchChannel) {
+        fetch('/api/twitch/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channel: twitchChannel, message: matchedCmd.response }),
+        }).catch(() => {});
       }
     }
   };

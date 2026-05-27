@@ -132,7 +132,6 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   const filterRowRef = useRef<HTMLDivElement>(null);
   const filterBtnRef = useRef<HTMLDivElement>(null);
   const isSavingRef = useRef(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const basePoolRef = useRef<CS2Item[]>([]);
 
   // Filter state
@@ -456,19 +455,14 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   const handleNameChange = (value: string) => {
     setForm(f => ({ ...f, name: value, imageUrl: '', pscValue: undefined }));
     setActiveSuggestion(-1);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (value.length < 2) {
-      setSuggestions(waxpeerPool.slice(0, 200));
-      setTotalMatches(waxpeerPool.length);
-      return;
-    }
-    // Filtra imediatamente do pool local (resposta instantânea)
-    const q = value.toLowerCase();
-    const localResults = waxpeerPool.filter(item => item.name.toLowerCase().includes(q));
-    setSuggestions(localResults.slice(0, 200));
-    setTotalMatches(localResults.length);
-    // Busca na API com todos os filtros ativos (atualiza pool após debounce)
-    debounceRef.current = setTimeout(() => fetchWithFilters(value), 400);
+    // Pool completo já carregado — só filtrar local, sem chamada à API
+    const q = value.toLowerCase().trim();
+    const pool = basePoolRef.current.length > 0 ? basePoolRef.current : waxpeerPool;
+    const results = q.length === 0
+      ? pool
+      : pool.filter(item => item.name.toLowerCase().includes(q));
+    setSuggestions(results.slice(0, 200));
+    setTotalMatches(results.length);
   };
 
   const handleNameFocus = () => { /* fetch is triggered on change, not focus */ };

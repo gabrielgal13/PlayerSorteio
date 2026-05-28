@@ -153,14 +153,25 @@ export default function TwitchPanel() {
     }
 
     const matchedCmd = botCommandsRef.current.find(c => c.command.trim().toLowerCase() === msgTrimmed);
-    if (matchedCmd && source === 'twitch') {
-      const twitchChannel = useStore.getState().twitchConfig.channel || useStore.getState().currentUser?.twitchChannel;
-      if (twitchChannel) {
-        fetch('/api/twitch/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ channel: twitchChannel, message: matchedCmd.response }),
-        }).catch(() => {});
+    if (matchedCmd) {
+      if (source === 'twitch') {
+        const twitchChannel = useStore.getState().twitchConfig.channel || useStore.getState().currentUser?.twitchChannel;
+        if (twitchChannel) {
+          fetch('/api/twitch/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channel: twitchChannel, message: matchedCmd.response }),
+          }).catch(() => {});
+        }
+      } else if (source === 'kick') {
+        const kickChannel = useStore.getState().currentUser?.kickChannel;
+        if (kickChannel) {
+          fetch('/api/kick/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kickChannel, message: matchedCmd.response }),
+          }).catch(() => {});
+        }
       }
     }
   };

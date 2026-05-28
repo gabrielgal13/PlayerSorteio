@@ -866,6 +866,34 @@ export default function RaffleEngine() {
         .catch(err => console.warn('[twitch/notify] erro de rede:', err));
     }
 
+    const youtubeHandle = currentUser?.youtubeChannel;
+    if (youtubeHandle) {
+      fetch('/api/youtube/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ youtubeHandle, winnerName, prizeName }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (!data?.ok) console.warn('[youtube/notify] bot não enviou:', data);
+        })
+        .catch(err => console.warn('[youtube/notify] erro de rede:', err));
+    }
+
+    const kickChannel = currentUser?.kickChannel;
+    if (kickChannel) {
+      fetch('/api/kick/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kickChannel, winnerName, prizeName }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (!data?.ok) console.warn('[kick/notify] bot não enviou:', data);
+        })
+        .catch(err => console.warn('[kick/notify] erro de rede:', err));
+    }
+
     // Dispara compra automática no Waxpeer (apenas afiliados)
     if (isAffiliate && username) {
       setPendingMarketplaceDelivery({ winnerName, prizeName, waxpeerItemId: null, status: 'buying' });

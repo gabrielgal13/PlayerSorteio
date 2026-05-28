@@ -46,14 +46,17 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:support.dmarket.com)",
       "Bash(dir \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\components\" /s /b)",
-      "Bash(node_modules\\\\.bin\\\\prisma db *)"
+      "Bash(node_modules\\\\.bin\\\\prisma db *)",
+      "Bash(mkdir -p \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\app\\\\api\\\\youtube\\\\[[...path]]\" \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\app\\\\api\\\\kick\\\\[[...path]]\")",
+      "Bash(Select-String -Pattern \"kick|KickToken|AdminPanel\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\streamers",
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\streamers\\[username]",
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\marketing",
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\pokemon-showdown-master\\server",
-      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\twitch"
+      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\twitch",
+      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\youtube"
     ]
   }
 }

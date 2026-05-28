@@ -100,6 +100,18 @@ export async function GET(
     return Response.json({ ok: msgRes.ok, status: msgRes.status, twitchResponse: msgData, botUserId, broadcasterId });
   }
 
+  // ── status ───────────────────────────────────────────────────────────────
+  if (seg0 === 'status') {
+    const rows = await prisma.appConfig.findMany({
+      where: { key: { in: ['twitch_bot_user_token', 'twitch_bot_username'] } },
+    });
+    const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
+    return NextResponse.json({
+      connected: Boolean(map['twitch_bot_user_token']),
+      username: map['twitch_bot_username'] ?? null,
+    });
+  }
+
   // ── viewers ──────────────────────────────────────────────────────────────
   if (!seg0 || seg0 === 'viewers') {
     const channel = req.nextUrl.searchParams.get('channel');

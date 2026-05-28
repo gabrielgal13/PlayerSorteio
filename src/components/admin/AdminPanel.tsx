@@ -9,7 +9,7 @@ import type { RaffleResult, DeliveryStatus } from '@/types';
 interface StreamerRow { username: string; displayName: string | null; pscBalance: number; isAffiliate: boolean; }
 interface AdminProduct { id: string; name: string; description: string | null; imageUrl: string | null; quantity: number; pscValue: number | null; skipPsc: boolean; }
 interface EditProfile { displayName: string; newPassword: string; twitchChannel: string; kickChannel: string; youtubeChannel: string; themeColor: string; forceFirstAccess: boolean; currentForcePasswordChange: boolean; }
-type Section = 'psc' | 'criar-streamer' | 'entregas' | 'editar-streamer' | 'marketing';
+type Section = 'psc' | 'criar-streamer' | 'entregas' | 'editar-streamer' | 'marketing' | 'bots';
 
 const COLOR_PRESETS = ['#BF5AF2', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#00E5FF', '#00FFA3'];
 
@@ -252,6 +252,223 @@ function FrameBuilder({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ── BotCard ───────────────────────────────────────────────────────────────────
+function BotCard({
+  platform, color, authUrl, statusUrl, icon, description, note,
+}: {
+  platform: string;
+  color: string;
+  authUrl: string;
+  statusUrl: string;
+  icon: React.ReactNode;
+  description: string;
+  note: string;
+}) {
+  const [status, setStatus] = useState<{ connected: boolean; label: string | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(statusUrl)
+      .then(r => r.json())
+      .then((data: { connected: boolean; channelName?: string; username?: string }) => {
+        setStatus({ connected: data.connected, label: data.channelName ?? data.username ?? null });
+      })
+      .catch(() => setStatus({ connected: false, label: null }))
+      .finally(() => setLoading(false));
+  }, [statusUrl]);
+
+  return (
+    <div
+      className="rounded-xl p-5"
+      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          {icon}
+          <div>
+            <p className="font-orbitron text-sm font-bold tracking-wider" style={{ color: 'rgba(255,255,255,0.85)' }}>
+              {platform}
+            </p>
+            <p className="font-rajdhani text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              {description}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {loading ? (
+            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'rgba(255,255,255,0.2)' }} />
+          ) : status?.connected ? (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
+              <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                {status.label ?? 'Conectado'}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
+              <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                Desconectado
+              </span>
+            </div>
+          )}
+
+          <a
+            href={authUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 rounded-lg font-orbitron text-xs font-bold tracking-widest transition-all"
+            style={{
+              background: `rgba(${hexToRgbInline(color)},0.12)`,
+              border: `1px solid rgba(${hexToRgbInline(color)},0.3)`,
+              color,
+            }}
+          >
+            {status?.connected ? 'RECONECTAR' : 'CONECTAR'}
+          </a>
+        </div>
+      </div>
+
+      <p className="font-rajdhani text-xs mt-3 pl-1" style={{ color: 'rgba(255,255,255,0.2)' }}>
+        ⚠ {note}
+      </p>
+    </div>
+  );
+}
+
+function hexToRgbInline(hex: string): string {
+  const c = hex.replace('#', '');
+  const full = c.length === 3 ? c.split('').map(x => x + x).join('') : c;
+  return `${parseInt(full.slice(0, 2), 16)},${parseInt(full.slice(2, 4), 16)},${parseInt(full.slice(4, 6), 16)}`;
+}
+
+// ── KickTokenCard ─────────────────────────────────────────────────────────────
+function KickTokenCard() {
+  const [status, setStatus] = useState<{ connected: boolean; label: string | null } | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+  const [token, setToken] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  const color = '#53FC18';
+
+  const refresh = useCallback(() => {
+    setLoadingStatus(true);
+    fetch('/api/kick/status')
+      .then(r => r.json())
+      .then((data: { connected: boolean; username?: string }) => {
+        setStatus({ connected: data.connected, label: data.username ?? null });
+      })
+      .catch(() => setStatus({ connected: false, label: null }))
+      .finally(() => setLoadingStatus(false));
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const handleSave = async () => {
+    if (!token.trim()) return;
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const res = await fetch('/api/kick/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token.trim() }),
+      });
+      const data = await res.json() as { ok: boolean; username?: string; error?: string };
+      if (data.ok) {
+        setSaveMsg(`✅ Conectado como ${data.username}`);
+        setToken('');
+        refresh();
+      } else {
+        setSaveMsg(`❌ ${data.error ?? 'Erro desconhecido'}`);
+      }
+    } catch {
+      setSaveMsg('❌ Erro de rede');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="rounded-xl p-5"
+      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#53FC18">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4-3h-2v-2h2v-2h-2V8h2l2 2.5L15 13z"/>
+          </svg>
+          <div>
+            <p className="font-orbitron text-sm font-bold tracking-wider" style={{ color: 'rgba(255,255,255,0.85)' }}>Kick</p>
+            <p className="font-rajdhani text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              Bot envia mensagem de ganhador + responde comandos do chat da Kick.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {loadingStatus ? (
+            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'rgba(255,255,255,0.2)' }} />
+          ) : status?.connected ? (
+            <>
+              <div className="w-2 h-2 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
+              <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>{status.label ?? 'Conectado'}</span>
+            </>
+          ) : (
+            <>
+              <div className="w-2 h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
+              <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Desconectado</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <input
+          type="password"
+          placeholder="Cole o Bearer token da conta bot aqui..."
+          value={token}
+          onChange={e => setToken(e.target.value)}
+          className="flex-1 px-3 py-2 rounded-lg font-rajdhani text-sm"
+          style={{
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            color: 'rgba(255,255,255,0.8)',
+            outline: 'none',
+          }}
+        />
+        <button
+          onClick={handleSave}
+          disabled={saving || !token.trim()}
+          className="px-4 py-2 rounded-lg font-orbitron text-xs font-bold tracking-widest transition-all"
+          style={{
+            background: 'rgba(83,252,24,0.12)',
+            border: '1px solid rgba(83,252,24,0.3)',
+            color,
+            opacity: saving || !token.trim() ? 0.4 : 1,
+            cursor: saving || !token.trim() ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {saving ? '...' : 'SALVAR'}
+        </button>
+      </div>
+
+      {saveMsg && (
+        <p className="font-rajdhani text-xs mt-2 pl-1" style={{ color: saveMsg.startsWith('❌') ? '#FF5555' : color }}>
+          {saveMsg}
+        </p>
+      )}
+
+      <p className="font-rajdhani text-xs mt-3 pl-1" style={{ color: 'rgba(255,255,255,0.2)' }}>
+        ⚠ Como obter: faça login em kick.com como a conta bot → DevTools (F12) → Network → qualquer request → header{' '}
+        <span style={{ fontFamily: 'monospace' }}>Authorization: Bearer ...</span>
+      </p>
+    </div>
+  );
+}
 
 export default function AdminPanel() {
   const logout = useStore(s => s.logout);
@@ -662,6 +879,15 @@ export default function AdminPanel() {
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
           <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-5-7l-3 3.72L11 13l-4 5h14l-4-5z"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'bots' as Section,
+      label: 'BOTS DE CHAT',
+      icon: (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-3 10H7v-2h10v2zm0-3H7V7h10v2z"/>
         </svg>
       ),
     },
@@ -2343,6 +2569,60 @@ export default function AdminPanel() {
                 transition={{ duration: 0.22 }}
               >
                 <MarketingSection />
+              </motion.div>
+            )}
+
+            {/* ── BOTS DE CHAT ── */}
+            {activeSection === 'bots' && (
+              <motion.div
+                key="bots"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -12 }}
+                transition={{ duration: 0.22 }}
+                className="max-w-2xl"
+              >
+                <h2 className="font-orbitron text-xl font-bold tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                  BOTS DE CHAT
+                </h2>
+                <p className="font-rajdhani text-sm mb-8" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  Conecte as contas de bot para enviar mensagens automáticas de ganhador no chat de cada plataforma.
+                </p>
+
+                <div className="space-y-4">
+                  {/* Twitch */}
+                  <BotCard
+                    platform="Twitch"
+                    color="#9147FF"
+                    authUrl="/api/twitch/eventsub/auth"
+                    statusUrl="/api/twitch/status"
+                    icon={
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="#9147FF">
+                        <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
+                      </svg>
+                    }
+                    description="Bot envia mensagem de ganhador + responde comandos do chat."
+                    note="Acesse /api/twitch/eventsub/auth enquanto estiver logado com a conta do bot."
+                  />
+
+                  {/* YouTube */}
+                  <BotCard
+                    platform="YouTube"
+                    color="#FF0000"
+                    authUrl="/api/youtube/auth"
+                    statusUrl="/api/youtube/status"
+                    icon={
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="#FF0000">
+                        <path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/>
+                      </svg>
+                    }
+                    description="Bot envia mensagem de ganhador no live chat do YouTube."
+                    note="Requer YOUTUBE_CLIENT_ID e YOUTUBE_CLIENT_SECRET no .env (Google Cloud Console → OAuth 2.0)."
+                  />
+
+                  {/* Kick */}
+                  <KickTokenCard />
+                </div>
               </motion.div>
             )}
 

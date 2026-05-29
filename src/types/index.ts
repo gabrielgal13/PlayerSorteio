@@ -88,6 +88,7 @@ export interface RaffleResult {
   tradeLink?: string;
   deliveryStatus?: DeliveryStatus;
   tradeLockAt?: number;
+  marketplaceItemId?: string | null;
 }
 
 export interface TwitchConfig {

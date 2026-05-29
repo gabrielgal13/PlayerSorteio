@@ -58,6 +58,7 @@ export async function GET(
       tradeLink: r.tradeLink ?? undefined,
       deliveryStatus: (r.deliveryStatus ?? 'novo') as import('@/types').DeliveryStatus,
       tradeLockAt: r.tradeLockAt?.getTime() ?? undefined,
+      marketplaceItemId: r.marketplaceItemId ?? undefined,
     })));
   }
 

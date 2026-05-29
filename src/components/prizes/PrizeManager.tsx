@@ -121,7 +121,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const [sortBy, setSortBy] = useState<'price' | 'name'>('price');
   const [mostUsedSkins, setMostUsedSkins] = useState<CS2Item[]>([]);
-  const [mostUsedVisible, setMostUsedVisible] = useState(4);
+  const [mostUsedOffset, setMostUsedOffset] = useState(0);
   const [waxpeerPool, setWaxpeerPool] = useState<CS2Item[]>([]);
   const [waxpeerLoading, setWaxpeerLoading] = useState(false);
 
@@ -279,6 +279,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
       const stored = localStorage.getItem('ps_most_used_skins_v2');
       const top: CS2Item[] = stored ? JSON.parse(stored) : [];
       setMostUsedSkins(top.slice(0, 12));
+      setMostUsedOffset(0);
     } catch {}
   }, []);
 
@@ -438,7 +439,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     try {
       const params = new URLSearchParams();
       params.set('limit', '200');
-      const minMilli = filterMinPrice !== '' ? Math.max(3000, Number(filterMinPrice) * 1000) : 3000;
+      const minMilli = filterMinPrice !== '' ? Math.max(1000, Number(filterMinPrice) * 1000) : 1000;
       params.set('min_price', String(minMilli));
       if (filterMaxPrice !== '') params.set('max_price', String(Number(filterMaxPrice) * 1000));
       if (filterWeapon !== 'Todos') params.set('weapon_type', filterWeapon);
@@ -574,7 +575,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/marketplace/browse?search=&limit=9999&min_price=3000');
+        const res = await fetch('/api/marketplace/browse?search=&limit=9999&min_price=1000');
         const data = await res.json() as { ok: boolean; items?: CS2Item[] };
         if (!cancelled && data.ok && data.items?.length) {
           const shuffled = [...data.items].sort(() => Math.random() - 0.5);
@@ -1098,91 +1099,104 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                             { imgW: 40, imgH: 36, padV: 7, padH: 8,  gap: '6px' },
                           ];
                           return (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                              {mostUsedSkins.slice(0, mostUsedVisible).map((item, idx) => {
-                                const { weapon, skin, wearAbbr } = parseItemName(item.name);
-                                const psc = pscFromMilliUsd(item.price);
-                                const sz = ROW_SIZE[Math.min(Math.floor(idx / 4), ROW_SIZE.length - 1)];
-                                return (
-                                  <div
-                                    key={item.name}
-                                    onMouseDown={() => applySuggestion(item)}
-                                    style={{
-                                      display: 'flex', alignItems: 'center', gap: sz.gap,
-                                      padding: `${sz.padV}px ${sz.padH}px`, borderRadius: '8px', cursor: 'pointer',
-                                      background: 'transparent', minWidth: 0,
-                                      border: '1px solid rgba(255,255,255,0.06)',
-                                      transition: 'background 0.1s, box-shadow 0.1s, border-color 0.1s',
-                                    }}
-                                    onMouseEnter={e => {
-                                      e.currentTarget.style.background = 'rgba(0,229,255,0.05)';
-                                      e.currentTarget.style.borderColor = 'rgba(0,229,255,0.18)';
-                                      e.currentTarget.style.boxShadow = 'inset 3px 0 0 #00E5FF';
-                                    }}
-                                    onMouseLeave={e => {
-                                      e.currentTarget.style.background = 'transparent';
-                                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
-                                      e.currentTarget.style.boxShadow = 'none';
-                                    }}
-                                  >
-                                    <img src={item.image} alt={item.name} style={{ width: sz.imgW, height: sz.imgH, objectFit: 'contain', flexShrink: 0 }} />
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0, flex: 1 }}>
-                                      <span className="font-rajdhani font-bold" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {weapon}
-                                      </span>
-                                      <span className="font-rajdhani" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {skin}
-                                      </span>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        {wearAbbr && WEAR_BADGE[wearAbbr] && (
-                                          <span className="font-orbitron" style={{
-                                            fontSize: '9px', fontWeight: 700, letterSpacing: '0.04em',
-                                            padding: '2px 5px', borderRadius: '4px',
-                                            background: WEAR_BADGE[wearAbbr].bg,
-                                            color: WEAR_BADGE[wearAbbr].color,
-                                            border: `1px solid ${WEAR_BADGE[wearAbbr].border}`,
-                                            flexShrink: 0,
-                                          }}>
-                                            {wearAbbr}
-                                          </span>
-                                        )}
-                                        {psc !== null && (
-                                          <span className="font-orbitron" style={{ fontSize: '9px', color: '#00E5FF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            💠 {psc}
-                                          </span>
-                                        )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {/* Seta esquerda */}
+                              <button
+                                type="button"
+                                onMouseDown={e => { e.preventDefault(); setMostUsedOffset(o => Math.max(0, o - 1)); }}
+                                disabled={mostUsedOffset === 0}
+                                style={{
+                                  flexShrink: 0, width: '24px', height: '24px', borderRadius: '6px',
+                                  cursor: mostUsedOffset === 0 ? 'default' : 'pointer',
+                                  background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.2)',
+                                  display: mostUsedSkins.length > 4 ? 'flex' : 'none',
+                                  alignItems: 'center', justifyContent: 'center',
+                                  opacity: mostUsedOffset === 0 ? 0.2 : 1, transition: 'opacity 0.15s',
+                                }}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="#00E5FF"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                              </button>
+
+                              {/* Grid de 4 itens */}
+                              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                                {mostUsedSkins.slice(mostUsedOffset, mostUsedOffset + 4).map((item) => {
+                                  const { weapon, skin, wearAbbr } = parseItemName(item.name);
+                                  const psc = pscFromMilliUsd(item.price);
+                                  const sz = ROW_SIZE[0];
+                                  return (
+                                    <div
+                                      key={item.name}
+                                      onMouseDown={() => applySuggestion(item)}
+                                      style={{
+                                        display: 'flex', alignItems: 'center', gap: sz.gap,
+                                        padding: `${sz.padV}px ${sz.padH}px`, borderRadius: '8px', cursor: 'pointer',
+                                        background: 'transparent', minWidth: 0,
+                                        border: '1px solid rgba(255,255,255,0.06)',
+                                        transition: 'background 0.1s, box-shadow 0.1s, border-color 0.1s',
+                                      }}
+                                      onMouseEnter={e => {
+                                        e.currentTarget.style.background = 'rgba(0,229,255,0.05)';
+                                        e.currentTarget.style.borderColor = 'rgba(0,229,255,0.18)';
+                                        e.currentTarget.style.boxShadow = 'inset 3px 0 0 #00E5FF';
+                                      }}
+                                      onMouseLeave={e => {
+                                        e.currentTarget.style.background = 'transparent';
+                                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+                                        e.currentTarget.style.boxShadow = 'none';
+                                      }}
+                                    >
+                                      <img src={item.image} alt={item.name} style={{ width: sz.imgW, height: sz.imgH, objectFit: 'contain', flexShrink: 0 }} />
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0, flex: 1 }}>
+                                        <span className="font-rajdhani font-bold" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {weapon}
+                                        </span>
+                                        <span className="font-rajdhani" style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {skin}
+                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                          {wearAbbr && WEAR_BADGE[wearAbbr] && (
+                                            <span className="font-orbitron" style={{
+                                              fontSize: '9px', fontWeight: 700, letterSpacing: '0.04em',
+                                              padding: '2px 5px', borderRadius: '4px',
+                                              background: WEAR_BADGE[wearAbbr].bg,
+                                              color: WEAR_BADGE[wearAbbr].color,
+                                              border: `1px solid ${WEAR_BADGE[wearAbbr].border}`,
+                                              flexShrink: 0,
+                                            }}>
+                                              {wearAbbr}
+                                            </span>
+                                          )}
+                                          {psc !== null && (
+                                            <span className="font-orbitron" style={{ fontSize: '9px', color: '#00E5FF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                              💠 {psc}
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                })}
+                              </div>
+
+                              {/* Seta direita */}
+                              <button
+                                type="button"
+                                onMouseDown={e => { e.preventDefault(); setMostUsedOffset(o => Math.min(o + 1, mostUsedSkins.length - 4)); }}
+                                disabled={mostUsedOffset >= mostUsedSkins.length - 4}
+                                style={{
+                                  flexShrink: 0, width: '24px', height: '24px', borderRadius: '6px',
+                                  cursor: mostUsedOffset >= mostUsedSkins.length - 4 ? 'default' : 'pointer',
+                                  background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.2)',
+                                  display: mostUsedSkins.length > 4 ? 'flex' : 'none',
+                                  alignItems: 'center', justifyContent: 'center',
+                                  opacity: mostUsedOffset >= mostUsedSkins.length - 4 ? 0.2 : 1, transition: 'opacity 0.15s',
+                                }}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="#00E5FF"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                              </button>
                             </div>
                           );
                         })()}
-                        {(mostUsedVisible < mostUsedSkins.length || mostUsedVisible > 4) && (
-                          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                            {mostUsedVisible < mostUsedSkins.length && (
-                              <button
-                                type="button"
-                                onMouseDown={e => { e.preventDefault(); setMostUsedVisible(v => Math.min(v + 4, mostUsedSkins.length)); }}
-                                className="font-orbitron"
-                                style={{ fontSize: '9px', color: '#00E5FF', background: 'rgba(0,229,255,0.06)', border: '1px solid rgba(0,229,255,0.2)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', letterSpacing: '0.06em' }}
-                              >
-                                VER +{Math.min(4, mostUsedSkins.length - mostUsedVisible)}
-                              </button>
-                            )}
-                            {mostUsedVisible > 4 && (
-                              <button
-                                type="button"
-                                onMouseDown={e => { e.preventDefault(); setMostUsedVisible(4); }}
-                                className="font-orbitron"
-                                style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', letterSpacing: '0.06em' }}
-                              >
-                                VER MENOS
-                              </button>
-                            )}
-                          </div>
-                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -1432,7 +1446,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                         </div>
 
                         {/* Result rows */}
-                        <div ref={suggestionItemsRef} style={{ overflowY: 'auto', maxHeight: '400px' }}>
+                        <div ref={suggestionItemsRef} style={{ overflowY: 'auto', maxHeight: '400px', overscrollBehavior: 'contain' }}>
 
                           {/* ── Produtos exclusivos do admin ── */}
                           {adminProducts.map(item => (

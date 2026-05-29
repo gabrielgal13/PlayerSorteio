@@ -151,6 +151,12 @@ export async function GET(
     }
   }
 
+  // GET /api/admin/bot-config
+  if (seg0 === 'bot-config') {
+    const row = await prisma.appConfig.findUnique({ where: { key: 'bot_messages_muted' } });
+    return NextResponse.json({ muted: row?.value === 'true' });
+  }
+
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
@@ -268,6 +274,17 @@ export async function POST(
       const msg = e instanceof Error ? e.message : String(e);
       return NextResponse.json({ error: msg }, { status: 500 });
     }
+  }
+
+  // POST /api/admin/bot-config
+  if (seg0 === 'bot-config') {
+    const { muted } = await req.json() as { muted: boolean };
+    await prisma.appConfig.upsert({
+      where: { key: 'bot_messages_muted' },
+      create: { key: 'bot_messages_muted', value: muted ? 'true' : 'false' },
+      update: { value: muted ? 'true' : 'false' },
+    });
+    return NextResponse.json({ ok: true, muted });
   }
 
   return NextResponse.json({ error: 'Not found' }, { status: 404 });

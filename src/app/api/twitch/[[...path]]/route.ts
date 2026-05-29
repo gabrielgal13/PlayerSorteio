@@ -322,6 +322,9 @@ export async function POST(
     if (!channel || !winnerName)
       return NextResponse.json({ ok: false, error: 'channel e winnerName são obrigatórios' }, { status: 400 });
 
+    const muteRow = await prisma.appConfig.findUnique({ where: { key: 'bot_messages_muted' } });
+    if (muteRow?.value === 'true') return NextResponse.json({ ok: true, muted: true });
+
     if (!await getBotWithRefresh())
       return NextResponse.json({ ok: false, error: 'Bot não autenticado' });
 

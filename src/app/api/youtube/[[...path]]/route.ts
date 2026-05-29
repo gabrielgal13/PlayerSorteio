@@ -215,6 +215,9 @@ export async function POST(
     if (!youtubeHandle || !winnerName)
       return NextResponse.json({ ok: false, error: 'youtubeHandle e winnerName são obrigatórios' }, { status: 400 });
 
+    const muteRow = await prisma.appConfig.findUnique({ where: { key: 'bot_messages_muted' } });
+    if (muteRow?.value === 'true') return NextResponse.json({ ok: true, muted: true });
+
     const liveChatId = await getLiveChatId(youtubeHandle);
     if (!liveChatId)
       return NextResponse.json({ ok: false, error: 'Canal não está ao vivo' });

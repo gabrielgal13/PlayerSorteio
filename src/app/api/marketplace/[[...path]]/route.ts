@@ -92,14 +92,28 @@ export async function POST(
         return NextResponse.json({ ok: false, error: 'Item não encontrado no Waxpeer' });
       }
 
-      const cheapest = listings[0];
-      console.log('[marketplace/buy] cheapest:', cheapest);
-      const buyResult = await buyItem(cheapest);
-      console.log('[marketplace/buy] buyResult:', buyResult);
-
-      if (!buyResult.success) {
-        return NextResponse.json({ ok: false, error: buyResult.msg });
+      let buyResult: Awaited<ReturnType<typeof buyItem>> | null = null;
+      let boughtListing: (typeof listings)[number] | null = null;
+      for (const listing of listings.slice(0, 5)) {
+        console.log('[marketplace/buy] tentando:', listing.item_id, 'price:', listing.price);
+        try {
+          const result = await buyItem(listing);
+          if (result.success) {
+            buyResult = result;
+            boughtListing = listing;
+            break;
+          }
+          console.log('[marketplace/buy] listing recusado:', listing.item_id, result.msg);
+        } catch (buyErr) {
+          console.log('[marketplace/buy] listing indisponível:', listing.item_id, String(buyErr));
+          // 404 = item já vendido, tenta o próximo
+        }
       }
+
+      if (!buyResult || !boughtListing) {
+        return NextResponse.json({ ok: false, error: 'Todos os listings tentados estão indisponíveis' });
+      }
+      console.log('[marketplace/buy] comprado:', boughtListing.item_id, 'result:', buyResult);
 
       try {
         await updateHistoryMarketplace(username, winnerName, prizeName, buyResult.id, historyId);
@@ -107,7 +121,7 @@ export async function POST(
         console.error('[marketplace/buy] history update falhou (compra OK):', histErr);
       }
 
-      return NextResponse.json({ ok: true, waxpeerItemId: buyResult.id, price: cheapest.price });
+      return NextResponse.json({ ok: true, waxpeerItemId: buyResult.id, price: boughtListing.price });
     } catch (e) {
       console.error('[marketplace/buy] erro:', e);
       return NextResponse.json({ ok: false, error: String(e) }, { status: 502 });

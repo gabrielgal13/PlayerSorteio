@@ -471,6 +471,80 @@ function KickTokenCard() {
   );
 }
 
+function BotMuteToggle() {
+  const [muted, setMuted] = useState<boolean | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/admin/bot-config')
+      .then(r => r.json())
+      .then((d: { muted: boolean }) => setMuted(d.muted))
+      .catch(() => setMuted(false));
+  }, []);
+
+  const toggle = async () => {
+    if (muted === null) return;
+    setSaving(true);
+    const next = !muted;
+    try {
+      await fetch('/api/admin/bot-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ muted: next }),
+      });
+      setMuted(next);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const on = muted === false;
+
+  return (
+    <div
+      className="rounded-2xl mb-6 flex items-center justify-between gap-4 px-5 py-4"
+      style={{
+        background: muted ? 'rgba(255,61,87,0.07)' : 'rgba(0,229,255,0.05)',
+        border: muted ? '1px solid rgba(255,61,87,0.3)' : '1px solid rgba(0,229,255,0.18)',
+      }}
+    >
+      <div>
+        <p className="font-orbitron font-bold text-sm tracking-widest" style={{ color: muted ? '#FF3D57' : 'rgba(255,255,255,0.85)' }}>
+          {muted ? '🔇 MENSAGENS SILENCIADAS' : '🔊 MENSAGENS ATIVAS'}
+        </p>
+        <p className="font-rajdhani text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          {muted ? 'Os bots não enviam mensagens em nenhum chat.' : 'Os bots enviam mensagens normalmente em todos os chats.'}
+        </p>
+      </div>
+      <button
+        onClick={toggle}
+        disabled={saving || muted === null}
+        style={{
+          flexShrink: 0,
+          width: 52, height: 28,
+          borderRadius: 14,
+          background: on ? '#00E5FF' : 'rgba(255,255,255,0.12)',
+          border: on ? '1px solid rgba(0,229,255,0.6)' : '1px solid rgba(255,255,255,0.15)',
+          position: 'relative',
+          cursor: saving || muted === null ? 'wait' : 'pointer',
+          transition: 'background 0.2s, border 0.2s',
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: 3, left: on ? 26 : 3,
+            width: 20, height: 20,
+            borderRadius: '50%',
+            background: on ? '#050816' : 'rgba(255,255,255,0.5)',
+            transition: 'left 0.2s',
+          }}
+        />
+      </button>
+    </div>
+  );
+}
+
 export default function AdminPanel() {
   const logout = useStore(s => s.logout);
   const addPscToAll = useStore(s => s.addPscToAll);
@@ -2593,6 +2667,8 @@ export default function AdminPanel() {
                 <p className="font-rajdhani text-sm mb-8" style={{ color: 'rgba(255,255,255,0.35)' }}>
                   Conecte as contas de bot para enviar mensagens automáticas de ganhador no chat de cada plataforma.
                 </p>
+
+                <BotMuteToggle />
 
                 <div className="space-y-4">
                   {/* Twitch */}

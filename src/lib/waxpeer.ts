@@ -171,8 +171,14 @@ export async function buyItem(listing: WaxpeerListing): Promise<WaxpeerBuyResult
       price: String(listing.price),
     }),
   );
-  if (!res.ok) throw new Error(`Waxpeer buy HTTP ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Waxpeer buy HTTP ${res.status} | body: ${body.slice(0, 300)}`);
+  }
   const data = await res.json() as WaxpeerBuyResult;
+  if (!data.success) {
+    throw new Error(`Waxpeer buy rejected | msg: ${data.msg ?? 'no msg'}`);
+  }
   return data;
 }
 

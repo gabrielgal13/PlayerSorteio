@@ -100,7 +100,11 @@ export async function POST(
         return NextResponse.json({ ok: false, error: buyResult.msg });
       }
 
-      await updateHistoryMarketplace(username, winnerName, prizeName, buyResult.id);
+      try {
+        await updateHistoryMarketplace(username, winnerName, prizeName, buyResult.id);
+      } catch (histErr) {
+        console.error('[marketplace/buy] history update falhou (compra OK):', histErr);
+      }
 
       return NextResponse.json({ ok: true, waxpeerItemId: buyResult.id, price: cheapest.price });
     } catch (e) {

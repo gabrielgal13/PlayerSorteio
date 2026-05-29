@@ -584,6 +584,7 @@ export default function RaffleEngine() {
     chatTriggerCommand,
     raffleAnimationStyle,
     setPendingMarketplaceDelivery,
+    updateDelivery,
   } = useStore();
 
   const eventMusic = useEventMusic();
@@ -837,8 +838,9 @@ export default function RaffleEngine() {
     stopChatVerification();
     setRaffleStatus('confirmed');
     if (!activePrize || !currentWinner) return;
+    const historyId = `raffle_${Date.now()}`;
     addHistory({
-      id: `raffle_${Date.now()}`,
+      id: historyId,
       winner: currentWinner,
       prize: activePrize,
       streamer: currentUser?.username || 'Unknown',
@@ -901,17 +903,22 @@ export default function RaffleEngine() {
       fetch('/api/marketplace/buy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prizeName, winnerName, username }),
+        body: JSON.stringify({ prizeName, winnerName, username, historyId }),
       })
         .then(r => r.json())
         .then((data: { ok: boolean; waxpeerItemId?: string }) => {
           if (data.ok && data.waxpeerItemId) {
+            updateDelivery(historyId, undefined, 'aguardando_tradelink');
             setPendingMarketplaceDelivery({ winnerName, prizeName, waxpeerItemId: data.waxpeerItemId, status: 'waiting_tradelink' });
           } else {
+            updateDelivery(historyId, undefined, 'erro_compra');
             setPendingMarketplaceDelivery(null);
           }
         })
-        .catch(() => setPendingMarketplaceDelivery(null));
+        .catch(() => {
+          updateDelivery(historyId, undefined, 'erro_compra');
+          setPendingMarketplaceDelivery(null);
+        });
     }
     const newQty = activePrize.quantity - 1;
     updatePrize(activePrize.id, { quantity: newQty });

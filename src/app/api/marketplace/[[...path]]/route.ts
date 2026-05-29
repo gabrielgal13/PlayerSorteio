@@ -69,10 +69,11 @@ export async function POST(
   const route = path?.[0];
 
   if (route === 'buy') {
-    const { prizeName, winnerName, username } = await req.json() as {
+    const { prizeName, winnerName, username, historyId } = await req.json() as {
       prizeName: string;
       winnerName: string;
       username: string;
+      historyId?: string;
     };
 
     if (!prizeName || !winnerName || !username) {
@@ -101,7 +102,7 @@ export async function POST(
       }
 
       try {
-        await updateHistoryMarketplace(username, winnerName, prizeName, buyResult.id);
+        await updateHistoryMarketplace(username, winnerName, prizeName, buyResult.id, historyId);
       } catch (histErr) {
         console.error('[marketplace/buy] history update falhou (compra OK):', histErr);
       }
@@ -175,12 +176,26 @@ async function updateHistoryMarketplace(
   winnerName: string,
   prizeName: string,
   marketplaceItemId: string,
+  historyId?: string,
 ): Promise<string | null> {
   const streamer = await prisma.streamer.findUnique({
     where: { username },
     select: { id: true, twitchChannel: true },
   });
   if (!streamer) return null;
+
+  // Se temos o historyId direto, usa ele sem polling
+  if (historyId) {
+    try {
+      await prisma.raffleHistory.update({
+        where: { id: historyId },
+        data: { marketplaceItemId, deliveryStatus: 'aguardando_tradelink' },
+      });
+      return streamer.twitchChannel ?? null;
+    } catch {
+      // fallthrough para busca por nome se o ID não existir ainda no DB
+    }
+  }
 
   const cutoff = new Date(Date.now() - 60_000); // últimos 60 segundos
   let attempts = 0;

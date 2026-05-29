@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { withdrawItem } from '@/lib/waxpeer';
+import { checkStock, buyItem } from '@/lib/waxpeer';
 
 const STEAM_LINK_REGEX = /https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/;
 
@@ -37,16 +37,46 @@ export async function POST(req: NextRequest) {
     data: { tradeLink },
   });
 
-  if (entry.marketplaceItemId) {
+  // Compra + entrega no Waxpeer agora que temos o trade link
+  if (process.env.WAXPEER_API_KEY) {
     try {
-      const result = await withdrawItem(entry.marketplaceItemId, tradeLink);
+      let bought: { id: string; price: number } | null = null;
+      let lastError = '';
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        const listings = await checkStock(entry.prizeName);
+        if (!listings.length) { lastError = 'Item não encontrado no Waxpeer'; break; }
+        try {
+          const result = await buyItem(listings[0], tradeLink);
+          bought = { id: String(result.id), price: listings[0].price };
+          break;
+        } catch (err) {
+          lastError = String(err);
+          console.log('[chat-trade-link] tentativa', attempt, 'falhou:', lastError);
+          if (attempt < 5) await new Promise(r => setTimeout(r, 500));
+        }
+      }
+
+      if (bought) {
+        await prisma.raffleHistory.update({
+          where: { id: entry.id },
+          data: { marketplaceItemId: bought.id, deliveryStatus: 'entregue' },
+        });
+        console.log(`[chat-trade-link] ${source} | ${winnerName} → entregue (${bought.id})`);
+      } else {
+        await prisma.raffleHistory.update({
+          where: { id: entry.id },
+          data: { deliveryStatus: 'erro_compra' },
+        });
+        console.log(`[chat-trade-link] ${source} | ${winnerName} → erro_compra: ${lastError}`);
+      }
+    } catch (err) {
+      console.error('[chat-trade-link] erro inesperado:', err);
       await prisma.raffleHistory.update({
         where: { id: entry.id },
-        data: { deliveryStatus: result.success ? 'entregue' : 'tradelocked' },
-      });
-    } catch { /* ignore — entrega será tentada manualmente */ }
+        data: { deliveryStatus: 'erro_compra' },
+      }).catch(() => {});
+    }
   }
 
-  console.log(`[chat-trade-link] ${source} | ${winnerName} → ${tradeLink}`);
   return NextResponse.json({ ok: true, source });
 }

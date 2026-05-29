@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { withdrawItem } from '@/lib/waxpeer';
+import { checkStock, buyItem } from '@/lib/waxpeer';
 
 const STEAM_REGEX = /https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/;
 const WINNER_CUTOFF_MS = 6 * 60 * 60 * 1000; // 6 h
@@ -251,14 +251,33 @@ export async function GET(req: NextRequest) {
           data: { tradeLink },
         });
 
-        if (winner.marketplaceItemId) {
+        // Compra + entrega P2P direto na Steam do trade link
+        if (process.env.WAXPEER_API_KEY && !winner.marketplaceItemId) {
           try {
-            const result = await withdrawItem(winner.marketplaceItemId, tradeLink);
+            let bought: { id: string } | null = null;
+            let lastError = '';
+            for (let attempt = 1; attempt <= 5; attempt++) {
+              const listings = await checkStock(winner.prizeName);
+              if (!listings.length) { lastError = 'Item não encontrado'; break; }
+              try {
+                const result = await buyItem(listings[0], tradeLink);
+                bought = { id: String(result.id) };
+                break;
+              } catch (err) {
+                lastError = String(err);
+                if (attempt < 5) await new Promise(r => setTimeout(r, 500));
+              }
+            }
             await prisma.raffleHistory.update({
               where: { id: winner.id },
-              data: { deliveryStatus: result.success ? 'entregue' : 'tradelocked' },
+              data: bought
+                ? { marketplaceItemId: bought.id, deliveryStatus: 'entregue' }
+                : { deliveryStatus: 'erro_compra' },
             });
-          } catch { /* ignore */ }
+            if (!bought) console.log('[poll-youtube] erro compra:', winner.winnerName, lastError);
+          } catch (err) {
+            console.error('[poll-youtube] erro inesperado:', err);
+          }
         }
 
         await sendYoutubeMessage(

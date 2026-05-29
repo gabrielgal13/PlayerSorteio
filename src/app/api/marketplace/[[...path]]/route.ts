@@ -4,8 +4,10 @@ import { checkStock, buyItem, withdrawItem, browseItems } from '@/lib/waxpeer';
 
 
 // GET  /api/marketplace/stock?item=AK-47%20%7C%20Redline%20(Field-Tested)
-// POST /api/marketplace/buy      { prizeName, winnerName, username }
+// POST /api/marketplace/buy      { prizeName, winnerName, username, tradeLink, historyId? }
+//   Compra + entrega P2P direto na Steam (partner+token do tradeLink)
 // POST /api/marketplace/withdraw { waxpeerItemId, tradeLink, username, winnerName }
+//   Legacy — não usado no fluxo novo (buy já entrega direto)
 
 export async function GET(
   req: NextRequest,
@@ -69,15 +71,21 @@ export async function POST(
   const route = path?.[0];
 
   if (route === 'buy') {
-    const { prizeName, winnerName, username, historyId } = await req.json() as {
+    const { prizeName, winnerName, username, historyId, tradeLink } = await req.json() as {
       prizeName: string;
       winnerName: string;
       username: string;
       historyId?: string;
+      tradeLink: string;
     };
 
-    if (!prizeName || !winnerName || !username) {
-      return NextResponse.json({ error: 'prizeName, winnerName e username são obrigatórios' }, { status: 400 });
+    if (!prizeName || !winnerName || !username || !tradeLink) {
+      return NextResponse.json({ error: 'prizeName, winnerName, username e tradeLink são obrigatórios' }, { status: 400 });
+    }
+
+    const steamLinkRegex = /https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/;
+    if (!steamLinkRegex.test(tradeLink)) {
+      return NextResponse.json({ ok: false, error: 'Trade link Steam inválido' }, { status: 400 });
     }
 
     if (!process.env.WAXPEER_API_KEY) {
@@ -89,33 +97,37 @@ export async function POST(
 
       let buyResult: Awaited<ReturnType<typeof buyItem>> | null = null;
       let boughtListing: Awaited<ReturnType<typeof checkStock>>[number] | null = null;
+      let lastError = '';
       const maxAttempts = 5;
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         const listings = await checkStock(prizeName);
         console.log('[marketplace/buy] attempt', attempt, '— checkStock returned', listings.length, 'listings');
         if (!listings.length) {
+          await markHistoryError(historyId, username, winnerName, prizeName);
           return NextResponse.json({ ok: false, error: 'Item não encontrado no Waxpeer' });
         }
         const cheapest = listings[0];
         console.log('[marketplace/buy] tentando:', cheapest.name, 'price:', cheapest.price);
         try {
-          const result = await buyItem(cheapest);
+          const result = await buyItem(cheapest, tradeLink);
           buyResult = result;
           boughtListing = cheapest;
           break;
         } catch (buyErr) {
-          console.log('[marketplace/buy] tentativa', attempt, 'falhou:', String(buyErr));
+          lastError = String(buyErr);
+          console.log('[marketplace/buy] tentativa', attempt, 'falhou:', lastError);
           if (attempt < maxAttempts) await new Promise(r => setTimeout(r, 500));
         }
       }
 
       if (!buyResult || !boughtListing) {
-        return NextResponse.json({ ok: false, error: 'Compra falhou após múltiplas tentativas' });
+        await markHistoryError(historyId, username, winnerName, prizeName);
+        return NextResponse.json({ ok: false, error: lastError || 'Compra falhou após múltiplas tentativas' });
       }
-      console.log('[marketplace/buy] comprado:', boughtListing.name, 'result:', buyResult);
+      console.log('[marketplace/buy] comprado e enviado:', boughtListing.name, 'result:', buyResult);
 
       try {
-        await updateHistoryMarketplace(username, winnerName, prizeName, buyResult.id, historyId);
+        await updateHistoryDelivered(username, winnerName, prizeName, buyResult.id, tradeLink, historyId);
       } catch (histErr) {
         console.error('[marketplace/buy] history update falhou (compra OK):', histErr);
       }
@@ -123,6 +135,7 @@ export async function POST(
       return NextResponse.json({ ok: true, waxpeerItemId: buyResult.id, price: boughtListing.price });
     } catch (e) {
       console.error('[marketplace/buy] erro:', e);
+      await markHistoryError(historyId, username, winnerName, prizeName);
       return NextResponse.json({ ok: false, error: String(e) }, { status: 502 });
     }
   }
@@ -184,35 +197,51 @@ export async function POST(
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
-async function updateHistoryMarketplace(
+async function updateHistoryDelivered(
   username: string,
   winnerName: string,
   prizeName: string,
   marketplaceItemId: string,
+  tradeLink: string,
   historyId?: string,
-): Promise<string | null> {
-  const streamer = await prisma.streamer.findUnique({
-    where: { username },
-    select: { id: true, twitchChannel: true },
-  });
-  if (!streamer) return null;
+): Promise<void> {
+  const data = { marketplaceItemId, tradeLink, deliveryStatus: 'entregue' as const };
 
-  // Se temos o historyId direto, usa ele sem polling
   if (historyId) {
     try {
-      await prisma.raffleHistory.update({
-        where: { id: historyId },
-        data: { marketplaceItemId, deliveryStatus: 'aguardando_tradelink' },
-      });
-      return streamer.twitchChannel ?? null;
-    } catch {
-      // fallthrough para busca por nome se o ID não existir ainda no DB
-    }
+      await prisma.raffleHistory.update({ where: { id: historyId }, data });
+      return;
+    } catch { /* fallthrough */ }
   }
 
-  const cutoff = new Date(Date.now() - 60_000); // últimos 60 segundos
-  let attempts = 0;
-  while (attempts < 5) {
+  const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true } });
+  if (!streamer) return;
+
+  const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  const entry = await prisma.raffleHistory.findFirst({
+    where: { streamerId: streamer.id, winnerName, prizeName, timestamp: { gte: cutoff } },
+    orderBy: { timestamp: 'desc' },
+  });
+  if (entry) await prisma.raffleHistory.update({ where: { id: entry.id }, data });
+}
+
+async function markHistoryError(
+  historyId: string | undefined,
+  username: string,
+  winnerName: string,
+  prizeName: string,
+): Promise<void> {
+  try {
+    if (historyId) {
+      await prisma.raffleHistory.update({
+        where: { id: historyId },
+        data: { deliveryStatus: 'erro_compra' },
+      });
+      return;
+    }
+    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true } });
+    if (!streamer) return;
+    const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000);
     const entry = await prisma.raffleHistory.findFirst({
       where: { streamerId: streamer.id, winnerName, prizeName, timestamp: { gte: cutoff } },
       orderBy: { timestamp: 'desc' },
@@ -220,12 +249,8 @@ async function updateHistoryMarketplace(
     if (entry) {
       await prisma.raffleHistory.update({
         where: { id: entry.id },
-        data: { marketplaceItemId, deliveryStatus: 'aguardando_tradelink' },
+        data: { deliveryStatus: 'erro_compra' },
       });
-      return streamer.twitchChannel ?? null;
     }
-    await new Promise(r => setTimeout(r, 400));
-    attempts++;
-  }
-  return streamer.twitchChannel ?? null;
+  } catch { /* best-effort */ }
 }

@@ -163,12 +163,22 @@ export async function checkStock(marketHashName: string): Promise<WaxpeerListing
   return data.items ?? [];
 }
 
-/** Compra o listing mais barato disponível para o item. Retorna o item_id comprado. */
-export async function buyItem(listing: WaxpeerListing): Promise<WaxpeerBuyResult> {
+function extractTradeUrlParams(tradeLink: string): { partner: string; token: string } | null {
+  const m = tradeLink.match(/partner=(\d+)&token=([\w-]+)/);
+  if (!m) return null;
+  return { partner: m[1], token: m[2] };
+}
+
+/** Compra o listing mais barato e entrega direto na Steam do trade link. */
+export async function buyItem(listing: WaxpeerListing, tradeLink: string): Promise<WaxpeerBuyResult> {
+  const params = extractTradeUrlParams(tradeLink);
+  if (!params) throw new Error('Trade link inválido');
   const res = await fetch(
     url('/buy-one-p2p', {
       item_id: listing.item_id,
       price: String(listing.price),
+      partner: params.partner,
+      token: params.token,
     }),
   );
   if (!res.ok) {

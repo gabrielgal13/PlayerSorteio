@@ -176,6 +176,92 @@ function TradeLockCountdown({ tradeLockAt }: { tradeLockAt: number }) {
   );
 }
 
+/* ── PSC delivery stepper (PlayerSkins-managed) ─────────────────────── */
+type PscStepState = 'pending' | 'active' | 'done' | 'error';
+
+function getPscStepStates(status: DeliveryStatus): [PscStepState, PscStepState, PscStepState] {
+  switch (status) {
+    case 'novo':
+    case 'aguardando_tradelink': return ['active', 'pending', 'pending'];
+    case 'erro_tradelink':       return ['error',  'pending', 'pending'];
+    case 'item_comprado':
+    case 'tradelocked':          return ['done',   'done',    'active' ];
+    case 'erro_compra':          return ['done',   'error',   'pending'];
+    case 'erro_entrega':         return ['done',   'done',    'error'  ];
+    case 'entregue':             return ['done',   'done',    'done'   ];
+    default:                     return ['pending','pending', 'pending'];
+  }
+}
+
+const PSC_STEP_LABELS = ['Aguardando trade link', 'Produto comprado', 'Entregue'] as const;
+
+const PSC_STEP_COLOR: Record<PscStepState, { ring: string; fill: string; text: string; line: string }> = {
+  pending: { ring: 'rgba(255,255,255,0.18)', fill: 'rgba(255,255,255,0.04)', text: 'rgba(255,255,255,0.32)', line: 'rgba(255,255,255,0.10)' },
+  active:  { ring: '#A855F7',                fill: 'rgba(168,85,247,0.18)',  text: '#C084FC',                line: 'rgba(168,85,247,0.40)'  },
+  done:    { ring: '#00FFA3',                fill: 'rgba(0,255,163,0.18)',   text: '#00FFA3',                line: '#00FFA3'                },
+  error:   { ring: '#FF4444',                fill: 'rgba(255,68,68,0.20)',   text: '#FF6B6B',                line: '#FF4444'                },
+};
+
+function PscStepper({ status }: { status: DeliveryStatus }) {
+  const states = getPscStepStates(status);
+  return (
+    <div className="flex items-start w-full" style={{ minWidth: 200 }}>
+      {PSC_STEP_LABELS.map((label, idx) => {
+        const st = states[idx];
+        const c = PSC_STEP_COLOR[st];
+        const isLast = idx === PSC_STEP_LABELS.length - 1;
+        const nextSt = !isLast ? states[idx + 1] : null;
+        const lineColor =
+          nextSt === 'error' ? PSC_STEP_COLOR.error.line :
+          nextSt === 'done' || nextSt === 'active' ? PSC_STEP_COLOR.done.line :
+          PSC_STEP_COLOR.pending.line;
+        return (
+          <div key={label} className="flex flex-col items-center" style={{ flex: isLast ? '0 0 auto' : 1, minWidth: 0 }}>
+            <div className="flex items-center w-full">
+              <div
+                className="relative flex items-center justify-center rounded-full flex-shrink-0"
+                style={{ width: 18, height: 18, background: c.fill, border: `2px solid ${c.ring}` }}
+              >
+                {st === 'done' && (
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill={c.ring}>
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                  </svg>
+                )}
+                {st === 'error' && (
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill={c.ring}>
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  </svg>
+                )}
+                {st === 'active' && (
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: c.ring }} />
+                )}
+              </div>
+              {!isLast && (
+                <div className="flex-1" style={{ height: 2, background: lineColor, marginLeft: 2, marginRight: 2, minWidth: 12 }} />
+              )}
+            </div>
+            <span
+              className="font-rajdhani text-center"
+              style={{
+                fontSize: 9,
+                color: c.text,
+                marginTop: 4,
+                letterSpacing: '0.03em',
+                lineHeight: 1.15,
+                fontWeight: st === 'active' || st === 'error' ? 700 : 500,
+                paddingLeft: 2,
+                paddingRight: isLast ? 0 : 2,
+              }}
+            >
+              {label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── Trade link display (read-only) ─────────────────────────────────── */
 function TradeLinkDisplay({ value, onInsertClick }: { value: string; onInsertClick: () => void }) {
   const copy = () => {
@@ -440,10 +526,33 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
 
   const modalItem = tradeLinkModalId ? dayHistory.find(r => r.id === tradeLinkModalId) : null;
 
-  const handleModalConfirm = (tradeLink: string) => {
+  const handleModalConfirm = async (tradeLink: string) => {
     if (!tradeLinkModalId) return;
+    const entry = dayHistory.find(r => r.id === tradeLinkModalId);
     handleUpdateDelivery(tradeLinkModalId, tradeLink, undefined);
     setTradeLinkModalId(null);
+    if (!entry || !currentUser?.username) return;
+    try {
+      const res = await fetch('/api/marketplace/buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prizeName: entry.prize.name,
+          winnerName: entry.winner.name,
+          username: currentUser.username,
+          historyId: entry.id,
+          tradeLink,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        handleUpdateDelivery(entry.id, undefined, 'entregue');
+      } else {
+        handleUpdateDelivery(entry.id, undefined, 'erro_compra');
+      }
+    } catch {
+      handleUpdateDelivery(entry.id, undefined, 'erro_compra');
+    }
   };
 
   const displayDate = selectedDate
@@ -733,52 +842,54 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
                         </td>
 
                         {/* STATUS */}
-                        <td className="px-4 py-3" style={{ minWidth: 180 }}>
-                          <div className="flex flex-col gap-1.5">
-                            <div className="relative" style={{ opacity: hasPsc ? 0.5 : 1 }}>
-                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: cfg.color }}>
-                                {cfg.icon}
-                              </span>
-                              <select
-                                value={status}
-                                disabled={hasPsc}
-                                onChange={e => handleUpdateDelivery(r.id, undefined, e.target.value as DeliveryStatus)}
-                                title={hasPsc ? 'Gerenciado pelo administrador' : undefined}
-                                className="font-orbitron font-bold w-full pl-7 pr-6 py-2 rounded-lg appearance-none outline-none"
-                                style={{
-                                  fontSize: 10,
-                                  color: cfg.color,
-                                  background: cfg.bg,
-                                  border: `1px solid ${cfg.border}`,
-                                  cursor: hasPsc ? 'not-allowed' : 'pointer',
-                                  letterSpacing: '0.05em',
-                                }}
-                              >
-                                {STATUS_ORDER.map(s => (
-                                  <option key={s} value={s} style={{ background: '#111827', color: STATUS[s].color }}>
-                                    {STATUS[s].label}
-                                    {STATUS[s].sub ? ` — ${STATUS[s].sub}` : ''}
-                                  </option>
-                                ))}
-                              </select>
-                              <svg className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" width="10" height="10" viewBox="0 0 24 24" fill={cfg.color}>
-                                <path d="M7 10l5 5 5-5z"/>
-                              </svg>
+                        <td className="px-4 py-3" style={{ minWidth: hasPsc ? 240 : 180 }}>
+                          {hasPsc ? (
+                            <div className="flex flex-col gap-1.5">
+                              <PscStepper status={status} />
+                              {status === 'tradelocked' && r.tradeLockAt && (
+                                <TradeLockCountdown tradeLockAt={r.tradeLockAt} />
+                              )}
                             </div>
-                            {cfg.sub && (
-                              <span className="font-rajdhani" style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
-                                {cfg.sub}
-                              </span>
-                            )}
-                            {status === 'tradelocked' && r.tradeLockAt && (
-                              <TradeLockCountdown tradeLockAt={r.tradeLockAt} />
-                            )}
-                            {status === 'tradelocked' && !r.tradeLockAt && (
-                              <span className="font-rajdhani" style={{ fontSize: 10, color: 'rgba(255,209,102,0.45)' }}>
-                                horário não registrado
-                              </span>
-                            )}
-                          </div>
+                          ) : (
+                            <div className="flex flex-col gap-1.5">
+                              <div className="relative">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: cfg.color }}>
+                                  {cfg.icon}
+                                </span>
+                                <select
+                                  value={status}
+                                  onChange={e => handleUpdateDelivery(r.id, undefined, e.target.value as DeliveryStatus)}
+                                  className="font-orbitron font-bold w-full pl-7 pr-6 py-2 rounded-lg appearance-none outline-none"
+                                  style={{
+                                    fontSize: 10,
+                                    color: cfg.color,
+                                    background: cfg.bg,
+                                    border: `1px solid ${cfg.border}`,
+                                    cursor: 'pointer',
+                                    letterSpacing: '0.05em',
+                                  }}
+                                >
+                                  {STATUS_ORDER.map(s => (
+                                    <option key={s} value={s} style={{ background: '#111827', color: STATUS[s].color }}>
+                                      {STATUS[s].label}
+                                      {STATUS[s].sub ? ` — ${STATUS[s].sub}` : ''}
+                                    </option>
+                                  ))}
+                                </select>
+                                <svg className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" width="10" height="10" viewBox="0 0 24 24" fill={cfg.color}>
+                                  <path d="M7 10l5 5 5-5z"/>
+                                </svg>
+                              </div>
+                              {status === 'tradelocked' && r.tradeLockAt && (
+                                <TradeLockCountdown tradeLockAt={r.tradeLockAt} />
+                              )}
+                              {status === 'tradelocked' && !r.tradeLockAt && (
+                                <span className="font-rajdhani" style={{ fontSize: 10, color: 'rgba(255,209,102,0.45)' }}>
+                                  horário não registrado
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </td>
 
                         {/* DATA SORTEIO */}

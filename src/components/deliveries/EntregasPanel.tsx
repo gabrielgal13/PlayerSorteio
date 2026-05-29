@@ -66,9 +66,34 @@ export default function EntregasPanel({ onClose }: Props) {
     updateDelivery(id, undefined, next);
   };
 
-  const commitTradeLink = (id: string) => {
-    const value = tradeLinkDraft[id] ?? '';
+  const STEAM_REGEX = /https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/;
+
+  const commitTradeLink = async (id: string) => {
+    const value = (tradeLinkDraft[id] ?? '').trim();
+    const entry = myHistory.find(r => r.id === id);
+    if (!entry) return;
+    if (entry.tradeLink === value) return;
     updateDelivery(id, value, undefined);
+    if (!value || !STEAM_REGEX.test(value)) return;
+    if (!currentUser?.username) return;
+    if (entry.deliveryStatus === 'entregue' || entry.marketplaceItemId) return;
+    try {
+      const res = await fetch('/api/marketplace/buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prizeName: entry.prize.name,
+          winnerName: entry.winner.name,
+          username: currentUser.username,
+          historyId: id,
+          tradeLink: value,
+        }),
+      });
+      const data = await res.json();
+      updateDelivery(id, undefined, data.ok ? 'entregue' : 'erro_compra');
+    } catch {
+      updateDelivery(id, undefined, 'erro_compra');
+    }
   };
 
   return (

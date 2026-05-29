@@ -584,7 +584,6 @@ export default function RaffleEngine() {
     chatTriggerCommand,
     raffleAnimationStyle,
     setPendingMarketplaceDelivery,
-    updateDelivery,
   } = useStore();
 
   const eventMusic = useEventMusic();
@@ -897,28 +896,11 @@ export default function RaffleEngine() {
         .catch(err => console.warn('[kick/notify] erro de rede:', err));
     }
 
-    // Dispara compra automática no Waxpeer (apenas afiliados)
+    // Aguarda trade link do ganhador. A compra + entrega no Waxpeer só acontece
+    // depois que o tradeLink é recebido (via chat ou inserção manual), pois o
+    // endpoint /buy-one-p2p precisa de partner+token para entregar direto na Steam.
     if (isAffiliate && username) {
-      setPendingMarketplaceDelivery({ winnerName, prizeName, waxpeerItemId: null, status: 'buying' });
-      fetch('/api/marketplace/buy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prizeName, winnerName, username, historyId }),
-      })
-        .then(r => r.json())
-        .then((data: { ok: boolean; waxpeerItemId?: string }) => {
-          if (data.ok && data.waxpeerItemId) {
-            updateDelivery(historyId, undefined, 'aguardando_tradelink');
-            setPendingMarketplaceDelivery({ winnerName, prizeName, waxpeerItemId: data.waxpeerItemId, status: 'waiting_tradelink' });
-          } else {
-            updateDelivery(historyId, undefined, 'erro_compra');
-            setPendingMarketplaceDelivery(null);
-          }
-        })
-        .catch(() => {
-          updateDelivery(historyId, undefined, 'erro_compra');
-          setPendingMarketplaceDelivery(null);
-        });
+      setPendingMarketplaceDelivery({ winnerName, prizeName, waxpeerItemId: null, status: 'waiting_tradelink' });
     }
     const newQty = activePrize.quantity - 1;
     updatePrize(activePrize.id, { quantity: newQty });

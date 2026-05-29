@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { withdrawItem } from '@/lib/waxpeer';
+import { checkStock, buyItem } from '@/lib/waxpeer';
 
 // Resolve a origin real mesmo atrás de proxy/Vercel
 function getOrigin(req: NextRequest): string {
@@ -467,15 +467,33 @@ export async function POST(
         data: { tradeLink },
       });
 
-      // Só chama Waxpeer se o item foi comprado via marketplace (afiliados)
-      if (entry.marketplaceItemId) {
+      // Compra + entrega P2P direto na Steam do tradeLink (apenas afiliados / Waxpeer items)
+      if (process.env.WAXPEER_API_KEY && !entry.marketplaceItemId) {
         try {
-          const result = await withdrawItem(entry.marketplaceItemId, tradeLink);
+          let bought: { id: string } | null = null;
+          let lastError = '';
+          for (let attempt = 1; attempt <= 5; attempt++) {
+            const listings = await checkStock(entry.prizeName);
+            if (!listings.length) { lastError = 'Item não encontrado'; break; }
+            try {
+              const result = await buyItem(listings[0], tradeLink);
+              bought = { id: String(result.id) };
+              break;
+            } catch (err) {
+              lastError = String(err);
+              if (attempt < 5) await new Promise(r => setTimeout(r, 500));
+            }
+          }
           await prisma.raffleHistory.update({
             where: { id: entry.id },
-            data: { deliveryStatus: result.success ? 'entregue' : 'tradelocked' },
+            data: bought
+              ? { marketplaceItemId: bought.id, deliveryStatus: 'entregue' }
+              : { deliveryStatus: 'erro_compra' },
           });
-        } catch { /* log seria ideal aqui */ }
+          if (!bought) console.log('[twitch/whisper] erro compra:', entry.winnerName, lastError);
+        } catch (err) {
+          console.error('[twitch/whisper] erro inesperado:', err);
+        }
       }
 
       return new NextResponse('ok', { status: 200 });

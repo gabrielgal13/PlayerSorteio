@@ -14,6 +14,18 @@ export async function GET(
   const { path } = await params;
   const route = path?.[0];
 
+  if (route === 'debug') {
+    const item = req.nextUrl.searchParams.get('item');
+    if (!item) return NextResponse.json({ error: 'item required' }, { status: 400 });
+    if (!process.env.WAXPEER_API_KEY) return NextResponse.json({ error: 'WAXPEER_API_KEY não configurada' });
+    try {
+      const listings = await checkStock(item);
+      return NextResponse.json({ ok: true, count: listings.length, listings: listings.slice(0, 3), apiKeyPrefix: process.env.WAXPEER_API_KEY.slice(0, 6) + '...' });
+    } catch (e) {
+      return NextResponse.json({ ok: false, error: String(e) }, { status: 502 });
+    }
+  }
+
   if (route === 'stock') {
     const item = req.nextUrl.searchParams.get('item');
     if (!item) return NextResponse.json({ error: 'item required' }, { status: 400 });
@@ -72,13 +84,17 @@ export async function POST(
     }
 
     try {
+      console.log('[marketplace/buy] prizeName:', prizeName, '| winnerName:', winnerName, '| username:', username);
       const listings = await checkStock(prizeName);
+      console.log('[marketplace/buy] checkStock returned', listings.length, 'listings');
       if (!listings.length) {
         return NextResponse.json({ ok: false, error: 'Item não encontrado no Waxpeer' });
       }
 
       const cheapest = listings[0];
+      console.log('[marketplace/buy] cheapest:', cheapest);
       const buyResult = await buyItem(cheapest);
+      console.log('[marketplace/buy] buyResult:', buyResult);
 
       if (!buyResult.success) {
         return NextResponse.json({ ok: false, error: buyResult.msg });
@@ -88,6 +104,7 @@ export async function POST(
 
       return NextResponse.json({ ok: true, waxpeerItemId: buyResult.id, price: cheapest.price });
     } catch (e) {
+      console.error('[marketplace/buy] erro:', e);
       return NextResponse.json({ ok: false, error: String(e) }, { status: 502 });
     }
   }

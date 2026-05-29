@@ -39,19 +39,82 @@ async function getBotConfig() {
   };
 }
 
-async function sendTwitchWhisper(toUserId: string, message: string): Promise<void> {
+async function refreshTwitchBotToken(): Promise<string | null> {
+  const row = await prisma.appConfig.findUnique({ where: { key: 'twitch_bot_refresh_token' } });
+  if (!row?.value) return null;
+  const res = await fetch('https://id.twitch.tv/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: process.env.TWITCH_CLIENT_ID!,
+      client_secret: process.env.TWITCH_CLIENT_SECRET!,
+      refresh_token: row.value,
+      grant_type: 'refresh_token',
+    }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json() as { access_token: string; refresh_token?: string };
+  await prisma.appConfig.upsert({ where: { key: 'twitch_bot_user_token' }, create: { key: 'twitch_bot_user_token', value: data.access_token }, update: { value: data.access_token } });
+  if (data.refresh_token) {
+    await prisma.appConfig.upsert({ where: { key: 'twitch_bot_refresh_token' }, create: { key: 'twitch_bot_refresh_token', value: data.refresh_token }, update: { value: data.refresh_token } });
+  }
+  return data.access_token;
+}
+
+async function getBotWithRefresh(): Promise<{ token: string; userId: string } | null> {
   const bot = await getBotConfig();
-  if (!bot.token || !bot.userId) return;
-  try {
-    await fetch(`https://api.twitch.tv/helix/whispers?from_user_id=${bot.userId}&to_user_id=${toUserId}`, {
+  if (bot.token && bot.userId) return { token: bot.token, userId: bot.userId };
+  const newToken = await refreshTwitchBotToken();
+  if (!newToken) return null;
+  const updated = await getBotConfig();
+  if (!updated.token || !updated.userId) return null;
+  return { token: updated.token, userId: updated.userId };
+}
+
+async function sendBotChatMessage(broadcasterId: string, message: string): Promise<{ ok: boolean; sent?: boolean | null; dropped?: boolean; reason?: unknown; twitchResponse?: unknown }> {
+  const bot = await getBotWithRefresh();
+  if (!bot) return { ok: false };
+
+  const doSend = (token: string) =>
+    fetch('https://api.twitch.tv/helix/chat/messages', {
       method: 'POST',
-      headers: {
-        'Client-Id': process.env.TWITCH_CLIENT_ID!,
-        Authorization: `Bearer ${bot.token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: bot.userId, message }),
+    });
+
+  let res = await doSend(bot.token);
+  if (res.status === 401) {
+    const newToken = await refreshTwitchBotToken();
+    if (!newToken) return { ok: false };
+    res = await doSend(newToken);
+  }
+
+  const msgData = await res.json() as { data?: { is_sent?: boolean; drop_reason?: unknown }[] };
+  const sent = msgData.data?.[0];
+  if (res.ok && sent && sent.is_sent === false) {
+    return { ok: false, dropped: true, reason: sent.drop_reason, twitchResponse: msgData };
+  }
+  return { ok: res.ok, sent: sent?.is_sent ?? null, twitchResponse: msgData };
+}
+
+async function sendTwitchWhisper(toUserId: string, message: string): Promise<void> {
+  const bot = await getBotWithRefresh();
+  if (!bot) return;
+  try {
+    const res = await fetch(`https://api.twitch.tv/helix/whispers?from_user_id=${bot.userId}&to_user_id=${toUserId}`, {
+      method: 'POST',
+      headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${bot.token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ message }),
     });
+    if (res.status === 401) {
+      const newToken = await refreshTwitchBotToken();
+      if (!newToken) return;
+      await fetch(`https://api.twitch.tv/helix/whispers?from_user_id=${bot.userId}&to_user_id=${toUserId}`, {
+        method: 'POST',
+        headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${newToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+    }
   } catch { /* ignore */ }
 }
 
@@ -83,15 +146,8 @@ export async function GET(
     const winner  = req.nextUrl.searchParams.get('winner') ?? 'Teste123';
     if (!channel) return Response.json({ error: 'channel required' }, { status: 400 });
 
-    const rows = await prisma.appConfig.findMany({
-      where: { key: { in: ['twitch_bot_user_token', 'twitch_bot_user_id'] } },
-    });
-    const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
-    const botToken = map['twitch_bot_user_token'];
-    const botUserId = map['twitch_bot_user_id'];
-    if (!botToken || !botUserId) {
-      return Response.json({ ok: false, step: 'bot_config', error: 'Token ou ID do bot não encontrado no banco. Faça /api/twitch/eventsub/auth primeiro.' });
-    }
+    const bot = await getBotWithRefresh();
+    if (!bot) return Response.json({ ok: false, step: 'bot_config', error: 'Bot não autenticado. Faça /api/twitch/eventsub/auth primeiro.' });
 
     const appToken = await getAppToken();
     const userRes = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(channel)}`, {
@@ -99,21 +155,10 @@ export async function GET(
     });
     const userData = await userRes.json() as { data?: { id: string }[] };
     const broadcasterId = userData.data?.[0]?.id;
-    if (!broadcasterId) {
-      return Response.json({ ok: false, step: 'broadcaster_lookup', error: `Canal "${channel}" não encontrado na Twitch`, userData });
-    }
+    if (!broadcasterId) return Response.json({ ok: false, step: 'broadcaster_lookup', error: `Canal "${channel}" não encontrado na Twitch` });
 
-    const msgRes = await fetch('https://api.twitch.tv/helix/chat/messages', {
-      method: 'POST',
-      headers: {
-        'Client-Id': process.env.TWITCH_CLIENT_ID!,
-        Authorization: `Bearer ${botToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: botUserId, message: `@${winner} parabéns! (mensagem de teste)` }),
-    });
-    const msgData = await msgRes.json();
-    return Response.json({ ok: msgRes.ok, status: msgRes.status, twitchResponse: msgData, botUserId, broadcasterId });
+    const result = await sendBotChatMessage(broadcasterId, `@${winner} parabéns! (mensagem de teste)`);
+    return Response.json({ ...result, botUserId: bot.userId, broadcasterId });
   }
 
   // ── status ───────────────────────────────────────────────────────────────
@@ -198,7 +243,7 @@ export async function GET(
     });
 
     if (!tokenRes.ok) return NextResponse.json({ error: 'Falha ao trocar código OAuth' }, { status: 502 });
-    const tokenData = await tokenRes.json() as { access_token: string };
+    const tokenData = await tokenRes.json() as { access_token: string; refresh_token?: string };
     const userToken = tokenData.access_token;
 
     const userRes = await fetch('https://api.twitch.tv/helix/users', {
@@ -209,11 +254,15 @@ export async function GET(
     const bot = userData.data?.[0];
     if (!bot) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
 
-    await Promise.all([
+    const upserts: Promise<unknown>[] = [
       prisma.appConfig.upsert({ where: { key: 'twitch_bot_user_token' }, create: { key: 'twitch_bot_user_token', value: userToken }, update: { value: userToken } }),
       prisma.appConfig.upsert({ where: { key: 'twitch_bot_user_id' }, create: { key: 'twitch_bot_user_id', value: bot.id }, update: { value: bot.id } }),
       prisma.appConfig.upsert({ where: { key: 'twitch_bot_username' }, create: { key: 'twitch_bot_username', value: bot.login }, update: { value: bot.login } }),
-    ]);
+    ];
+    if (tokenData.refresh_token) {
+      upserts.push(prisma.appConfig.upsert({ where: { key: 'twitch_bot_refresh_token' }, create: { key: 'twitch_bot_refresh_token', value: tokenData.refresh_token }, update: { value: tokenData.refresh_token } }));
+    }
+    await Promise.all(upserts);
 
     return new NextResponse(
       `<!DOCTYPE html><html><body style="font-family:monospace;padding:2rem;background:#0a0a0a;color:#00E5FF">
@@ -251,13 +300,7 @@ export async function POST(
     if (!channel || !message?.trim())
       return NextResponse.json({ ok: false, error: 'channel e message são obrigatórios' }, { status: 400 });
 
-    const rows = await prisma.appConfig.findMany({
-      where: { key: { in: ['twitch_bot_user_token', 'twitch_bot_user_id'] } },
-    });
-    const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
-    const botToken = map['twitch_bot_user_token'];
-    const botUserId = map['twitch_bot_user_id'];
-    if (!botToken || !botUserId)
+    if (!await getBotWithRefresh())
       return NextResponse.json({ ok: false, error: 'Bot não autenticado' });
 
     const appToken = await getAppToken();
@@ -269,35 +312,18 @@ export async function POST(
     if (!broadcasterId)
       return NextResponse.json({ ok: false, error: `Canal "${channel}" não encontrado` });
 
-    const msgRes = await fetch('https://api.twitch.tv/helix/chat/messages', {
-      method: 'POST',
-      headers: {
-        'Client-Id': process.env.TWITCH_CLIENT_ID!,
-        Authorization: `Bearer ${botToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: botUserId, message: message.trim() }),
-    });
-    const msgData = await msgRes.json() as { data?: { is_sent?: boolean }[] };
-    return NextResponse.json({ ok: msgRes.ok, sent: msgData.data?.[0]?.is_sent ?? null });
+    const result = await sendBotChatMessage(broadcasterId, message.trim());
+    return NextResponse.json(result);
   }
 
   // ── Notificar ganhador no chat ────────────────────────────────────────────
   if (seg0 === 'notify' && !seg1) {
     const { channel, winnerName, prizeName, winnerSource } = await req.json() as { channel: string; winnerName: string; prizeName?: string; winnerSource?: string | null };
-    if (!channel || !winnerName) {
+    if (!channel || !winnerName)
       return NextResponse.json({ ok: false, error: 'channel e winnerName são obrigatórios' }, { status: 400 });
-    }
 
-    const rows = await prisma.appConfig.findMany({
-      where: { key: { in: ['twitch_bot_user_token', 'twitch_bot_user_id'] } },
-    });
-    const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
-    const botToken = map['twitch_bot_user_token'];
-    const botUserId = map['twitch_bot_user_id'];
-    if (!botToken || !botUserId) {
+    if (!await getBotWithRefresh())
       return NextResponse.json({ ok: false, error: 'Bot não autenticado' });
-    }
 
     const appToken = await getAppToken();
     const userRes = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(channel)}`, {
@@ -305,11 +331,9 @@ export async function POST(
     });
     const userData = await userRes.json() as { data?: { id: string }[] };
     const broadcasterId = userData.data?.[0]?.id;
-    if (!broadcasterId) {
+    if (!broadcasterId)
       return NextResponse.json({ ok: false, error: `Canal "${channel}" não encontrado` });
-    }
 
-    // Varia o conteúdo pra escapar do filtro anti-duplicata da Twitch (drop silencioso de mensagens similares em sequência)
     const greetings = ['parabéns', 'gg', 'level up', 'show de bola', 'topzera', 'mandou bem', 'que sorte hein', 'boa demais'];
     const emojis = ['🎉', '🏆', '🎁', '⭐', '🔥', '💎', '🚀', '👑'];
     const g = greetings[Math.floor(Math.random() * greetings.length)];
@@ -318,27 +342,11 @@ export async function POST(
     const prizePart = prizeName ? ` levou ${prizeName.replace(/\s*\(.*?\)/g, '').trim()}` : '';
     const botName = process.env.TWITCH_BOT_USERNAME ?? 'PlayerSkinsBOT';
     const isTwitchWinner = !winnerSource || winnerSource === 'twitch';
-    const instruction = isTwitchWinner
-      ? ` | Para receber, mande seu Steam trade link por WHISPER para @${botName}`
-      : '';
+    const instruction = isTwitchWinner ? ` | Para receber, mande seu Steam trade link por WHISPER para @${botName}` : '';
     const message = `${e1} @${winnerName} ${g}!${prizePart}${instruction} ${e2}`;
 
-    const msgRes = await fetch('https://api.twitch.tv/helix/chat/messages', {
-      method: 'POST',
-      headers: {
-        'Client-Id': process.env.TWITCH_CLIENT_ID!,
-        Authorization: `Bearer ${botToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: botUserId, message }),
-    });
-    const msgData = await msgRes.json() as { data?: { is_sent?: boolean; drop_reason?: { code?: string; message?: string } }[] };
-    const sent = msgData.data?.[0];
-    // Twitch retorna 200 mesmo quando dropa — precisa checar is_sent
-    if (msgRes.ok && sent && sent.is_sent === false) {
-      return NextResponse.json({ ok: false, dropped: true, reason: sent.drop_reason, message, twitchResponse: msgData });
-    }
-    return NextResponse.json({ ok: msgRes.ok, sent: sent?.is_sent ?? null, message, twitchResponse: msgData });
+    const result = await sendBotChatMessage(broadcasterId, message);
+    return NextResponse.json({ ...result, message });
   }
 
   // ── Criar assinatura EventSub (chamado uma vez pelo admin) ────────────────

@@ -657,10 +657,6 @@ export type RaffleHistoryUncheckedUpdateManyWithoutStreamerNestedInput = {
   deleteMany?: Prisma.RaffleHistoryScalarWhereInput | Prisma.RaffleHistoryScalarWhereInput[]
 }
 
-export type NullableDateTimeFieldUpdateOperationsInput = {
-  set?: Date | string | null
-}
-
 export type RaffleHistoryCreateWithoutStreamerInput = {
   id?: string
   winnerNumber: number

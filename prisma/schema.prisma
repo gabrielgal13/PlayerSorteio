@@ -21,6 +21,11 @@ model Streamer {
   youtubeChannel     String?
   youtubeDisplayName String?
 
+  // YouTube live chat polling (server-side)
+  youtubeLiveChatId       String?
+  youtubeNextPageToken    String?
+  youtubeLiveChatCheckedAt DateTime?
+
   // TwitchConfig (editável pelo modal de Configurações)
   registrationCommand String @default("!entrar")
   claimCommand        String @default("!claim")

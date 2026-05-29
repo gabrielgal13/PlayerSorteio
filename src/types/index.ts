@@ -68,7 +68,15 @@ export type RaffleStatus =
   | 'timeout'
   | 'reroll';
 
-export type DeliveryStatus = 'novo' | 'tradelocked' | 'entregue' | 'aguardando_tradelink';
+export type DeliveryStatus =
+  | 'novo'
+  | 'aguardando_tradelink'
+  | 'item_comprado'
+  | 'tradelocked'
+  | 'entregue'
+  | 'erro_tradelink'
+  | 'erro_entrega'
+  | 'erro_compra';
 
 export interface RaffleResult {
   id: string;

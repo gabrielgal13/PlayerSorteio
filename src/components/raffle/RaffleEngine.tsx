@@ -852,12 +852,13 @@ export default function RaffleEngine() {
     const username = currentUser?.username;
 
     // Notifica ganhador no chat imediatamente ao confirmar
+    const winnerSource = currentWinner.source ?? null;
     const channel = twitchConfig.channel || currentUser?.twitchChannel;
     if (channel) {
       fetch('/api/twitch/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel, winnerName, prizeName }),
+        body: JSON.stringify({ channel, winnerName, prizeName, winnerSource }),
       })
         .then(r => r.json())
         .then(data => {
@@ -871,7 +872,7 @@ export default function RaffleEngine() {
       fetch('/api/youtube/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ youtubeHandle, winnerName, prizeName }),
+        body: JSON.stringify({ youtubeHandle, winnerName, prizeName, winnerSource }),
       })
         .then(r => r.json())
         .then(data => {
@@ -885,7 +886,7 @@ export default function RaffleEngine() {
       fetch('/api/kick/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kickChannel, winnerName, prizeName }),
+        body: JSON.stringify({ kickChannel, winnerName, prizeName, winnerSource }),
       })
         .then(r => r.json())
         .then(data => {

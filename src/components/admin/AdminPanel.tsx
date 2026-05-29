@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import EntregasPage from '@/components/deliveries/EntregasPage';
+import AdminDeliveriesDashboard from '@/components/admin/AdminDeliveriesDashboard';
 import MarketingSection from '@/components/admin/MarketingSection';
 import type { RaffleResult, DeliveryStatus } from '@/types';
 
@@ -515,6 +516,7 @@ export default function AdminPanel() {
   const [editProfileLoading, setEditProfileLoading] = useState(false);
 
   // Entregas admin state
+  const [entregasTab, setEntregasTab] = useState<'dashboard' | 'streamer'>('dashboard');
   const [entregasStreamer, setEntregasStreamer] = useState<string>('');
   const [entregasHistory, setEntregasHistory] = useState<RaffleResult[]>([]);
   const [entregasLoading, setEntregasLoading] = useState(false);
@@ -2458,103 +2460,106 @@ export default function AdminPanel() {
                 transition={{ duration: 0.22 }}
                 className="flex-1 flex flex-col overflow-hidden"
               >
-                {/* Streamer selector bar */}
-                <div
-                  className="flex-shrink-0 flex items-center gap-4 px-8 py-4"
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(5,8,22,0.4)' }}
-                >
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-                      style={{ background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.2)' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#00E5FF">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                      </svg>
-                    </div>
-                    <span className="font-orbitron text-xs font-bold tracking-widest" style={{ color: 'rgba(0,229,255,0.85)' }}>
-                      STREAMER
-                    </span>
-                  </div>
-
-                  <div className="relative" style={{ minWidth: 220 }}>
-                    <select
-                      value={entregasStreamer}
-                      onChange={e => {
-                        const val = e.target.value;
-                        setEntregasStreamer(val);
-                        setEntregasHistory([]);
-                        if (val) loadEntregasHistory(val);
-                      }}
-                      className="w-full rounded-xl font-rajdhani text-sm outline-none px-4 py-2.5 appearance-none cursor-pointer"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: entregasStreamer ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.3)' }}
-                    >
-                      <option value="" style={{ background: '#080d24' }}>Selecionar streamer...</option>
-                      {streamers.map(s => (
-                        <option key={s.username} value={s.username} style={{ background: '#080d24' }}>
-                          {s.displayName || s.username}
-                        </option>
-                      ))}
-                    </select>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.3)" className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <path d="M7 10l5 5 5-5z"/>
-                    </svg>
-                  </div>
-
-                  {entregasStreamer && (
+                {/* Sub-tab bar */}
+                <div className="flex-shrink-0 flex items-center gap-2 px-8 py-3"
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(5,8,22,0.4)' }}>
+                  {([
+                    { key: 'dashboard', label: 'DASHBOARD GLOBAL' },
+                    { key: 'streamer',  label: 'POR STREAMER'     },
+                  ] as const).map(tab => (
                     <button
-                      onClick={() => loadEntregasHistory(entregasStreamer)}
-                      disabled={entregasLoading}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-125 disabled:opacity-60"
-                      style={{ fontSize: 10, color: '#00FFA3', background: 'rgba(0,255,163,0.08)', border: '1px solid rgba(0,255,163,0.25)' }}
+                      key={tab.key}
+                      onClick={() => setEntregasTab(tab.key)}
+                      className="px-4 py-2 rounded-lg font-orbitron font-bold tracking-wider transition-all"
+                      style={{
+                        fontSize: 10,
+                        color: entregasTab === tab.key ? '#00E5FF' : 'rgba(255,255,255,0.3)',
+                        background: entregasTab === tab.key ? 'rgba(0,229,255,0.1)' : 'transparent',
+                        border: entregasTab === tab.key ? '1px solid rgba(0,229,255,0.3)' : '1px solid rgba(255,255,255,0.07)',
+                      }}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
-                        style={{ animation: entregasLoading ? 'spin 1s linear infinite' : 'none' }}>
-                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                      </svg>
-                      ATUALIZAR
+                      {tab.label}
                     </button>
-                  )}
-
-                  {entregasLoading && (
-                    <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                      Carregando...
-                    </span>
-                  )}
+                  ))}
                 </div>
 
-                {/* Content */}
-                {!entregasStreamer ? (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,0.12)">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                      </svg>
-                    </div>
-                    <p className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                      SELECIONE UM STREAMER
-                    </p>
-                    <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.18)' }}>
-                      Escolha um streamer acima para visualizar e gerenciar suas entregas
-                    </p>
+                {/* DASHBOARD tab */}
+                {entregasTab === 'dashboard' && (
+                  <div className="flex-1 overflow-y-auto px-8 py-6">
+                    <AdminDeliveriesDashboard />
                   </div>
-                ) : entregasLoading ? (
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(0,229,255,0.5)"
-                        style={{ animation: 'spin 1s linear infinite' }}>
-                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                      </svg>
-                      <span className="font-rajdhani text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                        Carregando histórico...
-                      </span>
+                )}
+
+                {/* POR STREAMER tab */}
+                {entregasTab === 'streamer' && (
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    {/* Streamer selector bar */}
+                    <div className="flex-shrink-0 flex items-center gap-4 px-8 py-3"
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="relative" style={{ minWidth: 220 }}>
+                        <select
+                          value={entregasStreamer}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setEntregasStreamer(val);
+                            setEntregasHistory([]);
+                            if (val) loadEntregasHistory(val);
+                          }}
+                          className="w-full rounded-xl font-rajdhani text-sm outline-none px-4 py-2.5 appearance-none cursor-pointer"
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: entregasStreamer ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.3)' }}
+                        >
+                          <option value="" style={{ background: '#080d24' }}>Selecionar streamer...</option>
+                          {streamers.map(s => (
+                            <option key={s.username} value={s.username} style={{ background: '#080d24' }}>
+                              {s.displayName || s.username}
+                            </option>
+                          ))}
+                        </select>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.3)" className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                      </div>
+                      {entregasStreamer && (
+                        <button
+                          onClick={() => loadEntregasHistory(entregasStreamer)}
+                          disabled={entregasLoading}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-125 disabled:opacity-60"
+                          style={{ fontSize: 10, color: '#00FFA3', background: 'rgba(0,255,163,0.08)', border: '1px solid rgba(0,255,163,0.25)' }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+                            style={{ animation: entregasLoading ? 'spin 1s linear infinite' : 'none' }}>
+                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                          </svg>
+                          ATUALIZAR
+                        </button>
+                      )}
                     </div>
+
+                    {/* Content */}
+                    {!entregasStreamer ? (
+                      <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(255,255,255,0.12)">
+                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                        <p className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                          SELECIONE UM STREAMER
+                        </p>
+                      </div>
+                    ) : entregasLoading ? (
+                      <div className="flex-1 flex items-center justify-center">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="rgba(0,229,255,0.5)"
+                          style={{ animation: 'spin 1s linear infinite' }}>
+                          <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                        </svg>
+                      </div>
+                    ) : (
+                      <EntregasPage
+                        historyOverride={entregasHistory}
+                        onHistoryRefresh={() => loadEntregasHistory(entregasStreamer)}
+                        onUpdateDelivery={handleEntregasUpdateDelivery}
+                      />
+                    )}
                   </div>
-                ) : (
-                  <EntregasPage
-                    historyOverride={entregasHistory}
-                    onHistoryRefresh={() => loadEntregasHistory(entregasStreamer)}
-                    onUpdateDelivery={handleEntregasUpdateDelivery}
-                  />
                 )}
               </motion.div>
             )}

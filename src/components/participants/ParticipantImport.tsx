@@ -89,12 +89,22 @@ export default function ParticipantImport() {
         }
       }
 
+      const normalizePlatform = (raw: string): 'twitch' | 'kick' | 'youtube' | undefined => {
+        const v = raw.toLowerCase().trim();
+        if (!v) return undefined;
+        if (v === 'twitch' || v === 'tw' || v === 'ttv') return 'twitch';
+        if (v === 'kick' || v === 'k') return 'kick';
+        if (v === 'youtube' || v === 'yt') return 'youtube';
+        return undefined;
+      };
+
       for (let i = startRow; i < rows.length; i++) {
         const row = rows[i] as unknown[];
         if (!row || row.length < 2) continue;
 
         const rawNum = String(row[0] ?? '').trim();
         const rawName = String(row[1] ?? '').trim();
+        const rawPlatform = String(row[2] ?? '').trim();
 
         if (!rawNum && !rawName) continue;
 
@@ -112,8 +122,13 @@ export default function ParticipantImport() {
           continue;
         }
 
+        const source = normalizePlatform(rawPlatform);
+        if (rawPlatform && !source) {
+          errs.push({ row: i + 1, message: `Linha ${i + 1}: plataforma inválida "${rawPlatform}" (use twitch, kick ou youtube)` });
+        }
+
         seenNumbers.add(num);
-        parsed.push({ id: `p_${num}`, number: num, name: rawName });
+        parsed.push({ id: `p_${num}`, number: num, name: rawName, source });
       }
 
       if (parsed.length === 0 && errs.length === 0) {
@@ -331,6 +346,9 @@ export default function ParticipantImport() {
                         {isDragging ? 'Solte o arquivo aqui' : 'Arraste ou clique para importar participantes'}
                       </p>
                       <p className="font-rajdhani text-white/25 text-xs tracking-wider">.XLSX · .XLS · .CSV</p>
+                      <p className="font-rajdhani text-white/20 text-xs mt-1">
+                        Colunas: <span className="text-white/35">A</span> Número · <span className="text-white/35">B</span> Nome · <span className="text-white/35">C</span> Plataforma <span className="text-white/20">(opcional: twitch / kick / youtube)</span>
+                      </p>
                     </div>
                   </motion.div>
                 )}

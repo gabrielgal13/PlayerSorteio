@@ -54,6 +54,9 @@ export type StreamerMinAggregateOutputType = {
   kickChatroomId: number | null
   youtubeChannel: string | null
   youtubeDisplayName: string | null
+  youtubeLiveChatId: string | null
+  youtubeNextPageToken: string | null
+  youtubeLiveChatCheckedAt: Date | null
   registrationCommand: string | null
   claimCommand: string | null
   validationTimeout: number | null
@@ -89,6 +92,9 @@ export type StreamerMaxAggregateOutputType = {
   kickChatroomId: number | null
   youtubeChannel: string | null
   youtubeDisplayName: string | null
+  youtubeLiveChatId: string | null
+  youtubeNextPageToken: string | null
+  youtubeLiveChatCheckedAt: Date | null
   registrationCommand: string | null
   claimCommand: string | null
   validationTimeout: number | null
@@ -124,6 +130,9 @@ export type StreamerCountAggregateOutputType = {
   kickChatroomId: number
   youtubeChannel: number
   youtubeDisplayName: number
+  youtubeLiveChatId: number
+  youtubeNextPageToken: number
+  youtubeLiveChatCheckedAt: number
   registrationCommand: number
   claimCommand: number
   validationTimeout: number
@@ -177,6 +186,9 @@ export type StreamerMinAggregateInputType = {
   kickChatroomId?: true
   youtubeChannel?: true
   youtubeDisplayName?: true
+  youtubeLiveChatId?: true
+  youtubeNextPageToken?: true
+  youtubeLiveChatCheckedAt?: true
   registrationCommand?: true
   claimCommand?: true
   validationTimeout?: true
@@ -212,6 +224,9 @@ export type StreamerMaxAggregateInputType = {
   kickChatroomId?: true
   youtubeChannel?: true
   youtubeDisplayName?: true
+  youtubeLiveChatId?: true
+  youtubeNextPageToken?: true
+  youtubeLiveChatCheckedAt?: true
   registrationCommand?: true
   claimCommand?: true
   validationTimeout?: true
@@ -247,6 +262,9 @@ export type StreamerCountAggregateInputType = {
   kickChatroomId?: true
   youtubeChannel?: true
   youtubeDisplayName?: true
+  youtubeLiveChatId?: true
+  youtubeNextPageToken?: true
+  youtubeLiveChatCheckedAt?: true
   registrationCommand?: true
   claimCommand?: true
   validationTimeout?: true
@@ -369,6 +387,9 @@ export type StreamerGroupByOutputType = {
   kickChatroomId: number | null
   youtubeChannel: string | null
   youtubeDisplayName: string | null
+  youtubeLiveChatId: string | null
+  youtubeNextPageToken: string | null
+  youtubeLiveChatCheckedAt: Date | null
   registrationCommand: string
   claimCommand: string
   validationTimeout: number
@@ -427,6 +448,9 @@ export type StreamerWhereInput = {
   kickChatroomId?: Prisma.IntNullableFilter<"Streamer"> | number | null
   youtubeChannel?: Prisma.StringNullableFilter<"Streamer"> | string | null
   youtubeDisplayName?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  youtubeLiveChatId?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  youtubeNextPageToken?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  youtubeLiveChatCheckedAt?: Prisma.DateTimeNullableFilter<"Streamer"> | Date | string | null
   registrationCommand?: Prisma.StringFilter<"Streamer"> | string
   claimCommand?: Prisma.StringFilter<"Streamer"> | string
   validationTimeout?: Prisma.IntFilter<"Streamer"> | number
@@ -466,6 +490,9 @@ export type StreamerOrderByWithRelationInput = {
   kickChatroomId?: Prisma.SortOrderInput | Prisma.SortOrder
   youtubeChannel?: Prisma.SortOrderInput | Prisma.SortOrder
   youtubeDisplayName?: Prisma.SortOrderInput | Prisma.SortOrder
+  youtubeLiveChatId?: Prisma.SortOrderInput | Prisma.SortOrder
+  youtubeNextPageToken?: Prisma.SortOrderInput | Prisma.SortOrder
+  youtubeLiveChatCheckedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   registrationCommand?: Prisma.SortOrder
   claimCommand?: Prisma.SortOrder
   validationTimeout?: Prisma.SortOrder
@@ -508,6 +535,9 @@ export type StreamerWhereUniqueInput = Prisma.AtLeast<{
   kickChatroomId?: Prisma.IntNullableFilter<"Streamer"> | number | null
   youtubeChannel?: Prisma.StringNullableFilter<"Streamer"> | string | null
   youtubeDisplayName?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  youtubeLiveChatId?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  youtubeNextPageToken?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  youtubeLiveChatCheckedAt?: Prisma.DateTimeNullableFilter<"Streamer"> | Date | string | null
   registrationCommand?: Prisma.StringFilter<"Streamer"> | string
   claimCommand?: Prisma.StringFilter<"Streamer"> | string
   validationTimeout?: Prisma.IntFilter<"Streamer"> | number
@@ -547,6 +577,9 @@ export type StreamerOrderByWithAggregationInput = {
   kickChatroomId?: Prisma.SortOrderInput | Prisma.SortOrder
   youtubeChannel?: Prisma.SortOrderInput | Prisma.SortOrder
   youtubeDisplayName?: Prisma.SortOrderInput | Prisma.SortOrder
+  youtubeLiveChatId?: Prisma.SortOrderInput | Prisma.SortOrder
+  youtubeNextPageToken?: Prisma.SortOrderInput | Prisma.SortOrder
+  youtubeLiveChatCheckedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   registrationCommand?: Prisma.SortOrder
   claimCommand?: Prisma.SortOrder
   validationTimeout?: Prisma.SortOrder
@@ -590,6 +623,9 @@ export type StreamerScalarWhereWithAggregatesInput = {
   kickChatroomId?: Prisma.IntNullableWithAggregatesFilter<"Streamer"> | number | null
   youtubeChannel?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
   youtubeDisplayName?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
+  youtubeLiveChatId?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
+  youtubeNextPageToken?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
+  youtubeLiveChatCheckedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Streamer"> | Date | string | null
   registrationCommand?: Prisma.StringWithAggregatesFilter<"Streamer"> | string
   claimCommand?: Prisma.StringWithAggregatesFilter<"Streamer"> | string
   validationTimeout?: Prisma.IntWithAggregatesFilter<"Streamer"> | number
@@ -625,6 +661,9 @@ export type StreamerCreateInput = {
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
@@ -664,6 +703,9 @@ export type StreamerUncheckedCreateInput = {
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
@@ -703,6 +745,9 @@ export type StreamerUpdateInput = {
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
@@ -742,6 +787,9 @@ export type StreamerUncheckedUpdateInput = {
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
@@ -781,6 +829,9 @@ export type StreamerCreateManyInput = {
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
@@ -816,6 +867,9 @@ export type StreamerUpdateManyMutationInput = {
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
@@ -851,6 +905,9 @@ export type StreamerUncheckedUpdateManyInput = {
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
@@ -886,6 +943,9 @@ export type StreamerCountOrderByAggregateInput = {
   kickChatroomId?: Prisma.SortOrder
   youtubeChannel?: Prisma.SortOrder
   youtubeDisplayName?: Prisma.SortOrder
+  youtubeLiveChatId?: Prisma.SortOrder
+  youtubeNextPageToken?: Prisma.SortOrder
+  youtubeLiveChatCheckedAt?: Prisma.SortOrder
   registrationCommand?: Prisma.SortOrder
   claimCommand?: Prisma.SortOrder
   validationTimeout?: Prisma.SortOrder
@@ -929,6 +989,9 @@ export type StreamerMaxOrderByAggregateInput = {
   kickChatroomId?: Prisma.SortOrder
   youtubeChannel?: Prisma.SortOrder
   youtubeDisplayName?: Prisma.SortOrder
+  youtubeLiveChatId?: Prisma.SortOrder
+  youtubeNextPageToken?: Prisma.SortOrder
+  youtubeLiveChatCheckedAt?: Prisma.SortOrder
   registrationCommand?: Prisma.SortOrder
   claimCommand?: Prisma.SortOrder
   validationTimeout?: Prisma.SortOrder
@@ -964,6 +1027,9 @@ export type StreamerMinOrderByAggregateInput = {
   kickChatroomId?: Prisma.SortOrder
   youtubeChannel?: Prisma.SortOrder
   youtubeDisplayName?: Prisma.SortOrder
+  youtubeLiveChatId?: Prisma.SortOrder
+  youtubeNextPageToken?: Prisma.SortOrder
+  youtubeLiveChatCheckedAt?: Prisma.SortOrder
   registrationCommand?: Prisma.SortOrder
   claimCommand?: Prisma.SortOrder
   validationTimeout?: Prisma.SortOrder
@@ -1018,6 +1084,10 @@ export type NullableIntFieldUpdateOperationsInput = {
   decrement?: number
   multiply?: number
   divide?: number
+}
+
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
 }
 
 export type IntFieldUpdateOperationsInput = {
@@ -1100,6 +1170,9 @@ export type StreamerCreateWithoutPrizeListsInput = {
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
@@ -1138,6 +1211,9 @@ export type StreamerUncheckedCreateWithoutPrizeListsInput = {
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
@@ -1192,6 +1268,9 @@ export type StreamerUpdateWithoutPrizeListsInput = {
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1230,6 +1309,9 @@ export type StreamerUncheckedUpdateWithoutPrizeListsInput = {
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1268,6 +1350,9 @@ export type StreamerCreateWithoutPscTransactionsInput = {
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
@@ -1306,6 +1391,9 @@ export type StreamerUncheckedCreateWithoutPscTransactionsInput = {
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
@@ -1360,6 +1448,9 @@ export type StreamerUpdateWithoutPscTransactionsInput = {
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1398,6 +1489,9 @@ export type StreamerUncheckedUpdateWithoutPscTransactionsInput = {
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1436,6 +1530,9 @@ export type StreamerCreateWithoutHistoryInput = {
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
@@ -1474,6 +1571,9 @@ export type StreamerUncheckedCreateWithoutHistoryInput = {
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
@@ -1528,6 +1628,9 @@ export type StreamerUpdateWithoutHistoryInput = {
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1566,6 +1669,9 @@ export type StreamerUncheckedUpdateWithoutHistoryInput = {
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1604,6 +1710,9 @@ export type StreamerCreateWithoutBotCommandsInput = {
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
@@ -1642,6 +1751,9 @@ export type StreamerUncheckedCreateWithoutBotCommandsInput = {
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
@@ -1696,6 +1808,9 @@ export type StreamerUpdateWithoutBotCommandsInput = {
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1734,6 +1849,9 @@ export type StreamerUncheckedUpdateWithoutBotCommandsInput = {
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1830,6 +1948,9 @@ export type StreamerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   kickChatroomId?: boolean
   youtubeChannel?: boolean
   youtubeDisplayName?: boolean
+  youtubeLiveChatId?: boolean
+  youtubeNextPageToken?: boolean
+  youtubeLiveChatCheckedAt?: boolean
   registrationCommand?: boolean
   claimCommand?: boolean
   validationTimeout?: boolean
@@ -1870,6 +1991,9 @@ export type StreamerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   kickChatroomId?: boolean
   youtubeChannel?: boolean
   youtubeDisplayName?: boolean
+  youtubeLiveChatId?: boolean
+  youtubeNextPageToken?: boolean
+  youtubeLiveChatCheckedAt?: boolean
   registrationCommand?: boolean
   claimCommand?: boolean
   validationTimeout?: boolean
@@ -1905,6 +2029,9 @@ export type StreamerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   kickChatroomId?: boolean
   youtubeChannel?: boolean
   youtubeDisplayName?: boolean
+  youtubeLiveChatId?: boolean
+  youtubeNextPageToken?: boolean
+  youtubeLiveChatCheckedAt?: boolean
   registrationCommand?: boolean
   claimCommand?: boolean
   validationTimeout?: boolean
@@ -1940,6 +2067,9 @@ export type StreamerSelectScalar = {
   kickChatroomId?: boolean
   youtubeChannel?: boolean
   youtubeDisplayName?: boolean
+  youtubeLiveChatId?: boolean
+  youtubeNextPageToken?: boolean
+  youtubeLiveChatCheckedAt?: boolean
   registrationCommand?: boolean
   claimCommand?: boolean
   validationTimeout?: boolean
@@ -1963,7 +2093,7 @@ export type StreamerSelectScalar = {
   updatedAt?: boolean
 }
 
-export type StreamerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "passwordHash" | "mascot" | "displayName" | "isAdmin" | "twitchChannel" | "kickChannel" | "kickChatroomId" | "youtubeChannel" | "youtubeDisplayName" | "registrationCommand" | "claimCommand" | "validationTimeout" | "isAffiliate" | "pscBalance" | "audioEnabled" | "excelImportEnabled" | "excelPrizesImportEnabled" | "eventMusic" | "eventEffect" | "spinEffect" | "themeColor" | "socoChuteModeEnabled" | "raffleTriggerMode" | "autoRoundDelay" | "chatTriggerCount" | "chatTriggerCommand" | "raffleAnimationStyle" | "forcePasswordChange" | "createdAt" | "updatedAt", ExtArgs["result"]["streamer"]>
+export type StreamerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "passwordHash" | "mascot" | "displayName" | "isAdmin" | "twitchChannel" | "kickChannel" | "kickChatroomId" | "youtubeChannel" | "youtubeDisplayName" | "youtubeLiveChatId" | "youtubeNextPageToken" | "youtubeLiveChatCheckedAt" | "registrationCommand" | "claimCommand" | "validationTimeout" | "isAffiliate" | "pscBalance" | "audioEnabled" | "excelImportEnabled" | "excelPrizesImportEnabled" | "eventMusic" | "eventEffect" | "spinEffect" | "themeColor" | "socoChuteModeEnabled" | "raffleTriggerMode" | "autoRoundDelay" | "chatTriggerCount" | "chatTriggerCommand" | "raffleAnimationStyle" | "forcePasswordChange" | "createdAt" | "updatedAt", ExtArgs["result"]["streamer"]>
 export type StreamerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   history?: boolean | Prisma.Streamer$historyArgs<ExtArgs>
   pscTransactions?: boolean | Prisma.Streamer$pscTransactionsArgs<ExtArgs>
@@ -1994,6 +2124,9 @@ export type $StreamerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     kickChatroomId: number | null
     youtubeChannel: string | null
     youtubeDisplayName: string | null
+    youtubeLiveChatId: string | null
+    youtubeNextPageToken: string | null
+    youtubeLiveChatCheckedAt: Date | null
     registrationCommand: string
     claimCommand: string
     validationTimeout: number
@@ -2453,6 +2586,9 @@ export interface StreamerFieldRefs {
   readonly kickChatroomId: Prisma.FieldRef<"Streamer", 'Int'>
   readonly youtubeChannel: Prisma.FieldRef<"Streamer", 'String'>
   readonly youtubeDisplayName: Prisma.FieldRef<"Streamer", 'String'>
+  readonly youtubeLiveChatId: Prisma.FieldRef<"Streamer", 'String'>
+  readonly youtubeNextPageToken: Prisma.FieldRef<"Streamer", 'String'>
+  readonly youtubeLiveChatCheckedAt: Prisma.FieldRef<"Streamer", 'DateTime'>
   readonly registrationCommand: Prisma.FieldRef<"Streamer", 'String'>
   readonly claimCommand: Prisma.FieldRef<"Streamer", 'String'>
   readonly validationTimeout: Prisma.FieldRef<"Streamer", 'Int'>

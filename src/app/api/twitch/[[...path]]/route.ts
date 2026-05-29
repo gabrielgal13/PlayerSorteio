@@ -39,6 +39,22 @@ async function getBotConfig() {
   };
 }
 
+async function sendTwitchWhisper(toUserId: string, message: string): Promise<void> {
+  const bot = await getBotConfig();
+  if (!bot.token || !bot.userId) return;
+  try {
+    await fetch(`https://api.twitch.tv/helix/whispers?from_user_id=${bot.userId}&to_user_id=${toUserId}`, {
+      method: 'POST',
+      headers: {
+        'Client-Id': process.env.TWITCH_CLIENT_ID!,
+        Authorization: `Bearer ${bot.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message }),
+    });
+  } catch { /* ignore */ }
+}
+
 function verifyEventSubSignature(secret: string, msgId: string, ts: string, body: string, sig: string): boolean {
   const hmac = createHmac('sha256', secret);
   hmac.update(msgId + ts + body);
@@ -268,7 +284,7 @@ export async function POST(
 
   // ── Notificar ganhador no chat ────────────────────────────────────────────
   if (seg0 === 'notify' && !seg1) {
-    const { channel, winnerName, prizeName } = await req.json() as { channel: string; winnerName: string; prizeName?: string };
+    const { channel, winnerName, prizeName, winnerSource } = await req.json() as { channel: string; winnerName: string; prizeName?: string; winnerSource?: string | null };
     if (!channel || !winnerName) {
       return NextResponse.json({ ok: false, error: 'channel e winnerName são obrigatórios' }, { status: 400 });
     }
@@ -300,7 +316,12 @@ export async function POST(
     const e1 = emojis[Math.floor(Math.random() * emojis.length)];
     const e2 = emojis[Math.floor(Math.random() * emojis.length)];
     const prizePart = prizeName ? ` levou ${prizeName.replace(/\s*\(.*?\)/g, '').trim()}` : '';
-    const message = `${e1} @${winnerName} ${g}!${prizePart} ${e2}`;
+    const botName = process.env.TWITCH_BOT_USERNAME ?? 'PlayerSkinsBOT';
+    const isTwitchWinner = !winnerSource || winnerSource === 'twitch';
+    const instruction = isTwitchWinner
+      ? ` | Para receber, mande seu Steam trade link por WHISPER para @${botName}`
+      : '';
+    const message = `${e1} @${winnerName} ${g}!${prizePart}${instruction} ${e2}`;
 
     const msgRes = await fetch('https://api.twitch.tv/helix/chat/messages', {
       method: 'POST',
@@ -378,6 +399,7 @@ export async function POST(
     const payload = JSON.parse(body) as {
       challenge?: string;
       event?: {
+        from_user_id: string;
         from_user_login: string;
         whisper: { text: string };
       };
@@ -398,23 +420,33 @@ export async function POST(
 
       const steamLinkRegex = /https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/;
       if (!steamLinkRegex.test(text)) {
+        await sendTwitchWhisper(
+          payload.event.from_user_id,
+          'Link inválido! Envie apenas o trade link Steam no formato: https://steamcommunity.com/tradeoffer/new/?partner=XXXXXXXX&token=XXXXXXXX',
+        );
         return new NextResponse('ok', { status: 200 });
       }
       const tradeLink = text;
 
       // Busca entrega pendente — inclui afiliados (aguardando_tradelink) e não-afiliados (novo/sem status)
+      // winnerSource null = inscrito manualmente (aceito de qualquer plataforma)
       const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000); // últimas 6h
       const entry = await prisma.raffleHistory.findFirst({
         where: {
           winnerName: { equals: senderLogin, mode: 'insensitive' },
           deliveryStatus: { notIn: ['entregue', 'tradelocked'] },
-          tradeLink: null, // não reprocessar se já foi salvo
+          tradeLink: null,
           timestamp: { gte: cutoff },
+          OR: [{ winnerSource: 'twitch' }, { winnerSource: null }],
         },
         orderBy: { timestamp: 'desc' },
       });
 
       if (!entry) {
+        await sendTwitchWhisper(
+          payload.event.from_user_id,
+          'Nenhuma entrega pendente encontrada para sua conta. Se você ganhou há mais de 6 horas, entre em contato com o streamer.',
+        );
         return new NextResponse('ok', { status: 200 });
       }
 

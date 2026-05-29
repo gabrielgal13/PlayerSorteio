@@ -211,7 +211,7 @@ export async function POST(
   }
 
   if (seg0 === 'notify') {
-    const { youtubeHandle, winnerName, prizeName } = await req.json() as { youtubeHandle: string; winnerName: string; prizeName?: string };
+    const { youtubeHandle, winnerName, prizeName, winnerSource } = await req.json() as { youtubeHandle: string; winnerName: string; prizeName?: string; winnerSource?: string | null };
     if (!youtubeHandle || !winnerName)
       return NextResponse.json({ ok: false, error: 'youtubeHandle e winnerName são obrigatórios' }, { status: 400 });
 
@@ -225,7 +225,12 @@ export async function POST(
     const e1 = emojis[Math.floor(Math.random() * emojis.length)];
     const e2 = emojis[Math.floor(Math.random() * emojis.length)];
     const prizePart = prizeName ? ` levou ${prizeName.replace(/\s*\(.*?\)/g, '').trim()}` : '';
-    const message = `${e1} @${winnerName} ${g}!${prizePart} ${e2}`;
+    const botName = process.env.TWITCH_BOT_USERNAME ?? 'PlayerSkinsBOT';
+    const isYoutubeWinner = !winnerSource || winnerSource === 'youtube';
+    const instruction = isYoutubeWinner
+      ? ` | Para receber, marque @${botName} aqui no chat com seu Steam trade link!`
+      : '';
+    const message = `${e1} @${winnerName} ${g}!${prizePart}${instruction} ${e2}`;
 
     const result = await sendWithRefresh(liveChatId, message);
     return NextResponse.json({ ...result, message });

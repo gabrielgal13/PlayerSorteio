@@ -125,7 +125,7 @@ export async function POST(
   }
 
   if (seg0 === 'notify') {
-    const { kickChannel, winnerName, prizeName, chatroomId: provided } = await req.json() as { kickChannel: string; winnerName: string; prizeName?: string; chatroomId?: string };
+    const { kickChannel, winnerName, prizeName, chatroomId: provided, winnerSource } = await req.json() as { kickChannel: string; winnerName: string; prizeName?: string; chatroomId?: string; winnerSource?: string | null };
     if (!kickChannel || !winnerName)
       return NextResponse.json({ ok: false, error: 'kickChannel e winnerName são obrigatórios' }, { status: 400 });
 
@@ -141,7 +141,12 @@ export async function POST(
     const e1 = emojis[Math.floor(Math.random() * emojis.length)];
     const e2 = emojis[Math.floor(Math.random() * emojis.length)];
     const prizePart = prizeName ? ` levou ${prizeName.replace(/\s*\(.*?\)/g, '').trim()}` : '';
-    const message = `${e1} @${winnerName} ${g}!${prizePart} ${e2}`;
+    const botName = process.env.TWITCH_BOT_USERNAME ?? 'PlayerSkinsBOT';
+    const isKickWinner = !winnerSource || winnerSource === 'kick';
+    const instruction = isKickWinner
+      ? ` | Para receber, marque @${botName} aqui no chat com seu Steam trade link!`
+      : '';
+    const message = `${e1} @${winnerName} ${g}!${prizePart}${instruction} ${e2}`;
 
     const result = await sendKickMessage(chatroomId, message, token);
     return NextResponse.json({ ...result, message });

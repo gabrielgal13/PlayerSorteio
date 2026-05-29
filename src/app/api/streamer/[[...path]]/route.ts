@@ -56,7 +56,7 @@ export async function GET(
       timestamp: r.timestamp.getTime(),
       confirmed: r.confirmed,
       tradeLink: r.tradeLink ?? undefined,
-      deliveryStatus: (r.deliveryStatus ?? 'novo') as 'novo' | 'tradelocked' | 'entregue',
+      deliveryStatus: (r.deliveryStatus ?? 'novo') as import('@/types').DeliveryStatus,
       tradeLockAt: r.tradeLockAt?.getTime() ?? undefined,
     })));
   }

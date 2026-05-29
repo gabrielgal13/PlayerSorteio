@@ -174,6 +174,46 @@ export default function TwitchPanel() {
         }
       }
     }
+
+    // YouTube / Kick: captura trade link quando ganhador menciona o bot
+    if (source === 'youtube' || source === 'kick') {
+      const botName = (process.env.NEXT_PUBLIC_TWITCH_BOT_USERNAME ?? 'PlayerSkinsBOT').toLowerCase();
+      const mentionsBot = message.toLowerCase().includes(`@${botName}`);
+      const steamMatch = message.match(/https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/);
+      const isCurrentWinner =
+        currentWinnerRef.current &&
+        displayName.toLowerCase() === currentWinnerRef.current.name.toLowerCase();
+
+      if (mentionsBot && isCurrentWinner) {
+        if (steamMatch) {
+          fetch('/api/chat-trade-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ winnerName: displayName, tradeLink: steamMatch[0], source }),
+          }).catch(() => {});
+        } else {
+          const errorMsg = `@${displayName} link inválido! Envie no formato: https://steamcommunity.com/tradeoffer/new/?partner=XXXXXXXX&token=XXXXXXXX`;
+          const { currentUser: u } = useStore.getState();
+          if (source === 'kick' && u?.kickChannel) {
+            fetch('/api/kick/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                kickChannel: u.kickChannel,
+                message: errorMsg,
+                ...(u.kickChatroomId ? { chatroomId: String(u.kickChatroomId) } : {}),
+              }),
+            }).catch(() => {});
+          } else if (source === 'youtube' && u?.youtubeChannel) {
+            fetch('/api/youtube/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ youtubeHandle: u.youtubeChannel, message: errorMsg }),
+            }).catch(() => {});
+          }
+        }
+      }
+    }
   };
 
   // ── YouTube polling ──────────────────────────────────────────────────────

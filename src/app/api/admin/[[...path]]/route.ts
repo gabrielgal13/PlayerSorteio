@@ -72,6 +72,53 @@ export async function GET(
     return NextResponse.json(streamer);
   }
 
+  // GET /api/admin/deliveries — all RaffleHistory across all streamers with stats
+  if (seg0 === 'deliveries' && !seg1) {
+    const filter = _req.nextUrl.searchParams.get('filter') ?? 'all';
+    const errorStatuses = ['erro_tradelink', 'erro_entrega', 'erro_compra'];
+    const pendingStatuses = ['novo', 'aguardando_tradelink', 'item_comprado'];
+    const notDeliveredStatuses = ['novo', 'aguardando_tradelink', 'item_comprado', 'tradelocked', 'erro_tradelink', 'erro_entrega', 'erro_compra'];
+
+    const where =
+      filter === 'pending'     ? { deliveryStatus: { in: pendingStatuses } }
+      : filter === 'error'     ? { deliveryStatus: { in: errorStatuses } }
+      : filter === 'undelivered' ? { deliveryStatus: { in: notDeliveredStatuses } }
+      : {};
+
+    const [rows, totalPending, totalError, totalUndelivered] = await Promise.all([
+      prisma.raffleHistory.findMany({
+        where,
+        include: { streamer: { select: { username: true, displayName: true } } },
+        orderBy: { timestamp: 'desc' },
+        take: 500,
+      }),
+      prisma.raffleHistory.count({ where: { deliveryStatus: { in: pendingStatuses } } }),
+      prisma.raffleHistory.count({ where: { deliveryStatus: { in: errorStatuses } } }),
+      prisma.raffleHistory.count({ where: { deliveryStatus: { in: notDeliveredStatuses } } }),
+    ]);
+
+    const items = rows.map(r => ({
+      id: r.id,
+      winnerName: r.winnerName,
+      winnerSource: r.winnerSource,
+      prizeName: r.prizeName,
+      prizeDescription: r.prizeDescription,
+      prizeImageUrl: r.prizeImageUrl,
+      prizePscValue: r.prizePscValue,
+      tradeLink: r.tradeLink,
+      deliveryStatus: r.deliveryStatus,
+      tradeLockAt: r.tradeLockAt?.getTime() ?? null,
+      timestamp: r.timestamp.getTime(),
+      streamerUsername: r.streamer.username,
+      streamerDisplayName: r.streamer.displayName,
+    }));
+
+    return NextResponse.json({
+      items,
+      counts: { pending: totalPending, error: totalError, undelivered: totalUndelivered, total: rows.length },
+    });
+  }
+
   // GET /api/admin/marketing/random — public endpoint (rewritten from /api/marketing/random)
   if (seg0 === 'marketing' && seg1 === 'random') {
     try {
@@ -234,6 +281,24 @@ export async function PATCH(
 ) {
   const { path } = await params;
   const [seg0, seg1, seg2] = path ?? [];
+
+  // PATCH /api/admin/deliveries/[id]
+  if (seg0 === 'deliveries' && seg1) {
+    const { tradeLink, deliveryStatus } = await req.json();
+    const data: Record<string, unknown> = {};
+    if (tradeLink !== undefined) data.tradeLink = tradeLink || null;
+    if (deliveryStatus !== undefined) {
+      data.deliveryStatus = deliveryStatus;
+      if (deliveryStatus === 'tradelocked') {
+        const current = await prisma.raffleHistory.findUnique({ where: { id: seg1 }, select: { tradeLockAt: true } });
+        if (!current?.tradeLockAt) data.tradeLockAt = new Date();
+      }
+    }
+    if (Object.keys(data).length === 0)
+      return NextResponse.json({ error: 'Nada para atualizar' }, { status: 400 });
+    const updated = await prisma.raffleHistory.update({ where: { id: seg1 }, data });
+    return NextResponse.json({ ok: true, tradeLockAt: updated.tradeLockAt?.getTime() ?? null });
+  }
 
   // PATCH /api/admin/streamers/[username]
   if (seg0 === 'streamers' && seg1 && !seg2) {

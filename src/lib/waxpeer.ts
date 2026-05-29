@@ -167,7 +167,7 @@ export async function checkStock(marketHashName: string): Promise<WaxpeerListing
 export async function buyItem(listing: WaxpeerListing): Promise<WaxpeerBuyResult> {
   const res = await fetch(
     url('/buy-one-p2p', {
-      name: listing.name,
+      item_id: listing.item_id,
       price: String(listing.price),
     }),
   );

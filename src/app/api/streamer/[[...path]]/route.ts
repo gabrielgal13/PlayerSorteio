@@ -154,6 +154,7 @@ export async function POST(
     if (!streamer) return NextResponse.json({ error: 'streamer not found' }, { status: 404 });
     await prisma.raffleHistory.create({
       data: {
+        ...(result.id ? { id: result.id } : {}),
         streamerId: streamer.id,
         winnerNumber: result.winner.number,
         winnerName: result.winner.name,

@@ -86,34 +86,33 @@ export async function POST(
 
     try {
       console.log('[marketplace/buy] prizeName:', prizeName, '| winnerName:', winnerName, '| username:', username);
-      const listings = await checkStock(prizeName);
-      console.log('[marketplace/buy] checkStock returned', listings.length, 'listings');
-      if (!listings.length) {
-        return NextResponse.json({ ok: false, error: 'Item não encontrado no Waxpeer' });
-      }
 
       let buyResult: Awaited<ReturnType<typeof buyItem>> | null = null;
-      let boughtListing: (typeof listings)[number] | null = null;
-      for (const listing of listings.slice(0, 5)) {
-        console.log('[marketplace/buy] tentando:', listing.item_id, 'price:', listing.price);
+      let boughtListing: Awaited<ReturnType<typeof checkStock>>[number] | null = null;
+      const maxAttempts = 5;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const listings = await checkStock(prizeName);
+        console.log('[marketplace/buy] attempt', attempt, '— checkStock returned', listings.length, 'listings');
+        if (!listings.length) {
+          return NextResponse.json({ ok: false, error: 'Item não encontrado no Waxpeer' });
+        }
+        const cheapest = listings[0];
+        console.log('[marketplace/buy] tentando:', cheapest.name, 'price:', cheapest.price);
         try {
-          const result = await buyItem(listing);
-          if (result.success) {
-            buyResult = result;
-            boughtListing = listing;
-            break;
-          }
-          console.log('[marketplace/buy] listing recusado:', listing.item_id, result.msg);
+          const result = await buyItem(cheapest);
+          buyResult = result;
+          boughtListing = cheapest;
+          break;
         } catch (buyErr) {
-          console.log('[marketplace/buy] listing indisponível:', listing.item_id, String(buyErr));
-          // 404 = item já vendido, tenta o próximo
+          console.log('[marketplace/buy] tentativa', attempt, 'falhou:', String(buyErr));
+          if (attempt < maxAttempts) await new Promise(r => setTimeout(r, 500));
         }
       }
 
       if (!buyResult || !boughtListing) {
-        return NextResponse.json({ ok: false, error: 'Todos os listings tentados estão indisponíveis' });
+        return NextResponse.json({ ok: false, error: 'Compra falhou após múltiplas tentativas' });
       }
-      console.log('[marketplace/buy] comprado:', boughtListing.item_id, 'result:', buyResult);
+      console.log('[marketplace/buy] comprado:', boughtListing.name, 'result:', buyResult);
 
       try {
         await updateHistoryMarketplace(username, winnerName, prizeName, buyResult.id, historyId);

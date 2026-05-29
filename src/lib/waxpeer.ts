@@ -166,8 +166,8 @@ export async function checkStock(marketHashName: string): Promise<WaxpeerListing
 /** Compra o listing mais barato disponível para o item. Retorna o item_id comprado. */
 export async function buyItem(listing: WaxpeerListing): Promise<WaxpeerBuyResult> {
   const res = await fetch(
-    url('/buy-one-p2p-item', {
-      id: listing.item_id,
+    url('/buy-one-p2p', {
+      name: listing.name,
       price: String(listing.price),
     }),
   );
@@ -175,11 +175,11 @@ export async function buyItem(listing: WaxpeerListing): Promise<WaxpeerBuyResult
     const body = await res.text().catch(() => '');
     throw new Error(`Waxpeer buy HTTP ${res.status} | body: ${body.slice(0, 300)}`);
   }
-  const data = await res.json() as WaxpeerBuyResult;
+  const data = await res.json() as WaxpeerBuyResult & { id?: string | number };
   if (!data.success) {
     throw new Error(`Waxpeer buy rejected | msg: ${data.msg ?? 'no msg'}`);
   }
-  return data;
+  return { ...data, id: String(data.id ?? '') };
 }
 
 /** Envia o item comprado para o trade link do vencedor. */

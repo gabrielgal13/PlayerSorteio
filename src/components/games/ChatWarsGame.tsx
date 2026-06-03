@@ -3,16 +3,16 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import {
-  createWorld, stepWorld, applyMessage, leaderboard, playerCount,
+  leaderboard, playerCount,
   triggerXpRain, triggerHappyHour, triggerSmallRevolt, triggerGiantHunt,
-  triggerGoldenZone, triggerMeteor, triggerBoss, toggleStreamerBall,
-  type World, type LeaderRow, type MatchStats,
+  triggerGoldenZone, triggerMeteor, triggerBoss,
+  type World, type LeaderRow,
 } from './chatwars/engine';
+import { chatWarsSession, type FinalStats } from './chatwars/session';
 import { createCamera, updateCamera, render, type Camera } from './chatwars/render';
+import { processSprite, type ProcessedSprite } from './chatwars/spriteProcessor';
 import type { ChatMessage } from '@/types';
 
-const WORLD_W = 2000;
-const WORLD_H = 1200;
 const EVENT_COOLDOWN = 14_000;
 
 interface Props { onBack: () => void }
@@ -48,15 +48,13 @@ export default function ChatWarsGame({ onBack }: Props) {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const worldRef = useRef<World>(createWorld(WORLD_W, WORLD_H));
   const camRef = useRef<Camera | null>(null);
   const rafRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
-  const seenIdsRef = useRef<Set<string>>(new Set());
-  const runningRef = useRef(false);
   const sizeRef = useRef({ w: 0, h: 0, dpr: 1 });
 
-  const [running, setRunning] = useState(false);
+  // local state mirrors the persistent session so screens render correctly
+  const [running, setRunning] = useState(chatWarsSession.running);
   const [board, setBoard] = useState<LeaderRow[]>([]);
   const [pcount, setPcount] = useState(0);
   const [moment, setMoment] = useState<{ title: string; sub: string } | null>(null);
@@ -66,49 +64,36 @@ export default function ChatWarsGame({ onBack }: Props) {
     xpRain: 0, giantHunt: 0, smallRevolt: 0, meteor: 0, golden: 0, happyHour: 0,
   });
   const [streamerName, setStreamerName] = useState('');
-  const [streamerOn, setStreamerOn] = useState(false);
+  const [streamerOn, setStreamerOn] = useState(chatWarsSession.streamerOn);
   const [bossActive, setBossActive] = useState(false);
   const [timers, setTimers] = useState<{ key: EventKey; remain: number }[]>([]);
-  const [started, setStarted] = useState(false);
-  const [finished, setFinished] = useState(false);
-  const [finalRows, setFinalRows] = useState<LeaderRow[]>([]);
-  const [finalStats, setFinalStats] = useState<MatchStats & { elapsedMs: number }>({ messages: 0, eaten: 0, maxMass: 0, events: 0, elapsedMs: 0 });
+  const [started, setStarted] = useState(chatWarsSession.started);
+  const [finished, setFinished] = useState(chatWarsSession.finished);
+  const [finalRows, setFinalRows] = useState<LeaderRow[]>(chatWarsSession.finalRows);
+  const [finalStats, setFinalStats] = useState<FinalStats>(chatWarsSession.finalStats);
   const [showHelp, setShowHelp] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const spriteRef = useRef<HTMLImageElement | null>(null);
+  const spriteRef = useRef<ProcessedSprite | null>(null);
 
-  useEffect(() => { runningRef.current = running; }, [running]);
-
-  /* ── preload the streamer's custom ball sprite ───────────────────────────── */
+  /* ── boot the persistent session + keep the chat connection alive ────────── */
   useEffect(() => {
-    if (!spriteUrl) { spriteRef.current = null; return; }
-    const img = new Image();
-    img.onload = () => { spriteRef.current = img; };
-    img.onerror = () => { spriteRef.current = null; };
-    img.src = spriteUrl;
-    return () => { spriteRef.current = null; };
-  }, [spriteUrl]);
-
-  /* ── ensure the live-chat connection is active ───────────────────────────── */
-  useEffect(() => {
+    chatWarsSession.init();
     if (!chatRegistrationActive) setChatRegistrationRequested(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── ingest new chat messages into the world ─────────────────────────────── */
+  /* ── load + process the sprite (runs once per URL change) ───────────────── */
   useEffect(() => {
-    for (const m of chatMessages) {
-      if (seenIdsRef.current.has(m.id)) continue;
-      seenIdsRef.current.add(m.id);
-      if (!runningRef.current) continue;
-      applyMessage(worldRef.current, {
-        username: m.username, text: m.text, color: m.color, source: m.source,
-      });
-    }
-    if (seenIdsRef.current.size > 500) {
-      seenIdsRef.current = new Set(chatMessages.map(m => m.id));
-    }
-  }, [chatMessages]);
+    spriteRef.current = null;
+    const img = new Image();
+    img.onload = () => {
+      try { spriteRef.current = processSprite(img); }
+      catch { spriteRef.current = null; }
+    };
+    img.onerror = () => { spriteRef.current = null; };
+    img.src = spriteUrl;
+    return () => { spriteRef.current = null; };
+  }, [spriteUrl]);
 
   /* ── canvas sizing ───────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -125,11 +110,11 @@ export default function ChatWarsGame({ onBack }: Props) {
     });
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [started]);
+  }, [started, finished]);
 
-  /* ── main loop ───────────────────────────────────────────────────────────── */
+  /* ── render loop — draws the session world (stepping happens in session) ──── */
   useEffect(() => {
-    if (!camRef.current) camRef.current = createCamera(worldRef.current);
+    if (!camRef.current) camRef.current = createCamera(chatWarsSession.world);
     const loop = (t: number) => {
       const ctx = canvasRef.current?.getContext('2d');
       const cam = camRef.current!;
@@ -138,12 +123,11 @@ export default function ChatWarsGame({ onBack }: Props) {
       lastTimeRef.current = t;
       const dt = Math.min(dtMs, 50) / 1000;
 
-      if (runningRef.current) stepWorld(worldRef.current, dtMs);
       if (ctx && w > 0 && h > 0) {
-        updateCamera(cam, worldRef.current, w, h, dt);
+        updateCamera(cam, chatWarsSession.world, w, h, dt);
         ctx.save();
         ctx.scale(dpr, dpr);
-        render(ctx, worldRef.current, cam, w, h, spriteRef.current);
+        render(ctx, chatWarsSession.world, cam, w, h, spriteRef.current);
         ctx.restore();
       }
       rafRef.current = requestAnimationFrame(loop);
@@ -152,10 +136,10 @@ export default function ChatWarsGame({ onBack }: Props) {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, []);
 
-  /* ── UI snapshot (board / events / moment) ───────────────────────────────── */
+  /* ── UI snapshot (board / events / moment / session flags) ───────────────── */
   useEffect(() => {
     const iv = setInterval(() => {
-      const w = worldRef.current;
+      const w = chatWarsSession.world;
       setBoard(leaderboard(w, 5));
       setPcount(playerCount(w));
       setActiveFx({
@@ -167,6 +151,8 @@ export default function ChatWarsGame({ onBack }: Props) {
       });
       setBossActive(!!w.bossId);
       setMoment(w.moment ? { title: w.moment.title, sub: w.moment.sub } : null);
+      setRunning(chatWarsSession.running);
+      setStreamerOn(chatWarsSession.streamerOn);
 
       const now = w.time;
       const t: { key: EventKey; remain: number }[] = [];
@@ -204,30 +190,36 @@ export default function ChatWarsGame({ onBack }: Props) {
 
   const fireEvent = useCallback((key: EventKey, fn: (w: World) => void) => {
     if (cooldowns[key] > Date.now()) return;
-    fn(worldRef.current);
+    chatWarsSession.fireEvent(fn);
     setCooldowns(prev => ({ ...prev, [key]: Date.now() + EVENT_COOLDOWN }));
   }, [cooldowns]);
 
   const handleStreamerToggle = useCallback(() => {
-    toggleStreamerBall(worldRef.current, streamerName || 'STREAMER');
-    setStreamerOn(v => !v);
+    chatWarsSession.toggleStreamer(streamerName || 'STREAMER');
+    setStreamerOn(chatWarsSession.streamerOn);
   }, [streamerName]);
 
-  const handlePlay = useCallback(() => { setStarted(true); setRunning(true); }, []);
+  const handlePlay = useCallback(() => { chatWarsSession.start(); setStarted(true); setRunning(true); }, []);
+
+  const togglePause = useCallback(() => {
+    if (chatWarsSession.running) { chatWarsSession.pause(); setRunning(false); }
+    else { chatWarsSession.resume(); setRunning(true); }
+  }, []);
 
   const handleFinalize = useCallback(() => {
-    const w = worldRef.current;
-    setFinalRows(leaderboard(w, 9999));
-    setFinalStats({ ...w.stats, elapsedMs: w.time });
+    chatWarsSession.finalize();
+    setFinalRows(chatWarsSession.finalRows);
+    setFinalStats(chatWarsSession.finalStats);
     setRunning(false);
     setFinished(true);
   }, []);
 
-  const handleContinue = useCallback(() => { setFinished(false); setRunning(true); }, []);
+  const handleContinue = useCallback(() => { chatWarsSession.continueGame(); setFinished(false); setRunning(true); }, []);
 
   /* ── Sorteio: jogadores viram participantes com tickets (1 a cada 10 pts) ──── */
+  /*    Não para o jogo — a sessão continua rodando em segundo plano. */
   const handleSorteio = useCallback(() => {
-    const rows = leaderboard(worldRef.current, 9999);
+    const rows = leaderboard(chatWarsSession.world, 9999);
     const parts = rows.map((r, i) => ({
       id: `cw_${r.id}_${i}`,
       number: i + 1,
@@ -241,13 +233,12 @@ export default function ChatWarsGame({ onBack }: Props) {
   }, [setParticipants, setRaffleStage, setActiveTab]);
 
   const handleReset = useCallback(() => {
-    worldRef.current = createWorld(WORLD_W, WORLD_H);
-    camRef.current = createCamera(worldRef.current);
-    seenIdsRef.current = new Set(chatMessages.map(m => m.id));
+    chatWarsSession.reset();
+    camRef.current = createCamera(chatWarsSession.world);
     setStreamerOn(false);
     setBoard([]);
     setPcount(0);
-  }, [chatMessages]);
+  }, []);
 
   const activeMap: Record<EventKey, boolean> = {
     xpRain: activeFx.xpRain, giantHunt: activeFx.hunt, smallRevolt: activeFx.revolt,
@@ -292,11 +283,11 @@ export default function ChatWarsGame({ onBack }: Props) {
 
         <div className="ml-auto flex items-center gap-2">
           {!running ? (
-            <CtrlButton onClick={() => setRunning(true)} color="#53FC1C">
-              ▶ INICIAR
+            <CtrlButton onClick={togglePause} color="#53FC1C">
+              ▶ RETOMAR
             </CtrlButton>
           ) : (
-            <CtrlButton onClick={() => setRunning(false)} color="#FFD24A">
+            <CtrlButton onClick={togglePause} color="#FFD24A">
               ⏸ PAUSAR
             </CtrlButton>
           )}
@@ -357,7 +348,7 @@ export default function ChatWarsGame({ onBack }: Props) {
             </div>
 
             {/* LIVE BOSS */}
-            <button onClick={() => { if (running && !bossActive) triggerBoss(worldRef.current); }}
+            <button onClick={() => { if (running && !bossActive) chatWarsSession.fireEvent(triggerBoss); }}
               disabled={!running || bossActive}
               className="w-full mt-2.5 rounded-xl flex flex-col items-center justify-center py-2.5 transition-all"
               style={{
@@ -991,7 +982,7 @@ function SidePlace({ row, rank }: { row: LeaderRow; rank: number }) {
 }
 
 function ResultsScreen({ rows, stats, messages, endRef, onSorteio, onContinue, onExit }: {
-  rows: LeaderRow[]; stats: MatchStats & { elapsedMs: number }; messages: ChatMessage[];
+  rows: LeaderRow[]; stats: FinalStats; messages: ChatMessage[];
   endRef: React.RefObject<HTMLDivElement | null>;
   onSorteio: () => void; onContinue: () => void; onExit: () => void;
 }) {

@@ -5,6 +5,7 @@
  * that frames the swarm and zooms into "live moments".
  * ========================================================================== */
 import type { World, Ball } from './engine';
+import { getTintedSprite, type ProcessedSprite } from './spriteProcessor';
 
 export interface Camera {
   x: number;        // world-space centre
@@ -95,7 +96,7 @@ export function updateCamera(cam: Camera, w: World, viewW: number, viewH: number
   cam.shake = Math.max(0, cam.shake - dt * 1.6);
 }
 
-export function render(ctx: CanvasRenderingContext2D, w: World, cam: Camera, viewW: number, viewH: number, sprite: HTMLImageElement | null = null) {
+export function render(ctx: CanvasRenderingContext2D, w: World, cam: Camera, viewW: number, viewH: number, sprite: ProcessedSprite | null = null) {
   ctx.save();
 
   drawSpaceBackdrop(ctx, viewW, viewH);
@@ -146,9 +147,8 @@ export function render(ctx: CanvasRenderingContext2D, w: World, cam: Camera, vie
   }
 
   // balls — small→large so big ones sit on top
-  const spriteReady = !!sprite && sprite.complete && sprite.naturalWidth > 0;
   const balls = [...w.balls.values()].sort((a, b) => a.mass - b.mass);
-  for (const b of balls) drawBall(ctx, w, b, spriteReady ? sprite : null);
+  for (const b of balls) drawBall(ctx, w, b, sprite);
 
   // floating texts
   ctx.textAlign = 'center';
@@ -222,7 +222,7 @@ function moodFor(b: Ball, isLeader: boolean): Mood {
   return MOODS[Math.abs(h) % MOODS.length];
 }
 
-function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: HTMLImageElement | null) {
+function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: ProcessedSprite | null) {
   const r = b.radius;
   const isLeader = w.huntedId === b.id;
   // gelatin wobble
@@ -240,7 +240,7 @@ function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: HTML
     ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.setLineDash([]);
     ctx.globalAlpha = 0.5;
-    drawNameTag(ctx, b, r, true);
+    drawNameBelow(ctx, b, r, true);
     ctx.restore();
     return;
   }
@@ -255,21 +255,28 @@ function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: HTML
   ctx.shadowBlur = b.isBoss ? 55 : b.isStreamer || isLeader ? 38 : 20;
 
   if (sprite) {
-    // glow halo (filled hue ellipse under the sprite)
-    ctx.fillStyle = `hsl(${b.hue},90%,52%)`;
-    ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    // The sprite IS the ball — draw it round, keeping its native aspect ratio
+    // (no gelatin wobble, which would stretch the bitmap into an ellipse).
+    // Tinting + silhouette masking is pre-baked per hue offscreen, so there's
+    // no square colour leak into the transparent areas.
+    const aspect = sprite.width / sprite.height;
+    let sw = r * 2, sh = r * 2;
+    if (aspect >= 1) sh = sw / aspect; else sw = sh * aspect;
+    const sx = -sw / 2, sy = -sh / 2;
+    const tinted = getTintedSprite(sprite, b.hue);
+    ctx.drawImage(tinted, sx, sy, sw, sh);
     ctx.shadowBlur = 0;
-    // sprite base, clipped to the ball, tinted with the player colour
-    ctx.save();
-    ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.clip();
-    ctx.drawImage(sprite, -rx, -ry, rx * 2, ry * 2);
-    ctx.globalCompositeOperation = 'color';            // tint keeps the sprite's shading/texture
-    ctx.fillStyle = `hsl(${b.hue},85%,52%)`;
-    ctx.fillRect(-rx, -ry, rx * 2, ry * 2);
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.restore();
+
+    // hit flash: re-draw the sprite additively → brightens, stays in its shape
+    if (b.hitFlash > 0) {
+      ctx.save();
+      ctx.globalAlpha = b.hitFlash * 0.7;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(tinted, sx, sy, sw, sh);
+      ctx.restore();
+    }
   } else {
-    // body gradient — glossy sphere
+    // body gradient — glossy sphere (fallback when sprite fails to load)
     const g = ctx.createRadialGradient(-rx * 0.32, -ry * 0.36, r * 0.1, 0, 0, r * 1.05);
     g.addColorStop(0, `hsl(${b.hue},100%,78%)`);
     g.addColorStop(0.55, `hsl(${b.hue},90%,55%)`);
@@ -277,47 +284,37 @@ function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: HTML
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
-  }
 
-  // inner rim shading
-  ctx.lineWidth = Math.max(2, r * 0.07);
-  ctx.strokeStyle = `hsla(${b.hue},90%,22%,0.55)`;
-  ctx.beginPath(); ctx.ellipse(0, 0, rx * 0.97, ry * 0.97, 0, 0, Math.PI * 2); ctx.stroke();
-  // bright outline
-  ctx.lineWidth = Math.max(1.5, r * 0.045);
-  ctx.strokeStyle = b.isStreamer ? '#9be9ff' : `hsl(${b.hue},100%,82%)`;
-  ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
-
-  // glossy top highlight
-  ctx.globalAlpha = 0.4;
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath(); ctx.ellipse(-rx * 0.3, -ry * 0.42, rx * 0.34, ry * 0.2, -0.5, 0, Math.PI * 2); ctx.fill();
-  ctx.globalAlpha = 1;
-
-  // face
-  const showText = r > 26;
-  drawFace(ctx, moodFor(b, isLeader), r, b, showText);
-
-  // hit flash
-  if (b.hitFlash > 0) {
-    ctx.globalAlpha = b.hitFlash * 0.7;
+    // rim + highlight only for gradient balls
+    ctx.lineWidth = Math.max(2, r * 0.07);
+    ctx.strokeStyle = `hsla(${b.hue},90%,22%,0.55)`;
+    ctx.beginPath(); ctx.ellipse(0, 0, rx * 0.97, ry * 0.97, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = Math.max(1.5, r * 0.045);
+    ctx.strokeStyle = b.isStreamer ? '#9be9ff' : `hsl(${b.hue},100%,82%)`;
+    ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 0.4;
     ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-rx * 0.3, -ry * 0.42, rx * 0.34, ry * 0.2, -0.5, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
+
+    if (b.hitFlash > 0) {
+      ctx.globalAlpha = b.hitFlash * 0.7;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
   }
 
-  // crown for leader
+  // face centered on the ball; name + mass go BELOW it (outside the sphere)
+  drawFace(ctx, moodFor(b, isLeader), r, b, false);
   if (isLeader) drawCrown(ctx, r, w.time);
-  // streamer star ring
   if (b.isStreamer) {
+    ctx.shadowBlur = 0;
     ctx.strokeStyle = `rgba(0,229,255,${0.4 + 0.3 * Math.sin(w.time / 160)})`;
     ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(0, 0, r + 8, 0, Math.PI * 2); ctx.stroke();
   }
-
-  // name + mass
-  if (showText) drawNameTag(ctx, b, r, false);   // inside the ball
-  else drawNameAbove(ctx, b, r);                  // floating above small balls
+  drawNameBelow(ctx, b, r, false);
 
   ctx.restore();
 }
@@ -325,9 +322,9 @@ function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: HTML
 /* ── Cartoon face ────────────────────────────────────────────────────────── */
 function drawFace(ctx: CanvasRenderingContext2D, mood: Mood, r: number, b: Ball, textBelow: boolean) {
   if (r < 9) return;
-  const eyeY = textBelow ? -r * 0.34 : -r * 0.18;
-  const eyeDX = r * 0.34;
-  const eyeR = Math.max(2.4, r * 0.17);
+  const eyeY = textBelow ? -r * 0.30 : r * 0.04;   // lower — sits below the sprite's hat
+  const eyeDX = r * 0.24;
+  const eyeR = Math.max(2, r * 0.12);
   // pupils track velocity slightly
   const sp = Math.hypot(b.vx, b.vy) || 1;
   const px = (b.vx / sp) * eyeR * 0.45;
@@ -369,71 +366,59 @@ function drawFace(ctx: CanvasRenderingContext2D, mood: Mood, r: number, b: Ball,
     ctx.stroke();
   }
 
-  // mouth only when there's no name text taking the lower area
-  if (!textBelow) {
-    const my = r * 0.34;
-    ctx.strokeStyle = dark;
-    ctx.fillStyle = dark;
-    ctx.lineWidth = Math.max(2, r * 0.08);
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    if (mood === 'happy') {
-      ctx.arc(0, my * 0.5, r * 0.3, 0.15 * Math.PI, 0.85 * Math.PI);
-      ctx.stroke();
-    } else if (mood === 'angry') {
-      ctx.arc(0, my * 1.1, r * 0.3, 1.15 * Math.PI, 1.85 * Math.PI);
-      ctx.stroke();
-    } else if (mood === 'surprised') {
-      ctx.arc(0, my * 0.6, r * 0.16, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (mood === 'smug') {
-      ctx.moveTo(-r * 0.22, my * 0.5);
-      ctx.quadraticCurveTo(0, my * 0.95, r * 0.26, my * 0.35);
-      ctx.stroke();
-    } else {
-      ctx.moveTo(-r * 0.2, my * 0.6); ctx.lineTo(r * 0.2, my * 0.6);
-      ctx.stroke();
-    }
+  // mouth — always drawn; sits just under the eyes
+  const mouthY = textBelow ? r * 0.06 : r * 0.36;
+  const mr = r * 0.2;
+  ctx.strokeStyle = dark;
+  ctx.fillStyle = dark;
+  ctx.lineWidth = Math.max(2, r * 0.08);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  if (mood === 'happy') {
+    ctx.arc(0, mouthY - mr * 0.35, mr, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+  } else if (mood === 'angry') {
+    ctx.arc(0, mouthY + mr * 0.55, mr, 1.15 * Math.PI, 1.85 * Math.PI);
+    ctx.stroke();
+  } else if (mood === 'surprised') {
+    ctx.arc(0, mouthY, r * 0.11, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (mood === 'smug') {
+    ctx.moveTo(-r * 0.16, mouthY - r * 0.03);
+    ctx.quadraticCurveTo(0, mouthY + r * 0.12, r * 0.19, mouthY - r * 0.07);
+    ctx.stroke();
+  } else {
+    ctx.moveTo(-r * 0.15, mouthY); ctx.lineTo(r * 0.15, mouthY);
+    ctx.stroke();
   }
 }
 
-function drawNameAbove(ctx: CanvasRenderingContext2D, b: Ball, r: number) {
+/** Name + mass drawn BELOW the ball (outside the sphere), never over the face. */
+function drawNameBelow(ctx: CanvasRenderingContext2D, b: Ball, r: number, faint: boolean) {
   ctx.textAlign = 'center';
-  const fs = Math.max(13, Math.min(r * 0.6, 22));
-  ctx.font = `800 ${fs}px Rajdhani, sans-serif`;
-  const y = -r - fs * 0.55;
-  ctx.lineWidth = Math.max(2.5, fs * 0.22);
   ctx.lineJoin = 'round';
-  ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-  ctx.fillStyle = b.isStreamer ? '#9be9ff' : '#ffffff';
-  ctx.strokeText(b.name, 0, y);
-  ctx.fillText(b.name, 0, y);
-}
 
-function drawNameTag(ctx: CanvasRenderingContext2D, b: Ball, r: number, ghost: boolean) {
-  ctx.textAlign = 'center';
-  let fs = Math.max(11, Math.min(r * 0.36, 30));
+  // name
+  let fs = Math.max(12, Math.min(r * 0.34, 30));
   ctx.font = `800 ${fs}px Rajdhani, sans-serif`;
-  // shrink to fit width
+  const maxW = r * 2.4;
   const wdt = ctx.measureText(b.name).width;
-  const maxW = r * 1.7;
   if (wdt > maxW) { fs *= maxW / wdt; ctx.font = `800 ${fs}px Rajdhani, sans-serif`; }
-  const nameY = ghost ? -2 : r * 0.14;
-
-  ctx.lineWidth = Math.max(2, fs * 0.18);
-  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-  ctx.fillStyle = ghost ? 'rgba(255,255,255,0.5)' : '#ffffff';
-  ctx.lineJoin = 'round';
+  const nameY = r + fs * 0.34;   // glued right under the ball's bottom edge
+  ctx.lineWidth = Math.max(2.5, fs * 0.24);
+  ctx.strokeStyle = 'rgba(0,0,0,0.82)';
+  ctx.fillStyle = faint ? 'rgba(255,255,255,0.5)' : b.isStreamer ? '#9be9ff' : '#ffffff';
   ctx.strokeText(b.name, 0, nameY);
   ctx.fillText(b.name, 0, nameY);
 
-  if (!ghost) {
-    const ms = fs * 1.15;
-    ctx.font = `800 ${ms}px Orbitron, sans-serif`;
-    ctx.lineWidth = Math.max(2, ms * 0.16);
-    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  // mass (bigger, just below the name)
+  if (!faint) {
+    const ms = fs * 1.2;
+    ctx.font = `900 ${ms}px Orbitron, sans-serif`;
+    ctx.lineWidth = Math.max(3, ms * 0.22);
+    ctx.strokeStyle = 'rgba(0,0,0,0.82)';
     ctx.fillStyle = b.isStreamer ? '#9be9ff' : '#ffffff';
-    const my = nameY + fs * 1.15;
+    const my = nameY + ms * 0.78;
     ctx.strokeText(fmtMass(b.mass), 0, my);
     ctx.fillText(fmtMass(b.mass), 0, my);
   }

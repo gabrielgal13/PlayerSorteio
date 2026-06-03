@@ -722,7 +722,15 @@ export default function RaffleEngine() {
   };
 
   const selectWinner = useCallback((): Participant => {
-    return participants[Math.floor(Math.random() * participants.length)];
+    // Weighted by tickets (chances). No tickets field => 1 chance, so default
+    // raffles behave exactly as before.
+    const total = participants.reduce((s, p) => s + Math.max(1, p.tickets ?? 1), 0);
+    let r = Math.random() * total;
+    for (const p of participants) {
+      r -= Math.max(1, p.tickets ?? 1);
+      if (r < 0) return p;
+    }
+    return participants[participants.length - 1];
   }, [participants]);
 
   const startRaffle = async () => {

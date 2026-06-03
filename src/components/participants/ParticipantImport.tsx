@@ -233,6 +233,11 @@ export default function ParticipantImport() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                       {p.source && <PlatformIcon source={p.source} />}
                       {p.name}
+                      {p.tickets && p.tickets > 1 && (
+                        <span style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '9px', fontWeight: 700, color: '#FFD24A', background: 'rgba(255,210,74,0.12)', border: '1px solid rgba(255,210,74,0.4)', borderRadius: '6px', padding: '1px 6px' }}>
+                          {p.tickets}x
+                        </span>
+                      )}
                     </div>
                     {p.source && (
                       <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00FF88', boxShadow: '0 0 6px rgba(0,255,136,0.8)', flexShrink: 0, marginRight: '4px' }} />
@@ -522,6 +527,11 @@ export default function ParticipantImport() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                             {p.source && <PlatformIcon source={p.source} />}
                             {p.name}
+                            {p.tickets && p.tickets > 1 && (
+                              <span style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '9px', fontWeight: 700, color: '#FFD24A', background: 'rgba(255,210,74,0.12)', border: '1px solid rgba(255,210,74,0.4)', borderRadius: '6px', padding: '1px 6px' }}>
+                                {p.tickets}x
+                              </span>
+                            )}
                           </div>
                           {p.source && (
                             <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#00FF88', boxShadow: '0 0 6px rgba(0,255,136,0.8)', flexShrink: 0, marginRight: '4px' }} />

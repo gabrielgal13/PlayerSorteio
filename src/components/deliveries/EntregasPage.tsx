@@ -120,17 +120,84 @@ function getLocalDateKey(ts: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function CircularProgress({ pct }: { pct: number }) {
-  const r = 18;
+/* ── Color helper ──────────────────────────────────────────────────── */
+function hexA(hex: string, a: number) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function CircularProgress({ pct, color = '#00FFA3' }: { pct: number; color?: string }) {
+  const size = 46, stroke = 5, r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
-  const dash = (pct / 100) * circ;
+  const clamped = Math.min(100, Math.max(0, pct));
+  const dash = (clamped / 100) * circ;
   return (
-    <div className="relative flex items-center justify-center flex-shrink-0" style={{ width: 48, height: 48 }}>
-      <svg width="48" height="48" style={{ transform: 'rotate(-90deg)', position: 'absolute' }}>
-        <circle cx="24" cy="24" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
-        <circle cx="24" cy="24" r={r} fill="none" stroke="#00FFA3" strokeWidth="4"
-          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" />
+    <div className="relative flex items-center justify-center flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+          style={{ filter: `drop-shadow(0 0 5px ${hexA(color, 0.7)})`, transition: 'stroke-dasharray 0.6s ease' }}
+        />
       </svg>
+    </div>
+  );
+}
+
+/* ── Stat card ─────────────────────────────────────────────────────── */
+function StatCard({
+  label, value, accent, icon, glow = false, dim = false, boxedIcon = true,
+}: {
+  label: string;
+  value: React.ReactNode;
+  accent: string;
+  icon: React.ReactNode;
+  glow?: boolean;
+  dim?: boolean;
+  boxedIcon?: boolean;
+}) {
+  const c = dim ? '#9AA4B2' : accent;
+  return (
+    <div
+      className="relative rounded-xl px-4 py-3 overflow-hidden"
+      style={{
+        background: `linear-gradient(135deg, ${hexA(c, dim ? 0.04 : 0.11)} 0%, rgba(255,255,255,0.02) 55%, rgba(0,0,0,0.18) 100%)`,
+        border: `1px solid ${hexA(c, dim ? 0.14 : 0.30)}`,
+        boxShadow: dim
+          ? 'inset 0 1px 0 rgba(255,255,255,0.03)'
+          : `0 6px 22px ${hexA(c, glow ? 0.22 : 0.10)}, inset 0 1px 0 rgba(255,255,255,0.05)`,
+      }}
+    >
+      {/* top accent line */}
+      <div
+        className="absolute top-0 left-0 right-0"
+        style={{ height: 2, background: `linear-gradient(90deg, transparent, ${hexA(c, dim ? 0.25 : 0.9)}, transparent)` }}
+      />
+      <p className="font-rajdhani tracking-widest mb-2" style={{ fontSize: 9, color: hexA(c, dim ? 0.5 : 0.75) }}>
+        {label}
+      </p>
+      <div className="flex items-center justify-between">
+        <span
+          className="font-orbitron font-bold"
+          style={{ fontSize: 26, color: c, textShadow: dim ? 'none' : `0 0 18px ${hexA(c, 0.4)}` }}
+        >
+          {value}
+        </span>
+        {boxedIcon ? (
+          <div
+            className="flex items-center justify-center rounded-lg flex-shrink-0"
+            style={{ width: 38, height: 38, background: hexA(c, dim ? 0.06 : 0.12), border: `1px solid ${hexA(c, dim ? 0.12 : 0.24)}` }}
+          >
+            {icon}
+          </div>
+        ) : (
+          icon
+        )}
+      </div>
     </div>
   );
 }
@@ -640,50 +707,55 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
 
           {/* Stats row */}
           <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
-            <div className="rounded-xl px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="font-rajdhani text-white/35 tracking-widest mb-1" style={{ fontSize: 9 }}>TOTAL DE ITENS</p>
-              <div className="flex items-center justify-between">
-                <span className="font-orbitron font-bold text-white" style={{ fontSize: 26 }}>{dayHistory.length}</span>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(255,255,255,0.15)">
+            <StatCard
+              label="TOTAL DE ITENS"
+              value={dayHistory.length}
+              accent="#00E5FF"
+              icon={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#00E5FF">
                   <path d="M20 6h-2.18c.07-.44.18-.88.18-1.33C18 2.54 16.46 1 14.67 1c-1.14 0-2.03.63-2.67 1.47L12 2.5l-.07-.04C11.32 1.63 10.43 1 9.33 1 7.54 1 6 2.54 6 4.33c0 .45.11.89.18 1.33H4c-1.1 0-2 .9-2 2v13c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-5.33-3c.92 0 1.67.75 1.67 1.67 0 .92-.75 1.67-1.67 1.67H13V4.33C13 3.41 13.75 2.67 14.67 2.67zM9.33 2.67C10.25 2.67 11 3.41 11 4.33V6H9.33C8.41 6 7.67 5.25 7.67 4.33c0-.92.74-1.66 1.66-1.66zM4 11h7v8H4v-8zm9 8v-8h7v8h-7z"/>
                 </svg>
-              </div>
-            </div>
-            <div className="rounded-xl px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="font-rajdhani text-white/35 tracking-widest mb-1" style={{ fontSize: 9 }}>ENTREGUES</p>
-              <div className="flex items-center justify-between">
-                <span className="font-orbitron font-bold" style={{ fontSize: 26, color: '#00FFA3' }}>{counts.entregue}</span>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(0,255,163,0.3)">
+              }
+            />
+            <StatCard
+              label="ENTREGUES"
+              value={counts.entregue}
+              accent="#00FFA3"
+              icon={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#00FFA3">
                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                 </svg>
-              </div>
-            </div>
-            <div className="rounded-xl px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="font-rajdhani text-white/35 tracking-widest mb-1" style={{ fontSize: 9 }}>EM TRANSITO</p>
-              <div className="flex items-center justify-between">
-                <span className="font-orbitron font-bold" style={{ fontSize: 26, color: '#FFD166' }}>{counts.tradelocked}</span>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(255,209,102,0.3)">
-                  <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/>
+              }
+            />
+            <StatCard
+              label="EM TRÂNSITO"
+              value={counts.tradelocked}
+              accent="#FFD166"
+              icon={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#FFD166">
+                  <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9 1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
                 </svg>
-              </div>
-            </div>
-            <div className="rounded-xl px-4 py-3"
-              style={{ background: counts.erro > 0 ? 'rgba(255,68,68,0.07)' : 'rgba(255,255,255,0.03)', border: counts.erro > 0 ? '1px solid rgba(255,68,68,0.2)' : '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="font-rajdhani tracking-widest mb-1" style={{ fontSize: 9, color: counts.erro > 0 ? 'rgba(255,100,100,0.6)' : 'rgba(255,255,255,0.35)' }}>ERROS</p>
-              <div className="flex items-center justify-between">
-                <span className="font-orbitron font-bold" style={{ fontSize: 26, color: counts.erro > 0 ? '#FF4444' : 'rgba(255,255,255,0.3)' }}>{counts.erro}</span>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill={counts.erro > 0 ? 'rgba(255,68,68,0.4)' : 'rgba(255,255,255,0.1)'}>
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+              }
+            />
+            <StatCard
+              label="ERROS"
+              value={counts.erro}
+              accent="#FF4444"
+              dim={counts.erro === 0}
+              glow={counts.erro > 0}
+              icon={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill={counts.erro > 0 ? '#FF4444' : '#9AA4B2'}>
+                  <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
                 </svg>
-              </div>
-            </div>
-            <div className="rounded-xl px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="font-rajdhani text-white/35 tracking-widest mb-1" style={{ fontSize: 9 }}>% ENTREGUES</p>
-              <div className="flex items-center justify-between">
-                <span className="font-orbitron font-bold" style={{ fontSize: 26, color: '#00FFA3' }}>{pct}%</span>
-                <CircularProgress pct={pct} />
-              </div>
-            </div>
+              }
+            />
+            <StatCard
+              label="% ENTREGUES"
+              value={`${pct}%`}
+              accent="#00FFA3"
+              boxedIcon={false}
+              icon={<CircularProgress pct={pct} color="#00FFA3" />}
+            />
           </div>
 
           {/* Filters + search */}

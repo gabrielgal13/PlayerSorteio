@@ -476,7 +476,7 @@ export async function POST(
             const listings = await checkStock(entry.prizeName);
             if (!listings.length) { lastError = 'Item não encontrado'; break; }
             try {
-              const result = await buyItem(listings[0], tradeLink);
+              const result = await buyItem(listings[0], tradeLink, entry.id);
               bought = { id: String(result.id) };
               break;
             } catch (err) {
@@ -487,7 +487,7 @@ export async function POST(
           await prisma.raffleHistory.update({
             where: { id: entry.id },
             data: bought
-              ? { marketplaceItemId: bought.id, deliveryStatus: 'entregue' }
+              ? { marketplaceItemId: bought.id, deliveryStatus: 'item_comprado' }
               : { deliveryStatus: 'erro_compra' },
           });
           if (!bought) console.log('[twitch/whisper] erro compra:', entry.winnerName, lastError);

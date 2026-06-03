@@ -52,6 +52,9 @@ model Streamer {
   chatTriggerCommand      String  @default("!sortear")
   raffleAnimationStyle    String  @default("balada")
 
+  // Chat Wars — sprite neutro (data URL base64) usado como base das bolinhas
+  chatWarsSprite String?
+
   history         RaffleHistory[]
   pscTransactions PscTransaction[]
   prizeLists      PrizeList[]
@@ -134,7 +137,9 @@ model RaffleHistory {
   tradeLockAt    DateTime?
 
   // Marketplace (Waxpeer)
-  marketplaceItemId String?
+  marketplaceItemId    String?
+  marketplaceRetries   Int       @default(0)
+  marketplaceCheckedAt DateTime?
 }
 
 model BotCommand {

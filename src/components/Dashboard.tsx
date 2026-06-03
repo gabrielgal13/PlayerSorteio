@@ -12,6 +12,7 @@ import HistoryPanel from '@/components/history/HistoryPanel';
 import HangmanGame from '@/components/games/HangmanGame';
 import WorldGuessr from '@/components/games/WorldGuessr';
 import SkribllGame from '@/components/games/SkribllGame';
+import ChatWarsGame from '@/components/games/ChatWarsGame';
 import GamesLobby from '@/components/games/GamesLobby';
 import CommunityBar from '@/components/community/CommunityBar';
 import EntregasPage from '@/components/deliveries/EntregasPage';
@@ -54,7 +55,7 @@ export default function Dashboard() {
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const [activeGame, setActiveGame] = useState<'hangman' | 'worldguessr' | 'skribll' | null>(null);
+  const [activeGame, setActiveGame] = useState<'hangman' | 'worldguessr' | 'skribll' | 'chatwars' | null>(null);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -447,6 +448,12 @@ export default function Dashboard() {
                     initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
                     transition={{ duration: 0.3 }}>
                     <SkribllGame onBack={() => setActiveGame(null)} />
+                  </motion.div>
+                ) : activeGame === 'chatwars' ? (
+                  <motion.div key="chatwars" className="flex-1 flex flex-col min-h-0"
+                    initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
+                    transition={{ duration: 0.3 }}>
+                    <ChatWarsGame onBack={() => setActiveGame(null)} />
                   </motion.div>
                 ) : (
                   <motion.div key="games-lobby" className="flex-1 flex flex-col min-h-0"

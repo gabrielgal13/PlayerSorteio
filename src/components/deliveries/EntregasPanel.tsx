@@ -90,7 +90,7 @@ export default function EntregasPanel({ onClose }: Props) {
         }),
       });
       const data = await res.json();
-      updateDelivery(id, undefined, data.ok ? 'entregue' : 'erro_compra');
+      updateDelivery(id, undefined, data.ok ? 'item_comprado' : 'erro_compra');
     } catch {
       updateDelivery(id, undefined, 'erro_compra');
     }

@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
         const listings = await checkStock(entry.prizeName);
         if (!listings.length) { lastError = 'Item não encontrado no Waxpeer'; break; }
         try {
-          const result = await buyItem(listings[0], tradeLink);
+          const result = await buyItem(listings[0], tradeLink, entry.id);
           bought = { id: String(result.id), price: listings[0].price };
           break;
         } catch (err) {
@@ -59,9 +59,9 @@ export async function POST(req: NextRequest) {
       if (bought) {
         await prisma.raffleHistory.update({
           where: { id: entry.id },
-          data: { marketplaceItemId: bought.id, deliveryStatus: 'entregue' },
+          data: { marketplaceItemId: bought.id, deliveryStatus: 'item_comprado' },
         });
-        console.log(`[chat-trade-link] ${source} | ${winnerName} → entregue (${bought.id})`);
+        console.log(`[chat-trade-link] ${source} | ${winnerName} → item_comprado (${bought.id})`);
       } else {
         await prisma.raffleHistory.update({
           where: { id: entry.id },

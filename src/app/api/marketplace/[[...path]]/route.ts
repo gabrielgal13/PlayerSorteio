@@ -109,7 +109,7 @@ export async function POST(
         const cheapest = listings[0];
         console.log('[marketplace/buy] tentando:', cheapest.name, 'price:', cheapest.price);
         try {
-          const result = await buyItem(cheapest, tradeLink);
+          const result = await buyItem(cheapest, tradeLink, historyId);
           buyResult = result;
           boughtListing = cheapest;
           break;
@@ -168,7 +168,7 @@ export async function POST(
         return NextResponse.json({ ok: false, error: result.msg });
       }
 
-      // Atualiza o history entry com tradeLink + status entregue
+      // Atualiza o history entry: compra OK, aguardando entrega real (cron poll-waxpeer)
       try {
         const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true } });
         if (streamer) {
@@ -181,7 +181,7 @@ export async function POST(
             },
             data: {
               tradeLink,
-              deliveryStatus: 'entregue',
+              deliveryStatus: 'item_comprado',
               marketplaceItemId: waxpeerItemId,
             },
           });
@@ -205,7 +205,9 @@ async function updateHistoryDelivered(
   tradeLink: string,
   historyId?: string,
 ): Promise<void> {
-  const data = { marketplaceItemId, tradeLink, deliveryStatus: 'entregue' as const };
+  // Compra confirmada na Waxpeer, mas a entrega real (trade offer aceita na Steam)
+  // é validada depois pelo cron `poll-waxpeer`. Aqui só marcamos `item_comprado`.
+  const data = { marketplaceItemId, tradeLink, deliveryStatus: 'item_comprado' as const };
 
   if (historyId) {
     try {

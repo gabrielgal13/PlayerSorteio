@@ -283,6 +283,7 @@ export const useStore = create<AppState & AppActions>()(
           youtubeChannel: data.youtubeChannel,
           youtubeDisplayName: data.youtubeDisplayName,
           isAdmin: data.isAdmin,
+          chatWarsSprite: data.chatWarsSprite,
         };
 
         set({

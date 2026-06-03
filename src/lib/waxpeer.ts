@@ -169,18 +169,20 @@ function extractTradeUrlParams(tradeLink: string): { partner: string; token: str
   return { partner: m[1], token: m[2] };
 }
 
-/** Compra o listing mais barato e entrega direto na Steam do trade link. */
-export async function buyItem(listing: WaxpeerListing, tradeLink: string): Promise<WaxpeerBuyResult> {
+/** Compra o listing mais barato e entrega direto na Steam do trade link.
+ *  Se `projectId` for fornecido (recomendado: nosso historyId), a Waxpeer guarda
+ *  como referência e pode ser consultado depois via `checkTradesByProjectId`. */
+export async function buyItem(listing: WaxpeerListing, tradeLink: string, projectId?: string): Promise<WaxpeerBuyResult> {
   const params = extractTradeUrlParams(tradeLink);
   if (!params) throw new Error('Trade link inválido');
-  const res = await fetch(
-    url('/buy-one-p2p', {
-      item_id: listing.item_id,
-      price: String(listing.price),
-      partner: params.partner,
-      token: params.token,
-    }),
-  );
+  const queryParams: Record<string, string> = {
+    item_id: listing.item_id,
+    price: String(listing.price),
+    partner: params.partner,
+    token: params.token,
+  };
+  if (projectId) queryParams.project_id = projectId;
+  const res = await fetch(url('/buy-one-p2p', queryParams));
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`Waxpeer buy HTTP ${res.status} | body: ${body.slice(0, 300)}`);
@@ -190,6 +192,92 @@ export async function buyItem(listing: WaxpeerListing, tradeLink: string): Promi
     throw new Error(`Waxpeer buy rejected | msg: ${data.msg ?? 'no msg'}`);
   }
   return { ...data, id: String(data.id ?? '') };
+}
+
+/* ── Trade status polling ─────────────────────────────────────────────
+ * Após /buy-one-p2p, a Waxpeer leva alguns minutos pra:
+ *   1. o vendedor enviar a oferta na Steam (~5min de janela)
+ *   2. o comprador aceitar na Steam
+ *   3. a Waxpeer detectar a aceitação e marcar como concluída
+ * Polling via /check-many-project-id retorna o estado real de cada compra. */
+
+export interface WaxpeerTradeStatus {
+  id?: string | number;
+  project_id?: string;
+  /** Status numérico — interpretado por `classifyTradeStatus` abaixo. */
+  status?: number;
+  /** ID da trade offer na Steam (presente após a oferta ser enviada). */
+  trade_id?: string | number | null;
+  /** `true` quando a Waxpeer considera a trade finalizada (aceita pelo comprador). */
+  done?: boolean;
+  /** Mensagem de cancelamento/erro, se houver. */
+  reason?: string;
+  cancel_reason?: string;
+  for_steamid64?: string;
+  /** Preço pago em centavos. */
+  price?: number;
+}
+
+export type TradeOutcome =
+  | { kind: 'pending'; reason?: string }    // ainda em andamento (vendedor enviando ou aguardando aceitar)
+  | { kind: 'delivered'; tradeId?: string } // comprador aceitou na Steam, item entregue
+  | { kind: 'failed'; reason: string };     // cancelado / recusado / expirado / reembolsado
+
+/**
+ * Mapeia o `status` numérico da Waxpeer + flags para um dos 3 estados acima.
+ *
+ * Códigos observados (Waxpeer P2P):
+ *   0 = Sending     — vendedor preparando a oferta
+ *   1 = Active      — oferta enviada, aguardando comprador aceitar na Steam
+ *   2 = Cancelled   — algo cancelou (timeout, recusa, vendedor sumiu)
+ *   3 = Accepted    — comprador aceitou, item entregue
+ *   4 = Declined    — comprador recusou
+ *   5 = Refunded    — Waxpeer reembolsou (vendedor não enviou)
+ *   6 = Sent        — oferta criada, sendo enviada à Steam
+ *
+ * Como a doc da Waxpeer é instável, a função é defensiva: se `done === true`
+ * tratamos como entregue; se `cancel_reason`/`reason` indicar falha, tratamos
+ * como falha; resto é "pending" e o cron tenta de novo no próximo tick.
+ */
+export function classifyTradeStatus(t: WaxpeerTradeStatus): TradeOutcome {
+  // Sinais explícitos de sucesso
+  if (t.done === true) return { kind: 'delivered', tradeId: t.trade_id ? String(t.trade_id) : undefined };
+  if (t.status === 3) return { kind: 'delivered', tradeId: t.trade_id ? String(t.trade_id) : undefined };
+
+  // Sinais explícitos de falha
+  const failedStatuses = new Set([2, 4, 5]);
+  if (typeof t.status === 'number' && failedStatuses.has(t.status)) {
+    return { kind: 'failed', reason: t.cancel_reason ?? t.reason ?? `status=${t.status}` };
+  }
+  if (t.cancel_reason || (t.reason && /cancel|refund|declin|expir/i.test(t.reason))) {
+    return { kind: 'failed', reason: t.cancel_reason ?? t.reason ?? 'cancelled' };
+  }
+
+  return { kind: 'pending', reason: t.reason };
+}
+
+/** Consulta o estado de múltiplas compras pelos project_ids (= nossos historyIds). */
+export async function checkTradesByProjectId(projectIds: string[]): Promise<WaxpeerTradeStatus[]> {
+  if (!projectIds.length) return [];
+  const q = new URLSearchParams({ api: key() });
+  for (const id of projectIds) q.append('project_ids[]', id);
+  const res = await fetch(`${BASE}/check-many-project-id?${q.toString()}`);
+  if (!res.ok) return [];
+  const data = await res.json() as { success?: boolean; trades?: WaxpeerTradeStatus[]; msg?: string };
+  if (!data.success) return [];
+  return data.trades ?? [];
+}
+
+/** Fallback: consulta por trade IDs da Waxpeer (o `id` retornado por /buy-one-p2p). */
+export async function checkTradesById(tradeIds: string[]): Promise<WaxpeerTradeStatus[]> {
+  if (!tradeIds.length) return [];
+  const q = new URLSearchParams({ api: key() });
+  for (const id of tradeIds) q.append('id[]', id);
+  const res = await fetch(`${BASE}/check-many-steam?${q.toString()}`);
+  if (!res.ok) return [];
+  const data = await res.json() as { success?: boolean; trades?: WaxpeerTradeStatus[]; msg?: string };
+  if (!data.success) return [];
+  return data.trades ?? [];
 }
 
 /** Envia o item comprado para o trade link do vencedor. */

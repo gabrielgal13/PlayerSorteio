@@ -260,7 +260,7 @@ export async function GET(req: NextRequest) {
               const listings = await checkStock(winner.prizeName);
               if (!listings.length) { lastError = 'Item não encontrado'; break; }
               try {
-                const result = await buyItem(listings[0], tradeLink);
+                const result = await buyItem(listings[0], tradeLink, winner.id);
                 bought = { id: String(result.id) };
                 break;
               } catch (err) {
@@ -271,7 +271,7 @@ export async function GET(req: NextRequest) {
             await prisma.raffleHistory.update({
               where: { id: winner.id },
               data: bought
-                ? { marketplaceItemId: bought.id, deliveryStatus: 'entregue' }
+                ? { marketplaceItemId: bought.id, deliveryStatus: 'item_comprado' }
                 : { deliveryStatus: 'erro_compra' },
             });
             if (!bought) console.log('[poll-youtube] erro compra:', winner.winnerName, lastError);

@@ -75,6 +75,7 @@ export type StreamerMinAggregateOutputType = {
   chatTriggerCount: number | null
   chatTriggerCommand: string | null
   raffleAnimationStyle: string | null
+  chatWarsSprite: string | null
   forcePasswordChange: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -113,6 +114,7 @@ export type StreamerMaxAggregateOutputType = {
   chatTriggerCount: number | null
   chatTriggerCommand: string | null
   raffleAnimationStyle: string | null
+  chatWarsSprite: string | null
   forcePasswordChange: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -151,6 +153,7 @@ export type StreamerCountAggregateOutputType = {
   chatTriggerCount: number
   chatTriggerCommand: number
   raffleAnimationStyle: number
+  chatWarsSprite: number
   forcePasswordChange: number
   createdAt: number
   updatedAt: number
@@ -207,6 +210,7 @@ export type StreamerMinAggregateInputType = {
   chatTriggerCount?: true
   chatTriggerCommand?: true
   raffleAnimationStyle?: true
+  chatWarsSprite?: true
   forcePasswordChange?: true
   createdAt?: true
   updatedAt?: true
@@ -245,6 +249,7 @@ export type StreamerMaxAggregateInputType = {
   chatTriggerCount?: true
   chatTriggerCommand?: true
   raffleAnimationStyle?: true
+  chatWarsSprite?: true
   forcePasswordChange?: true
   createdAt?: true
   updatedAt?: true
@@ -283,6 +288,7 @@ export type StreamerCountAggregateInputType = {
   chatTriggerCount?: true
   chatTriggerCommand?: true
   raffleAnimationStyle?: true
+  chatWarsSprite?: true
   forcePasswordChange?: true
   createdAt?: true
   updatedAt?: true
@@ -408,6 +414,7 @@ export type StreamerGroupByOutputType = {
   chatTriggerCount: number
   chatTriggerCommand: string
   raffleAnimationStyle: string
+  chatWarsSprite: string | null
   forcePasswordChange: boolean
   createdAt: Date
   updatedAt: Date
@@ -469,6 +476,7 @@ export type StreamerWhereInput = {
   chatTriggerCount?: Prisma.IntFilter<"Streamer"> | number
   chatTriggerCommand?: Prisma.StringFilter<"Streamer"> | string
   raffleAnimationStyle?: Prisma.StringFilter<"Streamer"> | string
+  chatWarsSprite?: Prisma.StringNullableFilter<"Streamer"> | string | null
   forcePasswordChange?: Prisma.BoolFilter<"Streamer"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Streamer"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Streamer"> | Date | string
@@ -511,6 +519,7 @@ export type StreamerOrderByWithRelationInput = {
   chatTriggerCount?: Prisma.SortOrder
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
+  chatWarsSprite?: Prisma.SortOrderInput | Prisma.SortOrder
   forcePasswordChange?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -556,6 +565,7 @@ export type StreamerWhereUniqueInput = Prisma.AtLeast<{
   chatTriggerCount?: Prisma.IntFilter<"Streamer"> | number
   chatTriggerCommand?: Prisma.StringFilter<"Streamer"> | string
   raffleAnimationStyle?: Prisma.StringFilter<"Streamer"> | string
+  chatWarsSprite?: Prisma.StringNullableFilter<"Streamer"> | string | null
   forcePasswordChange?: Prisma.BoolFilter<"Streamer"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Streamer"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Streamer"> | Date | string
@@ -598,6 +608,7 @@ export type StreamerOrderByWithAggregationInput = {
   chatTriggerCount?: Prisma.SortOrder
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
+  chatWarsSprite?: Prisma.SortOrderInput | Prisma.SortOrder
   forcePasswordChange?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -644,6 +655,7 @@ export type StreamerScalarWhereWithAggregatesInput = {
   chatTriggerCount?: Prisma.IntWithAggregatesFilter<"Streamer"> | number
   chatTriggerCommand?: Prisma.StringWithAggregatesFilter<"Streamer"> | string
   raffleAnimationStyle?: Prisma.StringWithAggregatesFilter<"Streamer"> | string
+  chatWarsSprite?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
   forcePasswordChange?: Prisma.BoolWithAggregatesFilter<"Streamer"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Streamer"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Streamer"> | Date | string
@@ -682,6 +694,7 @@ export type StreamerCreateInput = {
   chatTriggerCount?: number
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -724,6 +737,7 @@ export type StreamerUncheckedCreateInput = {
   chatTriggerCount?: number
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -766,6 +780,7 @@ export type StreamerUpdateInput = {
   chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -808,6 +823,7 @@ export type StreamerUncheckedUpdateInput = {
   chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -850,6 +866,7 @@ export type StreamerCreateManyInput = {
   chatTriggerCount?: number
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -888,6 +905,7 @@ export type StreamerUpdateManyMutationInput = {
   chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -926,6 +944,7 @@ export type StreamerUncheckedUpdateManyInput = {
   chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -964,6 +983,7 @@ export type StreamerCountOrderByAggregateInput = {
   chatTriggerCount?: Prisma.SortOrder
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
+  chatWarsSprite?: Prisma.SortOrder
   forcePasswordChange?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -1010,6 +1030,7 @@ export type StreamerMaxOrderByAggregateInput = {
   chatTriggerCount?: Prisma.SortOrder
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
+  chatWarsSprite?: Prisma.SortOrder
   forcePasswordChange?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -1048,6 +1069,7 @@ export type StreamerMinOrderByAggregateInput = {
   chatTriggerCount?: Prisma.SortOrder
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
+  chatWarsSprite?: Prisma.SortOrder
   forcePasswordChange?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -1191,6 +1213,7 @@ export type StreamerCreateWithoutPrizeListsInput = {
   chatTriggerCount?: number
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1232,6 +1255,7 @@ export type StreamerUncheckedCreateWithoutPrizeListsInput = {
   chatTriggerCount?: number
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1289,6 +1313,7 @@ export type StreamerUpdateWithoutPrizeListsInput = {
   chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1330,6 +1355,7 @@ export type StreamerUncheckedUpdateWithoutPrizeListsInput = {
   chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1371,6 +1397,7 @@ export type StreamerCreateWithoutPscTransactionsInput = {
   chatTriggerCount?: number
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1412,6 +1439,7 @@ export type StreamerUncheckedCreateWithoutPscTransactionsInput = {
   chatTriggerCount?: number
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1469,6 +1497,7 @@ export type StreamerUpdateWithoutPscTransactionsInput = {
   chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1510,6 +1539,7 @@ export type StreamerUncheckedUpdateWithoutPscTransactionsInput = {
   chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1551,6 +1581,7 @@ export type StreamerCreateWithoutHistoryInput = {
   chatTriggerCount?: number
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1592,6 +1623,7 @@ export type StreamerUncheckedCreateWithoutHistoryInput = {
   chatTriggerCount?: number
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1649,6 +1681,7 @@ export type StreamerUpdateWithoutHistoryInput = {
   chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1690,6 +1723,7 @@ export type StreamerUncheckedUpdateWithoutHistoryInput = {
   chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1731,6 +1765,7 @@ export type StreamerCreateWithoutBotCommandsInput = {
   chatTriggerCount?: number
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1772,6 +1807,7 @@ export type StreamerUncheckedCreateWithoutBotCommandsInput = {
   chatTriggerCount?: number
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1829,6 +1865,7 @@ export type StreamerUpdateWithoutBotCommandsInput = {
   chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1870,6 +1907,7 @@ export type StreamerUncheckedUpdateWithoutBotCommandsInput = {
   chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1969,6 +2007,7 @@ export type StreamerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   chatTriggerCount?: boolean
   chatTriggerCommand?: boolean
   raffleAnimationStyle?: boolean
+  chatWarsSprite?: boolean
   forcePasswordChange?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -2012,6 +2051,7 @@ export type StreamerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   chatTriggerCount?: boolean
   chatTriggerCommand?: boolean
   raffleAnimationStyle?: boolean
+  chatWarsSprite?: boolean
   forcePasswordChange?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -2050,6 +2090,7 @@ export type StreamerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   chatTriggerCount?: boolean
   chatTriggerCommand?: boolean
   raffleAnimationStyle?: boolean
+  chatWarsSprite?: boolean
   forcePasswordChange?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -2088,12 +2129,13 @@ export type StreamerSelectScalar = {
   chatTriggerCount?: boolean
   chatTriggerCommand?: boolean
   raffleAnimationStyle?: boolean
+  chatWarsSprite?: boolean
   forcePasswordChange?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type StreamerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "passwordHash" | "mascot" | "displayName" | "isAdmin" | "twitchChannel" | "kickChannel" | "kickChatroomId" | "youtubeChannel" | "youtubeDisplayName" | "youtubeLiveChatId" | "youtubeNextPageToken" | "youtubeLiveChatCheckedAt" | "registrationCommand" | "claimCommand" | "validationTimeout" | "isAffiliate" | "pscBalance" | "audioEnabled" | "excelImportEnabled" | "excelPrizesImportEnabled" | "eventMusic" | "eventEffect" | "spinEffect" | "themeColor" | "socoChuteModeEnabled" | "raffleTriggerMode" | "autoRoundDelay" | "chatTriggerCount" | "chatTriggerCommand" | "raffleAnimationStyle" | "forcePasswordChange" | "createdAt" | "updatedAt", ExtArgs["result"]["streamer"]>
+export type StreamerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "passwordHash" | "mascot" | "displayName" | "isAdmin" | "twitchChannel" | "kickChannel" | "kickChatroomId" | "youtubeChannel" | "youtubeDisplayName" | "youtubeLiveChatId" | "youtubeNextPageToken" | "youtubeLiveChatCheckedAt" | "registrationCommand" | "claimCommand" | "validationTimeout" | "isAffiliate" | "pscBalance" | "audioEnabled" | "excelImportEnabled" | "excelPrizesImportEnabled" | "eventMusic" | "eventEffect" | "spinEffect" | "themeColor" | "socoChuteModeEnabled" | "raffleTriggerMode" | "autoRoundDelay" | "chatTriggerCount" | "chatTriggerCommand" | "raffleAnimationStyle" | "chatWarsSprite" | "forcePasswordChange" | "createdAt" | "updatedAt", ExtArgs["result"]["streamer"]>
 export type StreamerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   history?: boolean | Prisma.Streamer$historyArgs<ExtArgs>
   pscTransactions?: boolean | Prisma.Streamer$pscTransactionsArgs<ExtArgs>
@@ -2145,6 +2187,7 @@ export type $StreamerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     chatTriggerCount: number
     chatTriggerCommand: string
     raffleAnimationStyle: string
+    chatWarsSprite: string | null
     forcePasswordChange: boolean
     createdAt: Date
     updatedAt: Date
@@ -2607,6 +2650,7 @@ export interface StreamerFieldRefs {
   readonly chatTriggerCount: Prisma.FieldRef<"Streamer", 'Int'>
   readonly chatTriggerCommand: Prisma.FieldRef<"Streamer", 'String'>
   readonly raffleAnimationStyle: Prisma.FieldRef<"Streamer", 'String'>
+  readonly chatWarsSprite: Prisma.FieldRef<"Streamer", 'String'>
   readonly forcePasswordChange: Prisma.FieldRef<"Streamer", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"Streamer", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Streamer", 'DateTime'>

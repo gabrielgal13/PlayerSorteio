@@ -9,7 +9,7 @@ import type { RaffleResult, DeliveryStatus } from '@/types';
 
 interface StreamerRow { username: string; displayName: string | null; pscBalance: number; isAffiliate: boolean; }
 interface AdminProduct { id: string; name: string; description: string | null; imageUrl: string | null; quantity: number; pscValue: number | null; skipPsc: boolean; }
-interface EditProfile { displayName: string; newPassword: string; twitchChannel: string; kickChannel: string; youtubeChannel: string; themeColor: string; forceFirstAccess: boolean; currentForcePasswordChange: boolean; }
+interface EditProfile { displayName: string; newPassword: string; twitchChannel: string; kickChannel: string; youtubeChannel: string; themeColor: string; chatWarsSprite: string; forceFirstAccess: boolean; currentForcePasswordChange: boolean; }
 type Section = 'psc' | 'criar-streamer' | 'entregas' | 'editar-streamer' | 'marketing' | 'bots';
 
 const COLOR_PRESETS = ['#BF5AF2', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#00E5FF', '#00FFA3'];
@@ -585,7 +585,7 @@ export default function AdminPanel() {
   const [newBotCmd, setNewBotCmd] = useState({ command: '', response: '' });
   const [addingBotCmd, setAddingBotCmd] = useState(false);
 
-  const [editProfile, setEditProfile] = useState<EditProfile>({ displayName: '', newPassword: '', twitchChannel: '', kickChannel: '', youtubeChannel: '', themeColor: '#00E5FF', forceFirstAccess: false, currentForcePasswordChange: false });
+  const [editProfile, setEditProfile] = useState<EditProfile>({ displayName: '', newPassword: '', twitchChannel: '', kickChannel: '', youtubeChannel: '', themeColor: '#00E5FF', chatWarsSprite: '', forceFirstAccess: false, currentForcePasswordChange: false });
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [editProfileLoading, setEditProfileLoading] = useState(false);
 
@@ -671,7 +671,7 @@ export default function AdminPanel() {
     setEditPscInput(row ? String(row.pscBalance) : '');
     setAdminProducts([]);
     setBotCommands([]);
-    setEditProfile({ displayName: '', newPassword: '', twitchChannel: '', kickChannel: '', youtubeChannel: '', themeColor: '#00E5FF', forceFirstAccess: false, currentForcePasswordChange: false });
+    setEditProfile({ displayName: '', newPassword: '', twitchChannel: '', kickChannel: '', youtubeChannel: '', themeColor: '#00E5FF', chatWarsSprite: '', forceFirstAccess: false, currentForcePasswordChange: false });
     if (username) {
       loadAdminProducts(username);
       loadBotCommands(username);
@@ -687,6 +687,7 @@ export default function AdminPanel() {
             kickChannel: fullData.kickChannel ?? '',
             youtubeChannel: fullData.youtubeChannel ?? '',
             themeColor: fullData.themeColor ?? '#00E5FF',
+            chatWarsSprite: fullData.chatWarsSprite ?? '',
             forceFirstAccess: false,
             currentForcePasswordChange: fullData.forcePasswordChange ?? false,
           });
@@ -725,6 +726,7 @@ export default function AdminPanel() {
         kickChannel: editProfile.kickChannel || null,
         youtubeChannel: editProfile.youtubeChannel || null,
         displayName: editProfile.displayName.trim() || null,
+        chatWarsSprite: editProfile.chatWarsSprite || null,
       };
       if (editProfile.forceFirstAccess) {
         body.forcePasswordChange = true;
@@ -2077,6 +2079,47 @@ export default function AdminPanel() {
                                   style={{ width: 28, height: 28, border: '1px dashed rgba(255,255,255,0.2)', padding: 2, background: 'rgba(255,255,255,0.05)' }}
                                 />
                               </div>
+                            </div>
+
+                            {/* SPRITE CHAT WARS */}
+                            <div className="flex flex-col gap-2" style={{ marginTop: 8 }}>
+                              <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>SPRITE CHAT WARS (bola neutra)</label>
+                              <div className="flex items-center gap-3">
+                                <div className="flex-shrink-0 rounded-full"
+                                  style={{
+                                    width: 56, height: 56,
+                                    border: '1px solid rgba(145,70,255,0.4)',
+                                    background: editProfile.chatWarsSprite
+                                      ? `#0a0c1c center/cover no-repeat url(${editProfile.chatWarsSprite})`
+                                      : 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.18), rgba(145,70,255,0.12))',
+                                    boxShadow: '0 0 12px rgba(145,70,255,0.25)',
+                                  }} />
+                                <div className="flex flex-col gap-1.5">
+                                  <label className="cursor-pointer font-orbitron font-bold tracking-widest text-center rounded-lg px-3 py-2"
+                                    style={{ fontSize: 9, color: 'rgba(145,70,255,0.9)', background: 'rgba(145,70,255,0.1)', border: '1px solid rgba(145,70,255,0.3)' }}>
+                                    {editProfile.chatWarsSprite ? 'TROCAR IMAGEM' : 'ENVIAR IMAGEM'}
+                                    <input type="file" accept="image/png,image/webp,image/jpeg" className="hidden"
+                                      onChange={e => {
+                                        const f = e.target.files?.[0];
+                                        if (!f) return;
+                                        const r = new FileReader();
+                                        r.onload = ev => setEditProfile(p => ({ ...p, chatWarsSprite: ev.target?.result as string }));
+                                        r.readAsDataURL(f);
+                                        e.target.value = '';
+                                      }} />
+                                  </label>
+                                  {editProfile.chatWarsSprite && (
+                                    <button type="button" onClick={() => setEditProfile(p => ({ ...p, chatWarsSprite: '' }))}
+                                      className="font-rajdhani text-xs tracking-wide opacity-50 hover:opacity-80 transition-opacity text-left"
+                                      style={{ color: 'rgba(255,120,120,0.9)' }}>
+                                      ✕ Remover
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="font-rajdhani" style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', lineHeight: 1.4 }}>
+                                Imagem sem rosto — só a bola/textura. O jogo aplica a cor de cada jogador, o rosto e os efeitos por cima.
+                              </p>
                             </div>
                           </div>
 

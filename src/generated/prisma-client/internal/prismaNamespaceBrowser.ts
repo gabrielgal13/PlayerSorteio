@@ -110,6 +110,7 @@ export const StreamerScalarFieldEnum = {
   chatTriggerCount: 'chatTriggerCount',
   chatTriggerCommand: 'chatTriggerCommand',
   raffleAnimationStyle: 'raffleAnimationStyle',
+  chatWarsSprite: 'chatWarsSprite',
   forcePasswordChange: 'forcePasswordChange',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -187,7 +188,9 @@ export const RaffleHistoryScalarFieldEnum = {
   tradeLink: 'tradeLink',
   deliveryStatus: 'deliveryStatus',
   tradeLockAt: 'tradeLockAt',
-  marketplaceItemId: 'marketplaceItemId'
+  marketplaceItemId: 'marketplaceItemId',
+  marketplaceRetries: 'marketplaceRetries',
+  marketplaceCheckedAt: 'marketplaceCheckedAt'
 } as const
 
 export type RaffleHistoryScalarFieldEnum = (typeof RaffleHistoryScalarFieldEnum)[keyof typeof RaffleHistoryScalarFieldEnum]

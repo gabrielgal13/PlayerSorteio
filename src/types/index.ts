@@ -13,6 +13,8 @@ export interface StreamerProfile {
   youtubeDisplayName?: string;
   initialPscBalance?: number;
   isAdmin?: boolean;
+  /** Chat Wars: sprite neutro (data URL) usado como base das bolinhas. */
+  chatWarsSprite?: string | null;
 }
 
 export interface Participant {
@@ -20,6 +22,8 @@ export interface Participant {
   number: number;
   name: string;
   source?: 'twitch' | 'kick' | 'youtube';
+  /** Weighted-raffle tickets (chances). Undefined = 1. Used by the Chat Wars sorteio. */
+  tickets?: number;
 }
 
 export interface Prize {

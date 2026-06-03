@@ -1,7 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
 
-type GameId = 'hangman' | 'worldguessr' | 'skribll';
+type GameId = 'hangman' | 'worldguessr' | 'skribll' | 'chatwars';
 
 interface GameCard {
   id: GameId;
@@ -42,6 +42,13 @@ const GAMES: Card[] = [
     description: 'Desenhe e adivinhe\npalavras com os amigos!',
     available: true,
     icon: <SkribllIcon />,
+  },
+  {
+    id: 'chatwars',
+    title: 'CHAT WARS',
+    description: 'Cada viewer vira uma bolinha\nviva — quem fala mais, cresce!',
+    available: true,
+    icon: <ChatWarsIcon />,
   },
   {
     id: 'coming1',
@@ -277,6 +284,27 @@ function SkribllIcon() {
         <line x1="14" y1="54" x2="50" y2="54"/>
         {/* desenho: ondinha */}
         <path d="M16 32 Q22 22 28 32 Q34 42 40 32 Q46 22 52 32" strokeWidth="2"/>
+      </g>
+    </svg>
+  );
+}
+
+function ChatWarsIcon() {
+  return (
+    <svg width="52" height="52" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="cw-lobby-glow">
+          <feGaussianBlur stdDeviation="1.5" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <g filter="url(#cw-lobby-glow)" stroke="#00E5FF" strokeWidth="2.5" fill="none">
+        {/* bolinhas disputando */}
+        <circle cx="24" cy="34" r="13" />
+        <circle cx="44" cy="26" r="8" />
+        <circle cx="46" cy="44" r="5" />
+        {/* coroa no maior */}
+        <path d="M16 17 L18 23 L24 19 L30 23 L32 17" strokeWidth="2.2" strokeLinejoin="round" />
       </g>
     </svg>
   );

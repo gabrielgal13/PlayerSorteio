@@ -30,12 +30,14 @@ export type RaffleHistoryAvgAggregateOutputType = {
   winnerNumber: number | null
   prizeQuantity: number | null
   prizePscValue: number | null
+  marketplaceRetries: number | null
 }
 
 export type RaffleHistorySumAggregateOutputType = {
   winnerNumber: number | null
   prizeQuantity: number | null
   prizePscValue: number | null
+  marketplaceRetries: number | null
 }
 
 export type RaffleHistoryMinAggregateOutputType = {
@@ -55,6 +57,8 @@ export type RaffleHistoryMinAggregateOutputType = {
   deliveryStatus: string | null
   tradeLockAt: Date | null
   marketplaceItemId: string | null
+  marketplaceRetries: number | null
+  marketplaceCheckedAt: Date | null
 }
 
 export type RaffleHistoryMaxAggregateOutputType = {
@@ -74,6 +78,8 @@ export type RaffleHistoryMaxAggregateOutputType = {
   deliveryStatus: string | null
   tradeLockAt: Date | null
   marketplaceItemId: string | null
+  marketplaceRetries: number | null
+  marketplaceCheckedAt: Date | null
 }
 
 export type RaffleHistoryCountAggregateOutputType = {
@@ -93,6 +99,8 @@ export type RaffleHistoryCountAggregateOutputType = {
   deliveryStatus: number
   tradeLockAt: number
   marketplaceItemId: number
+  marketplaceRetries: number
+  marketplaceCheckedAt: number
   _all: number
 }
 
@@ -101,12 +109,14 @@ export type RaffleHistoryAvgAggregateInputType = {
   winnerNumber?: true
   prizeQuantity?: true
   prizePscValue?: true
+  marketplaceRetries?: true
 }
 
 export type RaffleHistorySumAggregateInputType = {
   winnerNumber?: true
   prizeQuantity?: true
   prizePscValue?: true
+  marketplaceRetries?: true
 }
 
 export type RaffleHistoryMinAggregateInputType = {
@@ -126,6 +136,8 @@ export type RaffleHistoryMinAggregateInputType = {
   deliveryStatus?: true
   tradeLockAt?: true
   marketplaceItemId?: true
+  marketplaceRetries?: true
+  marketplaceCheckedAt?: true
 }
 
 export type RaffleHistoryMaxAggregateInputType = {
@@ -145,6 +157,8 @@ export type RaffleHistoryMaxAggregateInputType = {
   deliveryStatus?: true
   tradeLockAt?: true
   marketplaceItemId?: true
+  marketplaceRetries?: true
+  marketplaceCheckedAt?: true
 }
 
 export type RaffleHistoryCountAggregateInputType = {
@@ -164,6 +178,8 @@ export type RaffleHistoryCountAggregateInputType = {
   deliveryStatus?: true
   tradeLockAt?: true
   marketplaceItemId?: true
+  marketplaceRetries?: true
+  marketplaceCheckedAt?: true
   _all?: true
 }
 
@@ -270,6 +286,8 @@ export type RaffleHistoryGroupByOutputType = {
   deliveryStatus: string
   tradeLockAt: Date | null
   marketplaceItemId: string | null
+  marketplaceRetries: number
+  marketplaceCheckedAt: Date | null
   _count: RaffleHistoryCountAggregateOutputType | null
   _avg: RaffleHistoryAvgAggregateOutputType | null
   _sum: RaffleHistorySumAggregateOutputType | null
@@ -312,6 +330,8 @@ export type RaffleHistoryWhereInput = {
   deliveryStatus?: Prisma.StringFilter<"RaffleHistory"> | string
   tradeLockAt?: Prisma.DateTimeNullableFilter<"RaffleHistory"> | Date | string | null
   marketplaceItemId?: Prisma.StringNullableFilter<"RaffleHistory"> | string | null
+  marketplaceRetries?: Prisma.IntFilter<"RaffleHistory"> | number
+  marketplaceCheckedAt?: Prisma.DateTimeNullableFilter<"RaffleHistory"> | Date | string | null
   streamer?: Prisma.XOR<Prisma.StreamerScalarRelationFilter, Prisma.StreamerWhereInput>
 }
 
@@ -332,6 +352,8 @@ export type RaffleHistoryOrderByWithRelationInput = {
   deliveryStatus?: Prisma.SortOrder
   tradeLockAt?: Prisma.SortOrderInput | Prisma.SortOrder
   marketplaceItemId?: Prisma.SortOrderInput | Prisma.SortOrder
+  marketplaceRetries?: Prisma.SortOrder
+  marketplaceCheckedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   streamer?: Prisma.StreamerOrderByWithRelationInput
 }
 
@@ -355,6 +377,8 @@ export type RaffleHistoryWhereUniqueInput = Prisma.AtLeast<{
   deliveryStatus?: Prisma.StringFilter<"RaffleHistory"> | string
   tradeLockAt?: Prisma.DateTimeNullableFilter<"RaffleHistory"> | Date | string | null
   marketplaceItemId?: Prisma.StringNullableFilter<"RaffleHistory"> | string | null
+  marketplaceRetries?: Prisma.IntFilter<"RaffleHistory"> | number
+  marketplaceCheckedAt?: Prisma.DateTimeNullableFilter<"RaffleHistory"> | Date | string | null
   streamer?: Prisma.XOR<Prisma.StreamerScalarRelationFilter, Prisma.StreamerWhereInput>
 }, "id">
 
@@ -375,6 +399,8 @@ export type RaffleHistoryOrderByWithAggregationInput = {
   deliveryStatus?: Prisma.SortOrder
   tradeLockAt?: Prisma.SortOrderInput | Prisma.SortOrder
   marketplaceItemId?: Prisma.SortOrderInput | Prisma.SortOrder
+  marketplaceRetries?: Prisma.SortOrder
+  marketplaceCheckedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.RaffleHistoryCountOrderByAggregateInput
   _avg?: Prisma.RaffleHistoryAvgOrderByAggregateInput
   _max?: Prisma.RaffleHistoryMaxOrderByAggregateInput
@@ -402,6 +428,8 @@ export type RaffleHistoryScalarWhereWithAggregatesInput = {
   deliveryStatus?: Prisma.StringWithAggregatesFilter<"RaffleHistory"> | string
   tradeLockAt?: Prisma.DateTimeNullableWithAggregatesFilter<"RaffleHistory"> | Date | string | null
   marketplaceItemId?: Prisma.StringNullableWithAggregatesFilter<"RaffleHistory"> | string | null
+  marketplaceRetries?: Prisma.IntWithAggregatesFilter<"RaffleHistory"> | number
+  marketplaceCheckedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"RaffleHistory"> | Date | string | null
 }
 
 export type RaffleHistoryCreateInput = {
@@ -420,6 +448,8 @@ export type RaffleHistoryCreateInput = {
   deliveryStatus?: string
   tradeLockAt?: Date | string | null
   marketplaceItemId?: string | null
+  marketplaceRetries?: number
+  marketplaceCheckedAt?: Date | string | null
   streamer: Prisma.StreamerCreateNestedOneWithoutHistoryInput
 }
 
@@ -440,6 +470,8 @@ export type RaffleHistoryUncheckedCreateInput = {
   deliveryStatus?: string
   tradeLockAt?: Date | string | null
   marketplaceItemId?: string | null
+  marketplaceRetries?: number
+  marketplaceCheckedAt?: Date | string | null
 }
 
 export type RaffleHistoryUpdateInput = {
@@ -458,6 +490,8 @@ export type RaffleHistoryUpdateInput = {
   deliveryStatus?: Prisma.StringFieldUpdateOperationsInput | string
   tradeLockAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   marketplaceItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  marketplaceRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  marketplaceCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   streamer?: Prisma.StreamerUpdateOneRequiredWithoutHistoryNestedInput
 }
 
@@ -478,6 +512,8 @@ export type RaffleHistoryUncheckedUpdateInput = {
   deliveryStatus?: Prisma.StringFieldUpdateOperationsInput | string
   tradeLockAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   marketplaceItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  marketplaceRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  marketplaceCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type RaffleHistoryCreateManyInput = {
@@ -497,6 +533,8 @@ export type RaffleHistoryCreateManyInput = {
   deliveryStatus?: string
   tradeLockAt?: Date | string | null
   marketplaceItemId?: string | null
+  marketplaceRetries?: number
+  marketplaceCheckedAt?: Date | string | null
 }
 
 export type RaffleHistoryUpdateManyMutationInput = {
@@ -515,6 +553,8 @@ export type RaffleHistoryUpdateManyMutationInput = {
   deliveryStatus?: Prisma.StringFieldUpdateOperationsInput | string
   tradeLockAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   marketplaceItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  marketplaceRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  marketplaceCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type RaffleHistoryUncheckedUpdateManyInput = {
@@ -534,6 +574,8 @@ export type RaffleHistoryUncheckedUpdateManyInput = {
   deliveryStatus?: Prisma.StringFieldUpdateOperationsInput | string
   tradeLockAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   marketplaceItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  marketplaceRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  marketplaceCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type RaffleHistoryListRelationFilter = {
@@ -563,12 +605,15 @@ export type RaffleHistoryCountOrderByAggregateInput = {
   deliveryStatus?: Prisma.SortOrder
   tradeLockAt?: Prisma.SortOrder
   marketplaceItemId?: Prisma.SortOrder
+  marketplaceRetries?: Prisma.SortOrder
+  marketplaceCheckedAt?: Prisma.SortOrder
 }
 
 export type RaffleHistoryAvgOrderByAggregateInput = {
   winnerNumber?: Prisma.SortOrder
   prizeQuantity?: Prisma.SortOrder
   prizePscValue?: Prisma.SortOrder
+  marketplaceRetries?: Prisma.SortOrder
 }
 
 export type RaffleHistoryMaxOrderByAggregateInput = {
@@ -588,6 +633,8 @@ export type RaffleHistoryMaxOrderByAggregateInput = {
   deliveryStatus?: Prisma.SortOrder
   tradeLockAt?: Prisma.SortOrder
   marketplaceItemId?: Prisma.SortOrder
+  marketplaceRetries?: Prisma.SortOrder
+  marketplaceCheckedAt?: Prisma.SortOrder
 }
 
 export type RaffleHistoryMinOrderByAggregateInput = {
@@ -607,12 +654,15 @@ export type RaffleHistoryMinOrderByAggregateInput = {
   deliveryStatus?: Prisma.SortOrder
   tradeLockAt?: Prisma.SortOrder
   marketplaceItemId?: Prisma.SortOrder
+  marketplaceRetries?: Prisma.SortOrder
+  marketplaceCheckedAt?: Prisma.SortOrder
 }
 
 export type RaffleHistorySumOrderByAggregateInput = {
   winnerNumber?: Prisma.SortOrder
   prizeQuantity?: Prisma.SortOrder
   prizePscValue?: Prisma.SortOrder
+  marketplaceRetries?: Prisma.SortOrder
 }
 
 export type RaffleHistoryCreateNestedManyWithoutStreamerInput = {
@@ -673,6 +723,8 @@ export type RaffleHistoryCreateWithoutStreamerInput = {
   deliveryStatus?: string
   tradeLockAt?: Date | string | null
   marketplaceItemId?: string | null
+  marketplaceRetries?: number
+  marketplaceCheckedAt?: Date | string | null
 }
 
 export type RaffleHistoryUncheckedCreateWithoutStreamerInput = {
@@ -691,6 +743,8 @@ export type RaffleHistoryUncheckedCreateWithoutStreamerInput = {
   deliveryStatus?: string
   tradeLockAt?: Date | string | null
   marketplaceItemId?: string | null
+  marketplaceRetries?: number
+  marketplaceCheckedAt?: Date | string | null
 }
 
 export type RaffleHistoryCreateOrConnectWithoutStreamerInput = {
@@ -739,6 +793,8 @@ export type RaffleHistoryScalarWhereInput = {
   deliveryStatus?: Prisma.StringFilter<"RaffleHistory"> | string
   tradeLockAt?: Prisma.DateTimeNullableFilter<"RaffleHistory"> | Date | string | null
   marketplaceItemId?: Prisma.StringNullableFilter<"RaffleHistory"> | string | null
+  marketplaceRetries?: Prisma.IntFilter<"RaffleHistory"> | number
+  marketplaceCheckedAt?: Prisma.DateTimeNullableFilter<"RaffleHistory"> | Date | string | null
 }
 
 export type RaffleHistoryCreateManyStreamerInput = {
@@ -757,6 +813,8 @@ export type RaffleHistoryCreateManyStreamerInput = {
   deliveryStatus?: string
   tradeLockAt?: Date | string | null
   marketplaceItemId?: string | null
+  marketplaceRetries?: number
+  marketplaceCheckedAt?: Date | string | null
 }
 
 export type RaffleHistoryUpdateWithoutStreamerInput = {
@@ -775,6 +833,8 @@ export type RaffleHistoryUpdateWithoutStreamerInput = {
   deliveryStatus?: Prisma.StringFieldUpdateOperationsInput | string
   tradeLockAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   marketplaceItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  marketplaceRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  marketplaceCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type RaffleHistoryUncheckedUpdateWithoutStreamerInput = {
@@ -793,6 +853,8 @@ export type RaffleHistoryUncheckedUpdateWithoutStreamerInput = {
   deliveryStatus?: Prisma.StringFieldUpdateOperationsInput | string
   tradeLockAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   marketplaceItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  marketplaceRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  marketplaceCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type RaffleHistoryUncheckedUpdateManyWithoutStreamerInput = {
@@ -811,6 +873,8 @@ export type RaffleHistoryUncheckedUpdateManyWithoutStreamerInput = {
   deliveryStatus?: Prisma.StringFieldUpdateOperationsInput | string
   tradeLockAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   marketplaceItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  marketplaceRetries?: Prisma.IntFieldUpdateOperationsInput | number
+  marketplaceCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 
@@ -832,6 +896,8 @@ export type RaffleHistorySelect<ExtArgs extends runtime.Types.Extensions.Interna
   deliveryStatus?: boolean
   tradeLockAt?: boolean
   marketplaceItemId?: boolean
+  marketplaceRetries?: boolean
+  marketplaceCheckedAt?: boolean
   streamer?: boolean | Prisma.StreamerDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["raffleHistory"]>
 
@@ -852,6 +918,8 @@ export type RaffleHistorySelectCreateManyAndReturn<ExtArgs extends runtime.Types
   deliveryStatus?: boolean
   tradeLockAt?: boolean
   marketplaceItemId?: boolean
+  marketplaceRetries?: boolean
+  marketplaceCheckedAt?: boolean
   streamer?: boolean | Prisma.StreamerDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["raffleHistory"]>
 
@@ -872,6 +940,8 @@ export type RaffleHistorySelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   deliveryStatus?: boolean
   tradeLockAt?: boolean
   marketplaceItemId?: boolean
+  marketplaceRetries?: boolean
+  marketplaceCheckedAt?: boolean
   streamer?: boolean | Prisma.StreamerDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["raffleHistory"]>
 
@@ -892,9 +962,11 @@ export type RaffleHistorySelectScalar = {
   deliveryStatus?: boolean
   tradeLockAt?: boolean
   marketplaceItemId?: boolean
+  marketplaceRetries?: boolean
+  marketplaceCheckedAt?: boolean
 }
 
-export type RaffleHistoryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "streamerId" | "winnerNumber" | "winnerName" | "winnerSource" | "prizeName" | "prizeDescription" | "prizeImageUrl" | "prizeQuantity" | "prizePscValue" | "confirmed" | "timestamp" | "tradeLink" | "deliveryStatus" | "tradeLockAt" | "marketplaceItemId", ExtArgs["result"]["raffleHistory"]>
+export type RaffleHistoryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "streamerId" | "winnerNumber" | "winnerName" | "winnerSource" | "prizeName" | "prizeDescription" | "prizeImageUrl" | "prizeQuantity" | "prizePscValue" | "confirmed" | "timestamp" | "tradeLink" | "deliveryStatus" | "tradeLockAt" | "marketplaceItemId" | "marketplaceRetries" | "marketplaceCheckedAt", ExtArgs["result"]["raffleHistory"]>
 export type RaffleHistoryInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   streamer?: boolean | Prisma.StreamerDefaultArgs<ExtArgs>
 }
@@ -927,6 +999,8 @@ export type $RaffleHistoryPayload<ExtArgs extends runtime.Types.Extensions.Inter
     deliveryStatus: string
     tradeLockAt: Date | null
     marketplaceItemId: string | null
+    marketplaceRetries: number
+    marketplaceCheckedAt: Date | null
   }, ExtArgs["result"]["raffleHistory"]>
   composites: {}
 }
@@ -1367,6 +1441,8 @@ export interface RaffleHistoryFieldRefs {
   readonly deliveryStatus: Prisma.FieldRef<"RaffleHistory", 'String'>
   readonly tradeLockAt: Prisma.FieldRef<"RaffleHistory", 'DateTime'>
   readonly marketplaceItemId: Prisma.FieldRef<"RaffleHistory", 'String'>
+  readonly marketplaceRetries: Prisma.FieldRef<"RaffleHistory", 'Int'>
+  readonly marketplaceCheckedAt: Prisma.FieldRef<"RaffleHistory", 'DateTime'>
 }
     
 

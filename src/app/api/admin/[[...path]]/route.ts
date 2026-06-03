@@ -65,7 +65,7 @@ export async function GET(
       select: {
         username: true, displayName: true, pscBalance: true, isAffiliate: true,
         themeColor: true, twitchChannel: true, kickChannel: true, youtubeChannel: true,
-        forcePasswordChange: true,
+        forcePasswordChange: true, chatWarsSprite: true,
       },
     });
     if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
@@ -331,6 +331,7 @@ export async function PATCH(
         isAffiliate?: boolean; pscBalance?: number; displayName?: string | null;
         passwordHash?: string; forcePasswordChange?: boolean; themeColor?: string;
         twitchChannel?: string | null; kickChannel?: string | null; youtubeChannel?: string | null;
+        chatWarsSprite?: string | null;
       } = {};
       if (typeof body.isAffiliate === 'boolean') updateData.isAffiliate = body.isAffiliate;
       if (typeof body.pscBalance === 'number' && body.pscBalance >= 0) {
@@ -359,6 +360,7 @@ export async function PATCH(
       if (body.twitchChannel !== undefined) updateData.twitchChannel = body.twitchChannel || null;
       if (body.kickChannel !== undefined) updateData.kickChannel = body.kickChannel || null;
       if (body.youtubeChannel !== undefined) updateData.youtubeChannel = body.youtubeChannel || null;
+      if (body.chatWarsSprite !== undefined) updateData.chatWarsSprite = body.chatWarsSprite || null;
       if (Object.keys(updateData).length === 0)
         return NextResponse.json({ error: 'Nenhum campo válido para atualizar.' }, { status: 400 });
       const updated = await prisma.streamer.update({

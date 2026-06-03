@@ -61,7 +61,8 @@
       "PowerShell(npx next build --no-lint 2>&1 | Out-File -FilePath \"$env:TEMP\\\\nextbuild.log\" -Encoding utf8; Select-String -Path \"$env:TEMP\\\\nextbuild.log\" -Pattern \"error|fail|✗|cannot|missing\" -CaseSensitive:$false | Select-Object -First 40 -ExpandProperty Line)",
       "PowerShell(npx next build 2>&1 | Out-File -FilePath \"$env:TEMP\\\\nextbuild.log\" -Encoding utf8; Get-Content \"$env:TEMP\\\\nextbuild.log\" -Tail 40)",
       "Bash(rtk lint *)",
-      "Bash(git ls-remote *)"
+      "Bash(git ls-remote *)",
+      "Bash(node node_modules/eslint/bin/eslint.js src/components/games/ChatWarsGame.tsx)"
     ],
     "additionalDirectories": [
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\streamers",

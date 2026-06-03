@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import {
@@ -10,7 +10,7 @@ import {
 } from './chatwars/engine';
 import { chatWarsSession, type FinalStats } from './chatwars/session';
 import { createCamera, updateCamera, render, type Camera } from './chatwars/render';
-import { processSprite, type ProcessedSprite } from './chatwars/spriteProcessor';
+import { processSprite, getTintedSprite, type ProcessedSprite } from './chatwars/spriteProcessor';
 import type { ChatMessage } from '@/types';
 
 const EVENT_COOLDOWN = 14_000;
@@ -74,6 +74,8 @@ export default function ChatWarsGame({ onBack }: Props) {
   const [showHelp, setShowHelp] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const spriteRef = useRef<ProcessedSprite | null>(null);
+  // mirror of the processed sprite for render-time consumers (results screen)
+  const [sprite, setSprite] = useState<ProcessedSprite | null>(null);
 
   /* ── boot the persistent session + keep the chat connection alive ────────── */
   useEffect(() => {
@@ -87,10 +89,10 @@ export default function ChatWarsGame({ onBack }: Props) {
     spriteRef.current = null;
     const img = new Image();
     img.onload = () => {
-      try { spriteRef.current = processSprite(img); }
-      catch { spriteRef.current = null; }
+      try { const p = processSprite(img); spriteRef.current = p; setSprite(p); }
+      catch { spriteRef.current = null; setSprite(null); }
     };
-    img.onerror = () => { spriteRef.current = null; };
+    img.onerror = () => { spriteRef.current = null; setSprite(null); };
     img.src = spriteUrl;
     return () => { spriteRef.current = null; };
   }, [spriteUrl]);
@@ -255,6 +257,7 @@ export default function ChatWarsGame({ onBack }: Props) {
   if (finished) {
     return (
       <ResultsScreen rows={finalRows} stats={finalStats} messages={chatMessages} endRef={chatEndRef}
+        sprite={sprite}
         onSorteio={handleSorteio} onContinue={handleContinue} onExit={onBack} />
     );
   }
@@ -889,10 +892,16 @@ function BallFace({ mood, wink, size }: { mood: 'happy' | 'angry'; wink?: boolea
   );
 }
 
-function ResultBall({ hue, name, size, rank, crown, streamer }: {
+function ResultBall({ hue, name, size, rank, crown, streamer, sprite }: {
   hue: number; name: string; size: number; rank: number; crown?: boolean; streamer?: boolean;
+  sprite?: ProcessedSprite | null;
 }) {
   const mood: 'happy' | 'angry' = rank === 1 || rank === 5 ? 'happy' : 'angry';
+  // tinted sprite as a data URL (cached per hue), same look as in-game
+  const spriteUrl = useMemo(
+    () => (sprite ? getTintedSprite(sprite, hue).toDataURL() : null),
+    [sprite, hue],
+  );
   return (
     <div className="relative" style={{ width: size, height: size }}>
       {crown && (
@@ -900,9 +909,13 @@ function ResultBall({ hue, name, size, rank, crown, streamer }: {
       )}
       <div className="w-full h-full rounded-full relative flex items-end justify-center"
         style={{
-          background: `radial-gradient(circle at 32% 26%, hsl(${hue},100%,82%), hsl(${hue},90%,54%) 56%, hsl(${hue},85%,32%))`,
-          boxShadow: `0 0 30px hsl(${hue},90%,55%), inset 0 -9px 20px rgba(0,0,0,0.42), inset 7px 9px 16px rgba(255,255,255,0.4)`,
-          border: `2px solid ${streamer ? '#9be9ff' : `hsl(${hue},100%,84%)`}`,
+          background: spriteUrl
+            ? `center/contain no-repeat url(${spriteUrl})`
+            : `radial-gradient(circle at 32% 26%, hsl(${hue},100%,82%), hsl(${hue},90%,54%) 56%, hsl(${hue},85%,32%))`,
+          boxShadow: spriteUrl
+            ? `0 0 30px hsl(${hue},90%,55%)`
+            : `0 0 30px hsl(${hue},90%,55%), inset 0 -9px 20px rgba(0,0,0,0.42), inset 7px 9px 16px rgba(255,255,255,0.4)`,
+          border: spriteUrl ? 'none' : `2px solid ${streamer ? '#9be9ff' : `hsl(${hue},100%,84%)`}`,
         }}>
         <BallFace mood={mood} wink={rank === 1} size={size} />
         <span className="font-orbitron font-bold text-white relative z-10 truncate px-1"
@@ -939,12 +952,12 @@ const PODIUM_GRAD = [
   'linear-gradient(180deg,#8a4fd6,#4a2a8a)',
 ];
 
-function PodiumPlace({ row, rank }: { row: LeaderRow; rank: 1 | 2 | 3 }) {
+function PodiumPlace({ row, rank, sprite }: { row: LeaderRow; rank: 1 | 2 | 3; sprite?: ProcessedSprite | null }) {
   const idx = rank - 1;
   return (
     <motion.div className="flex flex-col items-center justify-end relative z-10"
       initial={{ opacity: 0, y: 36 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + idx * 0.12, type: 'spring', stiffness: 220, damping: 18 }}>
-      <ResultBall hue={row.hue} name={row.name} size={PODIUM_BALL[idx]} rank={rank} crown={rank === 1} streamer={row.streamer} />
+      <ResultBall hue={row.hue} name={row.name} size={PODIUM_BALL[idx]} rank={rank} crown={rank === 1} streamer={row.streamer} sprite={sprite} />
       <div className="font-orbitron font-black mt-1.5" style={{ color: '#FFD24A', fontSize: rank === 1 ? 24 : 19, textShadow: '0 0 12px rgba(255,210,74,0.7)' }}>
         {fmtPts(row.mass)}
       </div>
@@ -969,21 +982,22 @@ function PodiumPlace({ row, rank }: { row: LeaderRow; rank: 1 | 2 | 3 }) {
   );
 }
 
-function SidePlace({ row, rank }: { row: LeaderRow; rank: number }) {
+function SidePlace({ row, rank, sprite }: { row: LeaderRow; rank: number; sprite?: ProcessedSprite | null }) {
   return (
     <motion.div className="flex flex-col items-center justify-end pb-1 relative z-10"
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.4 }}>
       <div className="font-orbitron font-black text-white/45 text-sm mb-1">{rank}º</div>
-      <ResultBall hue={row.hue} name={row.name} size={70} rank={rank} streamer={row.streamer} />
+      <ResultBall hue={row.hue} name={row.name} size={70} rank={rank} streamer={row.streamer} sprite={sprite} />
       <div className="font-orbitron font-bold mt-1" style={{ color: '#FFD24A', fontSize: 13 }}>{fmtPts(row.mass)}</div>
       <div className="font-orbitron text-white/40 tracking-widest" style={{ fontSize: 7 }}>PTS</div>
     </motion.div>
   );
 }
 
-function ResultsScreen({ rows, stats, messages, endRef, onSorteio, onContinue, onExit }: {
+function ResultsScreen({ rows, stats, messages, endRef, sprite, onSorteio, onContinue, onExit }: {
   rows: LeaderRow[]; stats: FinalStats; messages: ChatMessage[];
   endRef: React.RefObject<HTMLDivElement | null>;
+  sprite?: ProcessedSprite | null;
   onSorteio: () => void; onContinue: () => void; onExit: () => void;
 }) {
   const top = rows.slice(0, 5);
@@ -1104,11 +1118,11 @@ function ResultsScreen({ rows, stats, messages, endRef, onSorteio, onContinue, o
             animate={{ opacity: [0.72, 1, 0.72], scale: [0.95, 1.06, 0.95] }}
             transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }} />
 
-          {top[3] && <SidePlace row={top[3]} rank={4} />}
-          {top[1] && <PodiumPlace row={top[1]} rank={2} />}
-          {top[0] && <PodiumPlace row={top[0]} rank={1} />}
-          {top[2] && <PodiumPlace row={top[2]} rank={3} />}
-          {top[4] && <SidePlace row={top[4]} rank={5} />}
+          {top[3] && <SidePlace row={top[3]} rank={4} sprite={sprite} />}
+          {top[1] && <PodiumPlace row={top[1]} rank={2} sprite={sprite} />}
+          {top[0] && <PodiumPlace row={top[0]} rank={1} sprite={sprite} />}
+          {top[2] && <PodiumPlace row={top[2]} rank={3} sprite={sprite} />}
+          {top[4] && <SidePlace row={top[4]} rank={5} sprite={sprite} />}
         </div>
       )}
 

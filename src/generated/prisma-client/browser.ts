@@ -43,6 +43,16 @@ export type PscTransaction = Prisma.PscTransactionModel
  */
 export type MarketingImage = Prisma.MarketingImageModel
 /**
+ * Model AffiliateProposal
+ * 
+ */
+export type AffiliateProposal = Prisma.AffiliateProposalModel
+/**
+ * Model Sale
+ * 
+ */
+export type Sale = Prisma.SaleModel
+/**
  * Model RaffleHistory
  * 
  */

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getDeliveryMode } from '@/lib/prizeDelivery';
 import type { DeliveryStatus } from '@/types';
 
 const STEAM_REGEX = /https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/;
@@ -11,13 +12,19 @@ const STATUS_CFG: Record<string, { label: string; sub: string | null; color: str
   aguardando_tradelink:{ label: 'AGUARD. TRADE LINK', sub: 'Esperando DM do vencedor',           color: '#A855F7',              bg: 'rgba(168,85,247,0.1)',   border: 'rgba(168,85,247,0.3)',   isError: false },
   item_comprado:       { label: 'ITEM COMPRADO',       sub: 'Aguardando trade link',              color: '#00E5FF',              bg: 'rgba(0,229,255,0.08)',   border: 'rgba(0,229,255,0.25)',   isError: false },
   tradelocked:         { label: 'TRADE LOCK',          sub: null,                                 color: '#FFD166',              bg: 'rgba(255,209,102,0.1)', border: 'rgba(255,209,102,0.3)', isError: false },
+  aguardando_endereco: { label: 'AGUARD. ENDEREÇO',    sub: 'Esperando mensagem do vencedor',    color: '#A855F7',              bg: 'rgba(168,85,247,0.1)',   border: 'rgba(168,85,247,0.3)',   isError: false },
+  endereco_recebido:   { label: 'ENDEREÇO RECEBIDO',   sub: 'Aguardando envio pelo streamer',    color: '#00E5FF',              bg: 'rgba(0,229,255,0.08)',   border: 'rgba(0,229,255,0.25)',   isError: false },
   entregue:            { label: 'ENTREGUE',            sub: null,                                 color: '#00FFA3',              bg: 'rgba(0,255,163,0.1)',   border: 'rgba(0,255,163,0.3)',   isError: false },
   erro_tradelink:      { label: 'ERRO TRADE LINK',     sub: 'Erro ao receber trade link',         color: '#FF4444',              bg: 'rgba(255,68,68,0.12)',  border: 'rgba(255,68,68,0.35)',  isError: true  },
   erro_entrega:        { label: 'ERRO ENTREGA',        sub: 'Erro ao enviar produto',             color: '#FF4444',              bg: 'rgba(255,68,68,0.12)',  border: 'rgba(255,68,68,0.35)',  isError: true  },
   erro_compra:         { label: 'PROBLEMA NA COMPRA',  sub: 'Problema com a compra do produto',  color: '#FF4444',              bg: 'rgba(255,68,68,0.12)',  border: 'rgba(255,68,68,0.35)',  isError: true  },
 };
 
-const STATUS_ORDER = ['novo', 'aguardando_tradelink', 'item_comprado', 'tradelocked', 'entregue', 'erro_tradelink', 'erro_entrega', 'erro_compra'];
+const STATUS_ORDER = [
+  'novo', 'aguardando_tradelink', 'item_comprado', 'tradelocked',
+  'aguardando_endereco', 'endereco_recebido', 'entregue',
+  'erro_tradelink', 'erro_entrega', 'erro_compra',
+];
 
 interface DeliveryItem {
   id: string;
@@ -28,6 +35,7 @@ interface DeliveryItem {
   prizeImageUrl: string | null;
   prizePscValue: number | null;
   tradeLink: string | null;
+  deliveryAddress: string | null;
   deliveryStatus: string;
   tradeLockAt: number | null;
   timestamp: number;
@@ -150,6 +158,106 @@ function TradeLinkModal({ item, onConfirm, onClose }: {
   );
 }
 
+/* ── Address modal (prêmios "Camisa") ───────────────────────────────── */
+function AddressModal({ item, onConfirm, onClose }: {
+  item: DeliveryItem;
+  onConfirm: (address: string) => void;
+  onClose: () => void;
+}) {
+  const [value, setValue] = useState(item.deliveryAddress ?? '');
+  const [error, setError] = useState('');
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const mode = getDeliveryMode(item.prizeName);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const handleSave = () => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setError('Informe o endereço completo.');
+      return;
+    }
+    onConfirm(trimmed);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.75)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        className="rounded-2xl p-6 mx-4 w-full"
+        style={{ maxWidth: 520, background: '#0d1117', border: '1px solid rgba(255,180,0,0.25)', boxShadow: '0 24px 80px rgba(0,0,0,0.7)' }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(255,180,0,0.1)', border: '1px solid rgba(255,180,0,0.2)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFB300">
+              <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+            </svg>
+          </div>
+          <h2 className="font-orbitron font-bold tracking-widest text-white" style={{ fontSize: 13 }}>
+            {item.deliveryAddress ? 'EDITAR ENDEREÇO' : 'INSERIR ENDEREÇO'}
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-3 mb-4 p-3 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          {item.prizeImageUrl && (
+            <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0"
+              style={{ background: 'rgba(255,255,255,0.04)' }}>
+              <img src={item.prizeImageUrl} alt="" className="w-full h-full object-contain" />
+            </div>
+          )}
+          <div>
+            <p className="font-rajdhani font-bold text-white" style={{ fontSize: 13 }}>{item.prizeName}</p>
+            <p className="font-rajdhani" style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+              Ganhador: <span style={{ color: 'rgba(255,255,255,0.7)' }}>{item.winnerName}</span>
+              {' · '}
+              <span style={{ color: 'rgba(255,255,255,0.4)' }}>{item.streamerDisplayName || item.streamerUsername}</span>
+            </p>
+          </div>
+        </div>
+
+        <textarea
+          ref={inputRef}
+          value={value}
+          onChange={e => { setValue(e.target.value); setError(''); }}
+          onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+          placeholder={mode === 'address_and_shirt'
+            ? 'Endereço completo (com CEP) e qual camisa a pessoa escolheu...'
+            : 'Endereço completo (com CEP)...'}
+          rows={4}
+          className="w-full px-3 py-2.5 rounded-xl font-rajdhani mb-2 outline-none resize-none"
+          style={{
+            background: 'rgba(255,180,0,0.05)',
+            border: `1px solid ${error ? 'rgba(255,68,68,0.5)' : 'rgba(255,180,0,0.2)'}`,
+            color: 'rgba(255,255,255,0.85)', fontSize: 12,
+          }}
+        />
+        {error && <p className="font-rajdhani mb-3" style={{ fontSize: 11, color: '#FF4444' }}>{error}</p>}
+
+        <div className="flex gap-2 justify-end mt-4">
+          <button onClick={onClose}
+            className="px-4 py-2 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-125"
+            style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            CANCELAR
+          </button>
+          <button onClick={handleSave}
+            className="px-4 py-2 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-110"
+            style={{ fontSize: 10, color: '#000', background: '#FFB300', border: 'none' }}>
+            SALVAR
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 /* ── Main dashboard ─────────────────────────────────────────────────── */
 export default function AdminDeliveriesDashboard() {
   const [counts, setCounts] = useState<DashboardCounts>({ pending: 0, error: 0, undelivered: 0, total: 0 });
@@ -158,6 +266,7 @@ export default function AdminDeliveriesDashboard() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [modalItem, setModalItem] = useState<DeliveryItem | null>(null);
+  const [addressModalItem, setAddressModalItem] = useState<DeliveryItem | null>(null);
   const currentFilterRef = useRef<ActiveFilter | null>(null);
 
   const load = useCallback(async (filter: ActiveFilter | null) => {
@@ -214,6 +323,18 @@ export default function AdminDeliveriesDashboard() {
     } catch {}
   };
 
+  const handleAddressSave = async (id: string, deliveryAddress: string) => {
+    setItems(prev => prev.map(it => it.id === id ? { ...it, deliveryAddress, deliveryStatus: 'endereco_recebido' } : it));
+    setAddressModalItem(null);
+    try {
+      await fetch(`/api/admin/deliveries/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deliveryAddress, deliveryStatus: 'endereco_recebido' }),
+      });
+    } catch {}
+  };
+
   const displayed = items.filter(it => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -251,6 +372,13 @@ export default function AdminDeliveriesDashboard() {
             item={modalItem}
             onConfirm={tl => handleTradeLinkSave(modalItem.id, tl)}
             onClose={() => setModalItem(null)}
+          />
+        )}
+        {addressModalItem && (
+          <AddressModal
+            item={addressModalItem}
+            onConfirm={addr => handleAddressSave(addressModalItem.id, addr)}
+            onClose={() => setAddressModalItem(null)}
           />
         )}
       </AnimatePresence>
@@ -352,7 +480,7 @@ export default function AdminDeliveriesDashboard() {
                 <table className="w-full" style={{ borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                      {['ITEM', 'GANHADOR', 'STREAMER', 'TRADE LINK', 'STATUS', 'DATA'].map(h => (
+                      {['ITEM', 'GANHADOR', 'STREAMER', 'ENTREGA', 'STATUS', 'DATA'].map(h => (
                         <th key={h} className="font-orbitron text-white/25 tracking-widest text-left px-4 py-3"
                           style={{ fontSize: 9, fontWeight: 700 }}>
                           {h}
@@ -363,6 +491,7 @@ export default function AdminDeliveriesDashboard() {
                   <tbody>
                     {displayed.map((item, i) => {
                       const cfg = STATUS_CFG[item.deliveryStatus] ?? STATUS_CFG.novo;
+                      const isAddressMode = getDeliveryMode(item.prizeName) !== 'trade_link';
                       const dt = new Date(item.timestamp);
 
                       const rowBg = cfg.isError
@@ -441,9 +570,50 @@ export default function AdminDeliveriesDashboard() {
                             </div>
                           </td>
 
-                          {/* TRADE LINK */}
+                          {/* ENTREGA (trade link ou endereço, dependendo do prêmio) */}
                           <td className="px-4 py-3" style={{ minWidth: 180, maxWidth: 240 }}>
-                            {item.tradeLink ? (
+                            {isAddressMode ? (
+                              item.deliveryAddress ? (
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="flex-1 min-w-0 truncate font-rajdhani" style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }} title={item.deliveryAddress}>
+                                    {item.deliveryAddress}
+                                  </span>
+                                  <button
+                                    onClick={() => setAddressModalItem(item)}
+                                    title="Editar"
+                                    className="flex-shrink-0 p-1 rounded transition-all hover:bg-white/10"
+                                    style={{ color: 'rgba(255,180,0,0.5)' }}
+                                  >
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => navigator.clipboard.writeText(item.deliveryAddress!).catch(() => {})}
+                                    title="Copiar"
+                                    className="flex-shrink-0 p-1 rounded transition-all hover:bg-white/10"
+                                    style={{ color: 'rgba(255,180,0,0.5)' }}
+                                  >
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                                      <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                                    </svg>
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <span className="font-rajdhani" style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>
+                                    Não informado
+                                  </span>
+                                  <button
+                                    onClick={() => setAddressModalItem(item)}
+                                    className="flex-shrink-0 px-2 py-1 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-125"
+                                    style={{ fontSize: 9, color: '#FFB300', background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.2)' }}
+                                  >
+                                    INSERIR
+                                  </button>
+                                </div>
+                              )
+                            ) : item.tradeLink ? (
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="flex-1 min-w-0 truncate font-mono" style={{ fontSize: 10, color: '#00E5FF' }} title={item.tradeLink}>
                                   {item.tradeLink}

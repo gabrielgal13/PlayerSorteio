@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkStock, buyItem } from '@/lib/waxpeer';
+import { getDeliveryMode } from '@/lib/prizeDelivery';
+import { ensureDeliveryAddressColumn, saveDeliveryAddress, MIN_ADDRESS_LENGTH } from '@/lib/deliveryCapture';
 
 const STEAM_REGEX = /https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/;
 const WINNER_CUTOFF_MS = 6 * 60 * 60 * 1000; // 6 h
@@ -222,7 +224,7 @@ export async function GET(req: NextRequest) {
 
     // ── Get pending winners for this streamer ──
     const cutoff = new Date(Date.now() - WINNER_CUTOFF_MS);
-    const pendingWinners = await prisma.raffleHistory.findMany({
+    const pendingWinnersRaw = await prisma.raffleHistory.findMany({
       where: {
         streamerId: streamer.id,
         deliveryStatus: { notIn: ['entregue', 'tradelocked'] },
@@ -232,6 +234,19 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    // "tradeLink: null" acima também é verdade pra prêmios de endereço (Camisa),
+    // que nunca preenchem esse campo — filtramos os que já têm endereço salvo.
+    let pendingWinners = pendingWinnersRaw;
+    if (pendingWinnersRaw.length > 0) {
+      await ensureDeliveryAddressColumn();
+      const ids = pendingWinnersRaw.map(w => w.id);
+      const addrRows = await prisma.$queryRaw<Array<{ id: string; deliveryAddress: string | null }>>`
+        SELECT id, "deliveryAddress" FROM "RaffleHistory" WHERE id = ANY(${ids})
+      `;
+      const addressDoneIds = new Set(addrRows.filter(r => r.deliveryAddress).map(r => r.id));
+      pendingWinners = pendingWinnersRaw.filter(w => !addressDoneIds.has(w.id));
+    }
+
     const winnerMap = new Map(pendingWinners.map(w => [w.winnerName.toLowerCase(), w]));
     let processed = 0;
 
@@ -240,6 +255,28 @@ export async function GET(req: NextRequest) {
       const winner = winnerMap.get(sender);
 
       if (!winner) continue; // Not a pending winner — ignore
+
+      const mode = getDeliveryMode(winner.prizeName);
+
+      // ── Prêmio físico (Camisa) — coleta endereço (e camisa escolhida) em vez de trade link ──
+      if (mode !== 'trade_link') {
+        if (msg.text.trim().length >= MIN_ADDRESS_LENGTH) {
+          await saveDeliveryAddress(winner.id, msg.text.trim());
+          await sendYoutubeMessage(
+            liveChatId,
+            `@${msg.authorDisplayName} endereço recebido! O streamer vai providenciar o envio. 🎁`,
+            accessToken,
+          );
+          winnerMap.delete(sender);
+          processed++;
+        } else if (msg.text.toLowerCase().includes(`@${botName}`)) {
+          const askMore = mode === 'address_and_shirt'
+            ? 'preciso do seu endereço completo (com CEP) e qual camisa você quer, tudo em uma mensagem!'
+            : 'preciso do seu endereço completo (com CEP)!';
+          await sendYoutubeMessage(liveChatId, `@${msg.authorDisplayName} ${askMore}`, accessToken);
+        }
+        continue;
+      }
 
       const steamMatch = msg.text.match(STEAM_REGEX);
 

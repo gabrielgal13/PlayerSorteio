@@ -1,39 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkStock, buyItem } from '@/lib/waxpeer';
-
-const STEAM_LINK_REGEX = /https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/;
+import { findPendingDelivery, saveDeliveryAddress, STEAM_LINK_REGEX, MIN_ADDRESS_LENGTH } from '@/lib/deliveryCapture';
 
 export async function POST(req: NextRequest) {
-  const { winnerName, tradeLink, source } = await req.json() as {
+  const { winnerName, text, source } = await req.json() as {
     winnerName: string;
-    tradeLink: string;
+    text: string;
     source: 'youtube' | 'kick';
   };
 
-  if (!winnerName?.trim() || !tradeLink?.trim() || !STEAM_LINK_REGEX.test(tradeLink)) {
+  if (!winnerName?.trim() || !text?.trim()) {
     return NextResponse.json({ ok: false, error: 'Dados inválidos' }, { status: 400 });
   }
 
-  // winnerSource null = inscrito manualmente (aceito de qualquer plataforma)
-  const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000); // últimas 6 horas
-  const entry = await prisma.raffleHistory.findFirst({
-    where: {
-      winnerName: { equals: winnerName, mode: 'insensitive' },
-      deliveryStatus: { notIn: ['entregue', 'tradelocked'] },
-      tradeLink: null,
-      timestamp: { gte: cutoff },
-      OR: [{ winnerSource: source }, { winnerSource: null }],
-    },
-    orderBy: { timestamp: 'desc' },
-  });
-
-  if (!entry) {
+  const pending = await findPendingDelivery({ winnerName, source });
+  if (!pending) {
     return NextResponse.json({ ok: false, error: 'Nenhuma entrega pendente para esse usuário' });
   }
 
+  // ── Prêmio físico (Camisa) — coleta endereço (e camisa escolhida) em vez de trade link ──
+  if (pending.mode !== 'trade_link') {
+    if (text.trim().length < MIN_ADDRESS_LENGTH) {
+      return NextResponse.json({ ok: false, error: 'Texto muito curto para ser o endereço.' });
+    }
+    await saveDeliveryAddress(pending.id, text.trim());
+    return NextResponse.json({ ok: true, source, mode: pending.mode });
+  }
+
+  if (!STEAM_LINK_REGEX.test(text)) {
+    return NextResponse.json({ ok: false, error: 'Link inválido' });
+  }
+  const tradeLink = text;
+
   await prisma.raffleHistory.update({
-    where: { id: entry.id },
+    where: { id: pending.id },
     data: { tradeLink },
   });
 
@@ -43,10 +44,10 @@ export async function POST(req: NextRequest) {
       let bought: { id: string; price: number } | null = null;
       let lastError = '';
       for (let attempt = 1; attempt <= 5; attempt++) {
-        const listings = await checkStock(entry.prizeName);
+        const listings = await checkStock(pending.prizeName);
         if (!listings.length) { lastError = 'Item não encontrado no Waxpeer'; break; }
         try {
-          const result = await buyItem(listings[0], tradeLink, entry.id);
+          const result = await buyItem(listings[0], tradeLink, pending.id);
           bought = { id: String(result.id), price: listings[0].price };
           break;
         } catch (err) {
@@ -58,13 +59,13 @@ export async function POST(req: NextRequest) {
 
       if (bought) {
         await prisma.raffleHistory.update({
-          where: { id: entry.id },
+          where: { id: pending.id },
           data: { marketplaceItemId: bought.id, deliveryStatus: 'item_comprado' },
         });
         console.log(`[chat-trade-link] ${source} | ${winnerName} → item_comprado (${bought.id})`);
       } else {
         await prisma.raffleHistory.update({
-          where: { id: entry.id },
+          where: { id: pending.id },
           data: { deliveryStatus: 'erro_compra' },
         });
         console.log(`[chat-trade-link] ${source} | ${winnerName} → erro_compra: ${lastError}`);
@@ -72,11 +73,11 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error('[chat-trade-link] erro inesperado:', err);
       await prisma.raffleHistory.update({
-        where: { id: entry.id },
+        where: { id: pending.id },
         data: { deliveryStatus: 'erro_compra' },
       }).catch(() => {});
     }
   }
 
-  return NextResponse.json({ ok: true, source });
+  return NextResponse.json({ ok: true, source, mode: pending.mode });
 }

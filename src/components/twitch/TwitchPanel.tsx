@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
+import { getDeliveryMode } from '@/lib/prizeDelivery';
+
+const MIN_ADDRESS_LENGTH = 15;
 
 export default function TwitchPanel() {
   const {
@@ -175,41 +178,66 @@ export default function TwitchPanel() {
       }
     }
 
-    // YouTube / Kick: captura trade link quando ganhador menciona o bot
+    // YouTube / Kick: captura trade link (ou endereço, pra prêmios "Camisa") quando ganhador menciona o bot
     if (source === 'youtube' || source === 'kick') {
       const botName = (process.env.NEXT_PUBLIC_TWITCH_BOT_USERNAME ?? 'PlayerSkinsBOT').toLowerCase();
       const mentionsBot = message.toLowerCase().includes(`@${botName}`);
-      const steamMatch = message.match(/https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/);
       const isCurrentWinner =
         currentWinnerRef.current &&
         displayName.toLowerCase() === currentWinnerRef.current.name.toLowerCase();
 
-      if (mentionsBot && isCurrentWinner) {
-        if (steamMatch) {
-          fetch('/api/chat-trade-link', {
+      const sendChatError = (errorMsg: string) => {
+        const fullMsg = `@${displayName} ${errorMsg}`;
+        const { currentUser: u } = useStore.getState();
+        if (source === 'kick' && u?.kickChannel) {
+          fetch('/api/kick/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ winnerName: displayName, tradeLink: steamMatch[0], source }),
+            body: JSON.stringify({
+              kickChannel: u.kickChannel,
+              message: fullMsg,
+              ...(u.kickChatroomId ? { chatroomId: String(u.kickChatroomId) } : {}),
+            }),
           }).catch(() => {});
+        } else if (source === 'youtube' && u?.youtubeChannel) {
+          fetch('/api/youtube/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ youtubeHandle: u.youtubeChannel, message: fullMsg }),
+          }).catch(() => {});
+        }
+      };
+
+      if (mentionsBot && isCurrentWinner) {
+        const prizeName = useStore.getState().currentPrize?.name ?? '';
+        const mode = getDeliveryMode(prizeName);
+
+        if (mode !== 'trade_link') {
+          // Prêmio físico (Camisa) — texto livre com endereço (e camisa escolhida)
+          const cleaned = message.replace(new RegExp(`@${botName}`, 'ig'), '').trim();
+          if (cleaned.length >= MIN_ADDRESS_LENGTH) {
+            fetch('/api/chat-trade-link', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ winnerName: displayName, text: cleaned, source }),
+            }).catch(() => {});
+          } else {
+            sendChatError(
+              mode === 'address_and_shirt'
+                ? 'preciso do endereço completo (com CEP) e qual camisa você quer, tudo em uma mensagem!'
+                : 'preciso do endereço completo (com CEP), pode mandar em uma mensagem!',
+            );
+          }
         } else {
-          const errorMsg = `@${displayName} link inválido! Envie no formato: https://steamcommunity.com/tradeoffer/new/?partner=XXXXXXXX&token=XXXXXXXX`;
-          const { currentUser: u } = useStore.getState();
-          if (source === 'kick' && u?.kickChannel) {
-            fetch('/api/kick/send', {
+          const steamMatch = message.match(/https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/);
+          if (steamMatch) {
+            fetch('/api/chat-trade-link', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                kickChannel: u.kickChannel,
-                message: errorMsg,
-                ...(u.kickChatroomId ? { chatroomId: String(u.kickChatroomId) } : {}),
-              }),
+              body: JSON.stringify({ winnerName: displayName, text: steamMatch[0], source }),
             }).catch(() => {});
-          } else if (source === 'youtube' && u?.youtubeChannel) {
-            fetch('/api/youtube/send', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ youtubeHandle: u.youtubeChannel, message: errorMsg }),
-            }).catch(() => {});
+          } else {
+            sendChatError('link inválido! Envie no formato: https://steamcommunity.com/tradeoffer/new/?partner=XXXXXXXX&token=XXXXXXXX');
           }
         }
       }

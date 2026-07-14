@@ -77,6 +77,8 @@ export type DeliveryStatus =
   | 'aguardando_tradelink'
   | 'item_comprado'
   | 'tradelocked'
+  | 'aguardando_endereco'
+  | 'endereco_recebido'
   | 'entregue'
   | 'erro_tradelink'
   | 'erro_entrega'
@@ -90,6 +92,7 @@ export interface RaffleResult {
   timestamp: number;
   confirmed: boolean;
   tradeLink?: string;
+  deliveryAddress?: string;
   deliveryStatus?: DeliveryStatus;
   tradeLockAt?: number;
   marketplaceItemId?: string | null;

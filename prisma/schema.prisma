@@ -12,7 +12,8 @@ model Streamer {
   passwordHash String
   mascot       String  @default("careca")
   displayName  String?
-  isAdmin      Boolean @default(false)
+  nome         String?  // Nome real para identificação (ex: Felipe Paiva)
+  isAdmin      Boolean  @default(false)
 
   // Canais
   twitchChannel  String?
@@ -110,6 +111,46 @@ model MarketingImage {
   active    Boolean  @default(true)
   order     Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+model AffiliateProposal {
+  id               String   @id @default(cuid())
+  streamerName     String
+  coupon           String?
+  profitPct        Float
+  status           String   @default("pending") // pending | accepted | refused
+  accountConfirmed Boolean  @default(false)
+  shirtsConfirmed  Boolean  @default(false)
+  startedAt        DateTime? // Dia inicial da afiliação (definido pelo botão "Iniciar")
+  contractMonths   Int?      // Duração do contrato em meses (definido na criação da proposta)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Sale {
+  id                    String   @id @default(cuid())
+  orderNumber           String   // Número do pedido
+  date                  String
+  contactName           String
+  cpfCnpj               String
+  email                 String?
+  city                  String?
+  state                 String?
+  productDescription   String
+  quantity              Int
+  unitPrice             Float
+  totalPrice            Float
+  discount              Float   @default(0)
+  shipping              Float   @default(0)
+  status                String  @default("Em aberto") // Em aberto, Finalizado, Despesa Afiliado
+  affiliateUsername     String?  // Username do streamer afiliado (quando status = Despesa Afiliado)
+  trackingCode          String?
+  observations          String?
+  source                String?  // Origem do lançamento manual: 'vendas' | 'playerskins' (null = venda do CSV)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([orderNumber, productDescription]) // Chave única composta: pedido + produto
 }
 
 model RaffleHistory {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { checkStock, buyItem } from '@/lib/waxpeer';
+import { getDeliveryMode } from '@/lib/prizeDelivery';
+import { findPendingDelivery, saveDeliveryAddress, STEAM_LINK_REGEX, MIN_ADDRESS_LENGTH } from '@/lib/deliveryCapture';
 
 // Resolve a origin real mesmo atrás de proxy/Vercel
 function getOrigin(req: NextRequest): string {
@@ -345,7 +347,13 @@ export async function POST(
     const prizePart = prizeName ? ` levou ${prizeName.replace(/\s*\(.*?\)/g, '').trim()}` : '';
     const botName = process.env.TWITCH_BOT_USERNAME ?? 'PlayerSkinsBOT';
     const isTwitchWinner = !winnerSource || winnerSource === 'twitch';
-    const instruction = isTwitchWinner ? ` | Para receber, mande seu Steam trade link por WHISPER para @${botName}` : '';
+    const deliveryMode = prizeName ? getDeliveryMode(prizeName) : 'trade_link';
+    const askText = deliveryMode === 'address_and_shirt'
+      ? 'mande seu endereço completo (com CEP) e qual camisa você quer, tudo em uma mensagem'
+      : deliveryMode === 'address'
+      ? 'mande seu endereço completo (com CEP)'
+      : 'mande seu Steam trade link';
+    const instruction = isTwitchWinner ? ` | Para receber, ${askText} por WHISPER para @${botName}` : '';
     const message = `${e1} @${winnerName} ${g}!${prizePart}${instruction} ${e2}`;
 
     const result = await sendBotChatMessage(broadcasterId, message);
@@ -428,55 +436,58 @@ export async function POST(
     if (msgType === 'notification' && payload.event) {
       const senderLogin = payload.event.from_user_login.toLowerCase();
       const text = payload.event.whisper.text.trim();
+      const fromUserId = payload.event.from_user_id;
 
-      const steamLinkRegex = /https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/;
-      if (!steamLinkRegex.test(text)) {
+      // Busca entrega pendente — inclui afiliados (aguardando_tradelink) e não-afiliados (novo/sem status)
+      // winnerSource null = inscrito manualmente (aceito de qualquer plataforma)
+      const pending = await findPendingDelivery({ winnerName: senderLogin, source: 'twitch' });
+      if (!pending) {
         await sendTwitchWhisper(
-          payload.event.from_user_id,
+          fromUserId,
+          'Nenhuma entrega pendente encontrada para sua conta. Se você ganhou há mais de 6 horas, entre em contato com o streamer.',
+        );
+        return new NextResponse('ok', { status: 200 });
+      }
+
+      // ── Prêmio físico (Camisa) — coleta endereço (e camisa escolhida) em vez de trade link ──
+      if (pending.mode !== 'trade_link') {
+        if (text.length < MIN_ADDRESS_LENGTH) {
+          const askMore = pending.mode === 'address_and_shirt'
+            ? 'Preciso do seu endereço completo (com CEP) e qual camisa você quer, tudo em uma mensagem!'
+            : 'Preciso do seu endereço completo (com CEP)!';
+          await sendTwitchWhisper(fromUserId, askMore);
+          return new NextResponse('ok', { status: 200 });
+        }
+        await saveDeliveryAddress(pending.id, text);
+        await sendTwitchWhisper(fromUserId, 'Endereço recebido! O streamer vai providenciar o envio. 🎁');
+        return new NextResponse('ok', { status: 200 });
+      }
+
+      if (!STEAM_LINK_REGEX.test(text)) {
+        await sendTwitchWhisper(
+          fromUserId,
           'Link inválido! Envie apenas o trade link Steam no formato: https://steamcommunity.com/tradeoffer/new/?partner=XXXXXXXX&token=XXXXXXXX',
         );
         return new NextResponse('ok', { status: 200 });
       }
       const tradeLink = text;
 
-      // Busca entrega pendente — inclui afiliados (aguardando_tradelink) e não-afiliados (novo/sem status)
-      // winnerSource null = inscrito manualmente (aceito de qualquer plataforma)
-      const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000); // últimas 6h
-      const entry = await prisma.raffleHistory.findFirst({
-        where: {
-          winnerName: { equals: senderLogin, mode: 'insensitive' },
-          deliveryStatus: { notIn: ['entregue', 'tradelocked'] },
-          tradeLink: null,
-          timestamp: { gte: cutoff },
-          OR: [{ winnerSource: 'twitch' }, { winnerSource: null }],
-        },
-        orderBy: { timestamp: 'desc' },
-      });
-
-      if (!entry) {
-        await sendTwitchWhisper(
-          payload.event.from_user_id,
-          'Nenhuma entrega pendente encontrada para sua conta. Se você ganhou há mais de 6 horas, entre em contato com o streamer.',
-        );
-        return new NextResponse('ok', { status: 200 });
-      }
-
       // Salva o trade link sempre, independente de ser afiliado ou não
       await prisma.raffleHistory.update({
-        where: { id: entry.id },
+        where: { id: pending.id },
         data: { tradeLink },
       });
 
       // Compra + entrega P2P direto na Steam do tradeLink (apenas afiliados / Waxpeer items)
-      if (process.env.WAXPEER_API_KEY && !entry.marketplaceItemId) {
+      if (process.env.WAXPEER_API_KEY && !pending.marketplaceItemId) {
         try {
           let bought: { id: string } | null = null;
           let lastError = '';
           for (let attempt = 1; attempt <= 5; attempt++) {
-            const listings = await checkStock(entry.prizeName);
+            const listings = await checkStock(pending.prizeName);
             if (!listings.length) { lastError = 'Item não encontrado'; break; }
             try {
-              const result = await buyItem(listings[0], tradeLink, entry.id);
+              const result = await buyItem(listings[0], tradeLink, pending.id);
               bought = { id: String(result.id) };
               break;
             } catch (err) {
@@ -485,12 +496,12 @@ export async function POST(
             }
           }
           await prisma.raffleHistory.update({
-            where: { id: entry.id },
+            where: { id: pending.id },
             data: bought
               ? { marketplaceItemId: bought.id, deliveryStatus: 'item_comprado' }
               : { deliveryStatus: 'erro_compra' },
           });
-          if (!bought) console.log('[twitch/whisper] erro compra:', entry.winnerName, lastError);
+          if (!bought) console.log('[twitch/whisper] erro compra:', senderLogin, lastError);
         } catch (err) {
           console.error('[twitch/whisper] erro inesperado:', err);
         }

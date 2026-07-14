@@ -907,10 +907,12 @@ function ResultBall({ hue, name, size, rank, crown, streamer, sprite }: {
       {crown && (
         <div className="absolute left-1/2 -translate-x-1/2" style={{ top: -size * 0.4, fontSize: size * 0.44, filter: 'drop-shadow(0 0 10px rgba(255,210,74,0.95))' }}>👑</div>
       )}
-      <div className="w-full h-full rounded-full relative flex items-end justify-center"
+      <div className="w-full h-full rounded-full relative flex items-end justify-center overflow-hidden"
         style={{
+          // scaled past 100% so the sprite's transparent margin is pushed out and
+          // the artwork fills the whole circle (overflow clipped to the round shape)
           background: spriteUrl
-            ? `center/contain no-repeat url(${spriteUrl})`
+            ? `center / 138% 138% no-repeat url(${spriteUrl})`
             : `radial-gradient(circle at 32% 26%, hsl(${hue},100%,82%), hsl(${hue},90%,54%) 56%, hsl(${hue},85%,32%))`,
           boxShadow: spriteUrl
             ? `0 0 30px hsl(${hue},90%,55%)`

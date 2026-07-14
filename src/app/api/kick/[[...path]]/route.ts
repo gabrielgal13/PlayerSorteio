@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getDeliveryMode } from '@/lib/prizeDelivery';
 
 // Kick — unofficial token approach (no OAuth app required)
 // Get the bearer token: login as the bot account at kick.com →
@@ -146,8 +147,14 @@ export async function POST(
     const prizePart = prizeName ? ` levou ${prizeName.replace(/\s*\(.*?\)/g, '').trim()}` : '';
     const botName = process.env.TWITCH_BOT_USERNAME ?? 'PlayerSkinsBOT';
     const isKickWinner = !winnerSource || winnerSource === 'kick';
+    const deliveryMode = prizeName ? getDeliveryMode(prizeName) : 'trade_link';
+    const askText = deliveryMode === 'address_and_shirt'
+      ? 'seu endereço completo (com CEP) e qual camisa você quer'
+      : deliveryMode === 'address'
+      ? 'seu endereço completo (com CEP)'
+      : 'seu Steam trade link';
     const instruction = isKickWinner
-      ? ` | Para receber, marque @${botName} aqui no chat com seu Steam trade link!`
+      ? ` | Para receber, marque @${botName} aqui no chat com ${askText}!`
       : '';
     const message = `${e1} @${winnerName} ${g}!${prizePart}${instruction} ${e2}`;
 

@@ -48,6 +48,7 @@ export type StreamerMinAggregateOutputType = {
   passwordHash: string | null
   mascot: string | null
   displayName: string | null
+  nome: string | null
   isAdmin: boolean | null
   twitchChannel: string | null
   kickChannel: string | null
@@ -87,6 +88,7 @@ export type StreamerMaxAggregateOutputType = {
   passwordHash: string | null
   mascot: string | null
   displayName: string | null
+  nome: string | null
   isAdmin: boolean | null
   twitchChannel: string | null
   kickChannel: string | null
@@ -126,6 +128,7 @@ export type StreamerCountAggregateOutputType = {
   passwordHash: number
   mascot: number
   displayName: number
+  nome: number
   isAdmin: number
   twitchChannel: number
   kickChannel: number
@@ -183,6 +186,7 @@ export type StreamerMinAggregateInputType = {
   passwordHash?: true
   mascot?: true
   displayName?: true
+  nome?: true
   isAdmin?: true
   twitchChannel?: true
   kickChannel?: true
@@ -222,6 +226,7 @@ export type StreamerMaxAggregateInputType = {
   passwordHash?: true
   mascot?: true
   displayName?: true
+  nome?: true
   isAdmin?: true
   twitchChannel?: true
   kickChannel?: true
@@ -261,6 +266,7 @@ export type StreamerCountAggregateInputType = {
   passwordHash?: true
   mascot?: true
   displayName?: true
+  nome?: true
   isAdmin?: true
   twitchChannel?: true
   kickChannel?: true
@@ -387,6 +393,7 @@ export type StreamerGroupByOutputType = {
   passwordHash: string
   mascot: string
   displayName: string | null
+  nome: string | null
   isAdmin: boolean
   twitchChannel: string | null
   kickChannel: string | null
@@ -449,6 +456,7 @@ export type StreamerWhereInput = {
   passwordHash?: Prisma.StringFilter<"Streamer"> | string
   mascot?: Prisma.StringFilter<"Streamer"> | string
   displayName?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  nome?: Prisma.StringNullableFilter<"Streamer"> | string | null
   isAdmin?: Prisma.BoolFilter<"Streamer"> | boolean
   twitchChannel?: Prisma.StringNullableFilter<"Streamer"> | string | null
   kickChannel?: Prisma.StringNullableFilter<"Streamer"> | string | null
@@ -492,6 +500,7 @@ export type StreamerOrderByWithRelationInput = {
   passwordHash?: Prisma.SortOrder
   mascot?: Prisma.SortOrder
   displayName?: Prisma.SortOrderInput | Prisma.SortOrder
+  nome?: Prisma.SortOrderInput | Prisma.SortOrder
   isAdmin?: Prisma.SortOrder
   twitchChannel?: Prisma.SortOrderInput | Prisma.SortOrder
   kickChannel?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -538,6 +547,7 @@ export type StreamerWhereUniqueInput = Prisma.AtLeast<{
   passwordHash?: Prisma.StringFilter<"Streamer"> | string
   mascot?: Prisma.StringFilter<"Streamer"> | string
   displayName?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  nome?: Prisma.StringNullableFilter<"Streamer"> | string | null
   isAdmin?: Prisma.BoolFilter<"Streamer"> | boolean
   twitchChannel?: Prisma.StringNullableFilter<"Streamer"> | string | null
   kickChannel?: Prisma.StringNullableFilter<"Streamer"> | string | null
@@ -581,6 +591,7 @@ export type StreamerOrderByWithAggregationInput = {
   passwordHash?: Prisma.SortOrder
   mascot?: Prisma.SortOrder
   displayName?: Prisma.SortOrderInput | Prisma.SortOrder
+  nome?: Prisma.SortOrderInput | Prisma.SortOrder
   isAdmin?: Prisma.SortOrder
   twitchChannel?: Prisma.SortOrderInput | Prisma.SortOrder
   kickChannel?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -628,6 +639,7 @@ export type StreamerScalarWhereWithAggregatesInput = {
   passwordHash?: Prisma.StringWithAggregatesFilter<"Streamer"> | string
   mascot?: Prisma.StringWithAggregatesFilter<"Streamer"> | string
   displayName?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
+  nome?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
   isAdmin?: Prisma.BoolWithAggregatesFilter<"Streamer"> | boolean
   twitchChannel?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
   kickChannel?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
@@ -667,6 +679,7 @@ export type StreamerCreateInput = {
   passwordHash: string
   mascot?: string
   displayName?: string | null
+  nome?: string | null
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
@@ -710,6 +723,7 @@ export type StreamerUncheckedCreateInput = {
   passwordHash: string
   mascot?: string
   displayName?: string | null
+  nome?: string | null
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
@@ -753,6 +767,7 @@ export type StreamerUpdateInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   mascot?: Prisma.StringFieldUpdateOperationsInput | string
   displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -796,6 +811,7 @@ export type StreamerUncheckedUpdateInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   mascot?: Prisma.StringFieldUpdateOperationsInput | string
   displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -839,6 +855,7 @@ export type StreamerCreateManyInput = {
   passwordHash: string
   mascot?: string
   displayName?: string | null
+  nome?: string | null
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
@@ -878,6 +895,7 @@ export type StreamerUpdateManyMutationInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   mascot?: Prisma.StringFieldUpdateOperationsInput | string
   displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -917,6 +935,7 @@ export type StreamerUncheckedUpdateManyInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   mascot?: Prisma.StringFieldUpdateOperationsInput | string
   displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -956,6 +975,7 @@ export type StreamerCountOrderByAggregateInput = {
   passwordHash?: Prisma.SortOrder
   mascot?: Prisma.SortOrder
   displayName?: Prisma.SortOrder
+  nome?: Prisma.SortOrder
   isAdmin?: Prisma.SortOrder
   twitchChannel?: Prisma.SortOrder
   kickChannel?: Prisma.SortOrder
@@ -1003,6 +1023,7 @@ export type StreamerMaxOrderByAggregateInput = {
   passwordHash?: Prisma.SortOrder
   mascot?: Prisma.SortOrder
   displayName?: Prisma.SortOrder
+  nome?: Prisma.SortOrder
   isAdmin?: Prisma.SortOrder
   twitchChannel?: Prisma.SortOrder
   kickChannel?: Prisma.SortOrder
@@ -1042,6 +1063,7 @@ export type StreamerMinOrderByAggregateInput = {
   passwordHash?: Prisma.SortOrder
   mascot?: Prisma.SortOrder
   displayName?: Prisma.SortOrder
+  nome?: Prisma.SortOrder
   isAdmin?: Prisma.SortOrder
   twitchChannel?: Prisma.SortOrder
   kickChannel?: Prisma.SortOrder
@@ -1186,6 +1208,7 @@ export type StreamerCreateWithoutPrizeListsInput = {
   passwordHash: string
   mascot?: string
   displayName?: string | null
+  nome?: string | null
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
@@ -1228,6 +1251,7 @@ export type StreamerUncheckedCreateWithoutPrizeListsInput = {
   passwordHash: string
   mascot?: string
   displayName?: string | null
+  nome?: string | null
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
@@ -1286,6 +1310,7 @@ export type StreamerUpdateWithoutPrizeListsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   mascot?: Prisma.StringFieldUpdateOperationsInput | string
   displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1328,6 +1353,7 @@ export type StreamerUncheckedUpdateWithoutPrizeListsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   mascot?: Prisma.StringFieldUpdateOperationsInput | string
   displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1370,6 +1396,7 @@ export type StreamerCreateWithoutPscTransactionsInput = {
   passwordHash: string
   mascot?: string
   displayName?: string | null
+  nome?: string | null
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
@@ -1412,6 +1439,7 @@ export type StreamerUncheckedCreateWithoutPscTransactionsInput = {
   passwordHash: string
   mascot?: string
   displayName?: string | null
+  nome?: string | null
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
@@ -1470,6 +1498,7 @@ export type StreamerUpdateWithoutPscTransactionsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   mascot?: Prisma.StringFieldUpdateOperationsInput | string
   displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1512,6 +1541,7 @@ export type StreamerUncheckedUpdateWithoutPscTransactionsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   mascot?: Prisma.StringFieldUpdateOperationsInput | string
   displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1554,6 +1584,7 @@ export type StreamerCreateWithoutHistoryInput = {
   passwordHash: string
   mascot?: string
   displayName?: string | null
+  nome?: string | null
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
@@ -1596,6 +1627,7 @@ export type StreamerUncheckedCreateWithoutHistoryInput = {
   passwordHash: string
   mascot?: string
   displayName?: string | null
+  nome?: string | null
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
@@ -1654,6 +1686,7 @@ export type StreamerUpdateWithoutHistoryInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   mascot?: Prisma.StringFieldUpdateOperationsInput | string
   displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1696,6 +1729,7 @@ export type StreamerUncheckedUpdateWithoutHistoryInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   mascot?: Prisma.StringFieldUpdateOperationsInput | string
   displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1738,6 +1772,7 @@ export type StreamerCreateWithoutBotCommandsInput = {
   passwordHash: string
   mascot?: string
   displayName?: string | null
+  nome?: string | null
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
@@ -1780,6 +1815,7 @@ export type StreamerUncheckedCreateWithoutBotCommandsInput = {
   passwordHash: string
   mascot?: string
   displayName?: string | null
+  nome?: string | null
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
@@ -1838,6 +1874,7 @@ export type StreamerUpdateWithoutBotCommandsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   mascot?: Prisma.StringFieldUpdateOperationsInput | string
   displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1880,6 +1917,7 @@ export type StreamerUncheckedUpdateWithoutBotCommandsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   mascot?: Prisma.StringFieldUpdateOperationsInput | string
   displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1980,6 +2018,7 @@ export type StreamerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   passwordHash?: boolean
   mascot?: boolean
   displayName?: boolean
+  nome?: boolean
   isAdmin?: boolean
   twitchChannel?: boolean
   kickChannel?: boolean
@@ -2024,6 +2063,7 @@ export type StreamerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   passwordHash?: boolean
   mascot?: boolean
   displayName?: boolean
+  nome?: boolean
   isAdmin?: boolean
   twitchChannel?: boolean
   kickChannel?: boolean
@@ -2063,6 +2103,7 @@ export type StreamerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   passwordHash?: boolean
   mascot?: boolean
   displayName?: boolean
+  nome?: boolean
   isAdmin?: boolean
   twitchChannel?: boolean
   kickChannel?: boolean
@@ -2102,6 +2143,7 @@ export type StreamerSelectScalar = {
   passwordHash?: boolean
   mascot?: boolean
   displayName?: boolean
+  nome?: boolean
   isAdmin?: boolean
   twitchChannel?: boolean
   kickChannel?: boolean
@@ -2135,7 +2177,7 @@ export type StreamerSelectScalar = {
   updatedAt?: boolean
 }
 
-export type StreamerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "passwordHash" | "mascot" | "displayName" | "isAdmin" | "twitchChannel" | "kickChannel" | "kickChatroomId" | "youtubeChannel" | "youtubeDisplayName" | "youtubeLiveChatId" | "youtubeNextPageToken" | "youtubeLiveChatCheckedAt" | "registrationCommand" | "claimCommand" | "validationTimeout" | "isAffiliate" | "pscBalance" | "audioEnabled" | "excelImportEnabled" | "excelPrizesImportEnabled" | "eventMusic" | "eventEffect" | "spinEffect" | "themeColor" | "socoChuteModeEnabled" | "raffleTriggerMode" | "autoRoundDelay" | "chatTriggerCount" | "chatTriggerCommand" | "raffleAnimationStyle" | "chatWarsSprite" | "forcePasswordChange" | "createdAt" | "updatedAt", ExtArgs["result"]["streamer"]>
+export type StreamerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "passwordHash" | "mascot" | "displayName" | "nome" | "isAdmin" | "twitchChannel" | "kickChannel" | "kickChatroomId" | "youtubeChannel" | "youtubeDisplayName" | "youtubeLiveChatId" | "youtubeNextPageToken" | "youtubeLiveChatCheckedAt" | "registrationCommand" | "claimCommand" | "validationTimeout" | "isAffiliate" | "pscBalance" | "audioEnabled" | "excelImportEnabled" | "excelPrizesImportEnabled" | "eventMusic" | "eventEffect" | "spinEffect" | "themeColor" | "socoChuteModeEnabled" | "raffleTriggerMode" | "autoRoundDelay" | "chatTriggerCount" | "chatTriggerCommand" | "raffleAnimationStyle" | "chatWarsSprite" | "forcePasswordChange" | "createdAt" | "updatedAt", ExtArgs["result"]["streamer"]>
 export type StreamerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   history?: boolean | Prisma.Streamer$historyArgs<ExtArgs>
   pscTransactions?: boolean | Prisma.Streamer$pscTransactionsArgs<ExtArgs>
@@ -2160,6 +2202,7 @@ export type $StreamerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     passwordHash: string
     mascot: string
     displayName: string | null
+    nome: string | null
     isAdmin: boolean
     twitchChannel: string | null
     kickChannel: string | null
@@ -2623,6 +2666,7 @@ export interface StreamerFieldRefs {
   readonly passwordHash: Prisma.FieldRef<"Streamer", 'String'>
   readonly mascot: Prisma.FieldRef<"Streamer", 'String'>
   readonly displayName: Prisma.FieldRef<"Streamer", 'String'>
+  readonly nome: Prisma.FieldRef<"Streamer", 'String'>
   readonly isAdmin: Prisma.FieldRef<"Streamer", 'Boolean'>
   readonly twitchChannel: Prisma.FieldRef<"Streamer", 'String'>
   readonly kickChannel: Prisma.FieldRef<"Streamer", 'String'>

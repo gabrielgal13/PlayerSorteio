@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
+import { ensureDeliveryAddressColumn } from '@/lib/deliveryCapture';
 
 const ADMIN_LIST_NAME = '__admin_products__';
 
@@ -40,6 +41,13 @@ export async function GET(
       orderBy: { timestamp: 'desc' },
       take: 100,
     });
+    await ensureDeliveryAddressColumn();
+    const addrRows = rows.length > 0
+      ? await prisma.$queryRaw<Array<{ id: string; deliveryAddress: string | null }>>`
+          SELECT id, "deliveryAddress" FROM "RaffleHistory" WHERE id = ANY(${rows.map(r => r.id)})
+        `
+      : [];
+    const addressMap = new Map(addrRows.map(r => [r.id, r.deliveryAddress]));
     return NextResponse.json(rows.map(r => ({
       id: r.id,
       winner: { id: r.id, number: r.winnerNumber, name: r.winnerName, source: r.winnerSource ?? undefined },
@@ -56,6 +64,7 @@ export async function GET(
       timestamp: r.timestamp.getTime(),
       confirmed: r.confirmed,
       tradeLink: r.tradeLink ?? undefined,
+      deliveryAddress: addressMap.get(r.id) ?? undefined,
       deliveryStatus: (r.deliveryStatus ?? 'novo') as import('@/types').DeliveryStatus,
       tradeLockAt: r.tradeLockAt?.getTime() ?? undefined,
       marketplaceItemId: r.marketplaceItemId ?? undefined,
@@ -120,7 +129,8 @@ export async function GET(
       where: { streamerId: streamer.id, name: ADMIN_LIST_NAME },
       include: { items: { orderBy: { order: 'asc' } } },
     });
-    return NextResponse.json(list?.items ?? []);
+    // Produtos com quantidade esgotada não aparecem mais para o streamer sortear.
+    return NextResponse.json((list?.items ?? []).filter(item => item.quantity > 0));
   }
 
   if (route === 'bot-commands') {
@@ -169,6 +179,23 @@ export async function POST(
         timestamp: new Date(result.timestamp),
       },
     });
+    // Desconta 1 unidade do estoque de produtos exclusivos (admin) quando o prêmio
+    // sorteado corresponde a um produto com quantidade limitada.
+    const adminList = await prisma.prizeList.findFirst({
+      where: { streamerId: streamer.id, name: ADMIN_LIST_NAME },
+      select: { id: true },
+    });
+    if (adminList) {
+      const adminItem = await prisma.prizeListItem.findFirst({
+        where: { prizeListId: adminList.id, name: result.prize.name, quantity: { gt: 0 } },
+      });
+      if (adminItem) {
+        await prisma.prizeListItem.update({
+          where: { id: adminItem.id },
+          data: { quantity: adminItem.quantity - 1 },
+        });
+      }
+    }
     return NextResponse.json({ ok: true });
   }
 
@@ -321,7 +348,7 @@ export async function PATCH(
   }
 
   if (route === 'delivery') {
-    const { historyId, tradeLink, deliveryStatus } = await req.json();
+    const { historyId, tradeLink, deliveryStatus, deliveryAddress } = await req.json();
     if (!historyId) return NextResponse.json({ error: 'historyId required' }, { status: 400 });
     const data: Record<string, unknown> = {};
     if (tradeLink !== undefined) data.tradeLink = tradeLink || null;
@@ -333,6 +360,10 @@ export async function PATCH(
       }
     }
     const updated = await prisma.raffleHistory.update({ where: { id: historyId }, data });
+    if (deliveryAddress !== undefined) {
+      await ensureDeliveryAddressColumn();
+      await prisma.$executeRaw`UPDATE "RaffleHistory" SET "deliveryAddress" = ${deliveryAddress || null} WHERE id = ${historyId}`;
+    }
     return NextResponse.json({ ok: true, tradeLockAt: updated.tradeLockAt?.getTime() ?? null });
   }
 

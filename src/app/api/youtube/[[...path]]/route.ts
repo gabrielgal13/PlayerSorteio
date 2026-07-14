@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getDeliveryMode } from '@/lib/prizeDelivery';
 
 function getOrigin(req: NextRequest): string {
   const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? '';
@@ -230,8 +231,14 @@ export async function POST(
     const prizePart = prizeName ? ` levou ${prizeName.replace(/\s*\(.*?\)/g, '').trim()}` : '';
     const botName = process.env.TWITCH_BOT_USERNAME ?? 'PlayerSkinsBOT';
     const isYoutubeWinner = !winnerSource || winnerSource === 'youtube';
+    const deliveryMode = prizeName ? getDeliveryMode(prizeName) : 'trade_link';
+    const askText = deliveryMode === 'address_and_shirt'
+      ? 'seu endereço completo (com CEP) e qual camisa você quer'
+      : deliveryMode === 'address'
+      ? 'seu endereço completo (com CEP)'
+      : 'seu Steam trade link';
     const instruction = isYoutubeWinner
-      ? ` | Para receber, marque @${botName} aqui no chat com seu Steam trade link!`
+      ? ` | Para receber, marque @${botName} aqui no chat com ${askText}!`
       : '';
     const message = `${e1} @${winnerName} ${g}!${prizePart}${instruction} ${e2}`;
 

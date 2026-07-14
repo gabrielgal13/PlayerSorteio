@@ -389,6 +389,8 @@ export const ModelName = {
   PrizeListItem: 'PrizeListItem',
   PscTransaction: 'PscTransaction',
   MarketingImage: 'MarketingImage',
+  AffiliateProposal: 'AffiliateProposal',
+  Sale: 'Sale',
   RaffleHistory: 'RaffleHistory',
   BotCommand: 'BotCommand',
   AppConfig: 'AppConfig'
@@ -407,7 +409,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "streamer" | "prizeList" | "prizeListItem" | "pscTransaction" | "marketingImage" | "raffleHistory" | "botCommand" | "appConfig"
+    modelProps: "streamer" | "prizeList" | "prizeListItem" | "pscTransaction" | "marketingImage" | "affiliateProposal" | "sale" | "raffleHistory" | "botCommand" | "appConfig"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -781,6 +783,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    AffiliateProposal: {
+      payload: Prisma.$AffiliateProposalPayload<ExtArgs>
+      fields: Prisma.AffiliateProposalFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AffiliateProposalFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AffiliateProposalPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AffiliateProposalFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AffiliateProposalPayload>
+        }
+        findFirst: {
+          args: Prisma.AffiliateProposalFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AffiliateProposalPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AffiliateProposalFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AffiliateProposalPayload>
+        }
+        findMany: {
+          args: Prisma.AffiliateProposalFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AffiliateProposalPayload>[]
+        }
+        create: {
+          args: Prisma.AffiliateProposalCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AffiliateProposalPayload>
+        }
+        createMany: {
+          args: Prisma.AffiliateProposalCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AffiliateProposalCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AffiliateProposalPayload>[]
+        }
+        delete: {
+          args: Prisma.AffiliateProposalDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AffiliateProposalPayload>
+        }
+        update: {
+          args: Prisma.AffiliateProposalUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AffiliateProposalPayload>
+        }
+        deleteMany: {
+          args: Prisma.AffiliateProposalDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AffiliateProposalUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AffiliateProposalUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AffiliateProposalPayload>[]
+        }
+        upsert: {
+          args: Prisma.AffiliateProposalUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AffiliateProposalPayload>
+        }
+        aggregate: {
+          args: Prisma.AffiliateProposalAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAffiliateProposal>
+        }
+        groupBy: {
+          args: Prisma.AffiliateProposalGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AffiliateProposalGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AffiliateProposalCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AffiliateProposalCountAggregateOutputType> | number
+        }
+      }
+    }
+    Sale: {
+      payload: Prisma.$SalePayload<ExtArgs>
+      fields: Prisma.SaleFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SaleFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SalePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SaleFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SalePayload>
+        }
+        findFirst: {
+          args: Prisma.SaleFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SalePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SaleFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SalePayload>
+        }
+        findMany: {
+          args: Prisma.SaleFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SalePayload>[]
+        }
+        create: {
+          args: Prisma.SaleCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SalePayload>
+        }
+        createMany: {
+          args: Prisma.SaleCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SaleCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SalePayload>[]
+        }
+        delete: {
+          args: Prisma.SaleDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SalePayload>
+        }
+        update: {
+          args: Prisma.SaleUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SalePayload>
+        }
+        deleteMany: {
+          args: Prisma.SaleDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SaleUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SaleUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SalePayload>[]
+        }
+        upsert: {
+          args: Prisma.SaleUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SalePayload>
+        }
+        aggregate: {
+          args: Prisma.SaleAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSale>
+        }
+        groupBy: {
+          args: Prisma.SaleGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SaleGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SaleCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SaleCountAggregateOutputType> | number
+        }
+      }
+    }
     RaffleHistory: {
       payload: Prisma.$RaffleHistoryPayload<ExtArgs>
       fields: Prisma.RaffleHistoryFieldRefs
@@ -1048,6 +1198,7 @@ export const StreamerScalarFieldEnum = {
   passwordHash: 'passwordHash',
   mascot: 'mascot',
   displayName: 'displayName',
+  nome: 'nome',
   isAdmin: 'isAdmin',
   twitchChannel: 'twitchChannel',
   kickChannel: 'kickChannel',
@@ -1135,6 +1286,50 @@ export const MarketingImageScalarFieldEnum = {
 } as const
 
 export type MarketingImageScalarFieldEnum = (typeof MarketingImageScalarFieldEnum)[keyof typeof MarketingImageScalarFieldEnum]
+
+
+export const AffiliateProposalScalarFieldEnum = {
+  id: 'id',
+  streamerName: 'streamerName',
+  coupon: 'coupon',
+  profitPct: 'profitPct',
+  status: 'status',
+  accountConfirmed: 'accountConfirmed',
+  shirtsConfirmed: 'shirtsConfirmed',
+  startedAt: 'startedAt',
+  contractMonths: 'contractMonths',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AffiliateProposalScalarFieldEnum = (typeof AffiliateProposalScalarFieldEnum)[keyof typeof AffiliateProposalScalarFieldEnum]
+
+
+export const SaleScalarFieldEnum = {
+  id: 'id',
+  orderNumber: 'orderNumber',
+  date: 'date',
+  contactName: 'contactName',
+  cpfCnpj: 'cpfCnpj',
+  email: 'email',
+  city: 'city',
+  state: 'state',
+  productDescription: 'productDescription',
+  quantity: 'quantity',
+  unitPrice: 'unitPrice',
+  totalPrice: 'totalPrice',
+  discount: 'discount',
+  shipping: 'shipping',
+  status: 'status',
+  affiliateUsername: 'affiliateUsername',
+  trackingCode: 'trackingCode',
+  observations: 'observations',
+  source: 'source',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SaleScalarFieldEnum = (typeof SaleScalarFieldEnum)[keyof typeof SaleScalarFieldEnum]
 
 
 export const RaffleHistoryScalarFieldEnum = {
@@ -1388,6 +1583,8 @@ export type GlobalOmitConfig = {
   prizeListItem?: Prisma.PrizeListItemOmit
   pscTransaction?: Prisma.PscTransactionOmit
   marketingImage?: Prisma.MarketingImageOmit
+  affiliateProposal?: Prisma.AffiliateProposalOmit
+  sale?: Prisma.SaleOmit
   raffleHistory?: Prisma.RaffleHistoryOmit
   botCommand?: Prisma.BotCommandOmit
   appConfig?: Prisma.AppConfigOmit

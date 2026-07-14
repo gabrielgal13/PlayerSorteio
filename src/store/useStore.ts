@@ -51,7 +51,7 @@ interface AppActions {
   setEventEffect: (effect: EventEffectType) => void;
   setSpinEffect: (effect: RaffleSpinEffect) => void;
   saveConfigToDB: () => Promise<void>;
-  updateDelivery: (id: string, tradeLink?: string, deliveryStatus?: DeliveryStatus) => void;
+  updateDelivery: (id: string, tradeLink?: string, deliveryStatus?: DeliveryStatus, deliveryAddress?: string) => void;
   triggerMascotSoco: () => void;
   triggerMascotChute: () => void;
   initMascotHp: (viewerCount: number) => void;
@@ -126,12 +126,13 @@ export const useStore = create<AppState & AppActions>()(
       chatTriggerCount: 50,
       chatTriggerCommand: '!sortear',
 
-      updateDelivery: (id, tradeLink, deliveryStatus) => {
+      updateDelivery: (id, tradeLink, deliveryStatus, deliveryAddress) => {
         const now = Date.now();
         set({
           history: get().history.map(r => r.id === id ? {
             ...r,
             ...(tradeLink !== undefined && { tradeLink }),
+            ...(deliveryAddress !== undefined && { deliveryAddress }),
             ...(deliveryStatus !== undefined && { deliveryStatus }),
             ...(deliveryStatus === 'tradelocked' && !r.tradeLockAt && { tradeLockAt: now }),
           } : r),
@@ -139,7 +140,7 @@ export const useStore = create<AppState & AppActions>()(
         fetch('/api/streamer/delivery', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ historyId: id, tradeLink, deliveryStatus }),
+          body: JSON.stringify({ historyId: id, tradeLink, deliveryStatus, deliveryAddress }),
         }).catch(() => {});
       },
 

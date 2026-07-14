@@ -5,12 +5,16 @@ import { useStore } from '@/store/useStore';
 import EntregasPage from '@/components/deliveries/EntregasPage';
 import AdminDeliveriesDashboard from '@/components/admin/AdminDeliveriesDashboard';
 import MarketingSection from '@/components/admin/MarketingSection';
+import AffiliateProposals from '@/components/admin/AffiliateProposals';
+import SalesDashboard from '@/components/admin/SalesDashboard';
 import type { RaffleResult, DeliveryStatus } from '@/types';
 
 interface StreamerRow { username: string; displayName: string | null; pscBalance: number; isAffiliate: boolean; }
-interface AdminProduct { id: string; name: string; description: string | null; imageUrl: string | null; quantity: number; pscValue: number | null; skipPsc: boolean; }
-interface EditProfile { displayName: string; newPassword: string; twitchChannel: string; kickChannel: string; youtubeChannel: string; themeColor: string; chatWarsSprite: string; forceFirstAccess: boolean; currentForcePasswordChange: boolean; }
-type Section = 'psc' | 'criar-streamer' | 'entregas' | 'editar-streamer' | 'marketing' | 'bots';
+interface AdminProduct { id: string; name: string; description: string | null; imageUrl: string | null; quantity: number; pscValue: number | null; skipPsc: boolean; pinned: boolean; }
+interface FixedProductTemplate { id: string; name: string; description: string | null; imageUrl: string | null; pscValue: number | null; skipPsc: boolean; locked: boolean; }
+interface MarketingImageOption { id: number; imageData: string; label: string | null; }
+interface EditProfile { displayName: string; nome?: string; newPassword: string; twitchChannel: string; kickChannel: string; youtubeChannel: string; themeColor: string; chatWarsSprite: string; forceFirstAccess: boolean; currentForcePasswordChange: boolean; }
+type Section = 'psc' | 'criar-streamer' | 'entregas' | 'editar-streamer' | 'marketing' | 'bots' | 'afiliados' | 'vendas' | 'playerskins';
 
 const COLOR_PRESETS = ['#BF5AF2', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#00E5FF', '#00FFA3'];
 
@@ -557,7 +561,7 @@ export default function AdminPanel() {
   const [pscFeedback, setPscFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   // Criar streamer state
-  const [form, setForm] = useState({ username: '', displayName: '', password: '', mascot: 'dreads', themeColor: '#BF5AF2', pscBalance: 0, stageTheme: 'cyber-purple', twitchChannel: '', kickChannel: '', youtubeChannel: '' });
+  const [form, setForm] = useState({ username: '', displayName: '', nome: '', password: '', mascot: 'dreads', themeColor: '#BF5AF2', pscBalance: 0, stageTheme: 'cyber-purple', twitchChannel: '', kickChannel: '', youtubeChannel: '' });
   const [mascotImg, setMascotImg] = useState<string | null>(null);
   const [animFrames, setAnimFrames] = useState<(string | null)[]>(Array(MAX_FRAMES).fill(null));
   const [animTimings, setAnimTimings] = useState<number[]>([...DEFAULT_TIMINGS]);
@@ -577,8 +581,15 @@ export default function AdminPanel() {
   const [editFeedback, setEditFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [adminProducts, setAdminProducts] = useState<AdminProduct[]>([]);
   const [prodLoading, setProdLoading] = useState(false);
-  const [newProd, setNewProd] = useState({ name: '', description: '', quantity: 1, pscValue: '', skipPsc: false });
+  const [newProd, setNewProd] = useState({ name: '', description: '', quantity: 1, pscValue: '', skipPsc: false, imageUrl: '', isFixed: false });
   const [addingProd, setAddingProd] = useState(false);
+  const [fixedProducts, setFixedProducts] = useState<FixedProductTemplate[]>([]);
+  const [fixedQtyInputs, setFixedQtyInputs] = useState<Record<string, string>>({});
+  const [savingFixedName, setSavingFixedName] = useState<string | null>(null);
+  const [pinnedItemQtyInputs, setPinnedItemQtyInputs] = useState<Record<string, string>>({});
+  const [savingPinnedItemId, setSavingPinnedItemId] = useState<string | null>(null);
+  const [marketingImages, setMarketingImages] = useState<MarketingImageOption[]>([]);
+  const [showFixedImagePicker, setShowFixedImagePicker] = useState(false);
 
   const [botCommands, setBotCommands] = useState<{ id: string; command: string; response: string }[]>([]);
   const [botCmdLoading, setBotCmdLoading] = useState(false);
@@ -606,18 +617,19 @@ export default function AdminPanel() {
     setEntregasLoading(false);
   }, []);
 
-  const handleEntregasUpdateDelivery = useCallback((id: string, tradeLink?: string, deliveryStatus?: DeliveryStatus) => {
+  const handleEntregasUpdateDelivery = useCallback((id: string, tradeLink?: string, deliveryStatus?: DeliveryStatus, deliveryAddress?: string) => {
     const now = Date.now();
     setEntregasHistory(prev => prev.map(r => r.id === id ? {
       ...r,
       ...(tradeLink !== undefined && { tradeLink }),
+      ...(deliveryAddress !== undefined && { deliveryAddress }),
       ...(deliveryStatus !== undefined && { deliveryStatus }),
       ...(deliveryStatus === 'tradelocked' && !r.tradeLockAt && { tradeLockAt: now }),
     } : r));
     fetch('/api/streamer/delivery', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ historyId: id, tradeLink, deliveryStatus }),
+      body: JSON.stringify({ historyId: id, tradeLink, deliveryStatus, deliveryAddress }),
     }).catch(() => {});
   }, []);
 
@@ -629,6 +641,31 @@ export default function AdminPanel() {
   }, []);
 
   useEffect(() => { loadStreamers(); }, [loadStreamers]);
+
+  const loadFixedProducts = useCallback(() => {
+    fetch('/api/admin/fixed-products')
+      .then(r => r.json())
+      .then(setFixedProducts)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => { loadFixedProducts(); }, [loadFixedProducts]);
+
+  const loadMarketingImages = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/marketing');
+      const data = await res.json();
+      if (Array.isArray(data)) setMarketingImages(data);
+    } catch {}
+  }, []);
+
+  const toggleFixedImagePicker = () => {
+    if (!showFixedImagePicker && marketingImages.length === 0) loadMarketingImages();
+    setShowFixedImagePicker(v => !v);
+  };
+
+  const pinnedCustomProducts = adminProducts.filter(p => p.pinned);
+  const customAdminProducts = adminProducts.filter(p => !p.pinned && !fixedProducts.some(f => f.name === p.name));
 
   const handleAddPsc = () => {
     const value = Number(amount);
@@ -649,10 +686,23 @@ export default function AdminPanel() {
     try {
       const res = await fetch(`/api/admin/streamers/${username}/products`);
       const data = await res.json();
-      if (Array.isArray(data)) setAdminProducts(data);
+      if (Array.isArray(data)) {
+        setAdminProducts(data);
+        const qtyMap: Record<string, string> = {};
+        for (const tmpl of fixedProducts) {
+          const match = data.find((p: AdminProduct) => p.name === tmpl.name);
+          qtyMap[tmpl.name] = String(match?.quantity ?? 0);
+        }
+        setFixedQtyInputs(qtyMap);
+        const pinnedQtyMap: Record<string, string> = {};
+        for (const p of data as AdminProduct[]) {
+          if (p.pinned) pinnedQtyMap[p.id] = String(p.quantity);
+        }
+        setPinnedItemQtyInputs(pinnedQtyMap);
+      }
     } catch {}
     setProdLoading(false);
-  }, []);
+  }, [fixedProducts]);
 
   const loadBotCommands = useCallback(async (username: string) => {
     if (!username) return;
@@ -670,6 +720,8 @@ export default function AdminPanel() {
     setEditData(row);
     setEditPscInput(row ? String(row.pscBalance) : '');
     setAdminProducts([]);
+    setFixedQtyInputs({});
+    setPinnedItemQtyInputs({});
     setBotCommands([]);
     setEditProfile({ displayName: '', newPassword: '', twitchChannel: '', kickChannel: '', youtubeChannel: '', themeColor: '#00E5FF', chatWarsSprite: '', forceFirstAccess: false, currentForcePasswordChange: false });
     if (username) {
@@ -726,6 +778,7 @@ export default function AdminPanel() {
         kickChannel: editProfile.kickChannel || null,
         youtubeChannel: editProfile.youtubeChannel || null,
         displayName: editProfile.displayName.trim() || null,
+        nome: (editProfile as any).nome?.trim() || null,
         chatWarsSprite: editProfile.chatWarsSprite || null,
       };
       if (editProfile.forceFirstAccess) {
@@ -761,7 +814,8 @@ export default function AdminPanel() {
           forceFirstAccess: false,
           currentForcePasswordChange: (data.forcePasswordChange as boolean | undefined) ?? p.currentForcePasswordChange,
           displayName: (data.displayName as string | null | undefined) ?? p.displayName,
-        }));
+          nome: (data.nome as string | null | undefined) ?? (p as any).nome,
+        } as any));
         setEditFeedback({ type: 'success', msg: 'Alterações salvas com sucesso.' });
       }
     } catch {
@@ -772,19 +826,36 @@ export default function AdminPanel() {
     }
   };
 
+  const handleNewProdImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setNewProd(p => ({ ...p, imageUrl: ev.target?.result as string }));
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const handleAddProduct = async () => {
     if (!editData || !newProd.name.trim()) return;
+    const trimmedName = newProd.name.trim();
+    if (fixedProducts.some(f => f.name === trimmedName)) {
+      setEditFeedback({ type: 'error', msg: `"${trimmedName}" já é um item fixo padrão — ajuste a quantidade dele acima.` });
+      setTimeout(() => setEditFeedback(null), 4000);
+      return;
+    }
     setAddingProd(true);
     try {
       const res = await fetch(`/api/admin/streamers/${editData.username}/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: newProd.name,
+          name: trimmedName,
           description: newProd.description || null,
+          imageUrl: newProd.imageUrl || null,
           quantity: newProd.quantity,
           pscValue: newProd.pscValue !== '' ? Number(newProd.pscValue) : null,
           skipPsc: newProd.skipPsc,
+          pinned: newProd.isFixed,
         }),
       });
       const data = await res.json();
@@ -792,8 +863,9 @@ export default function AdminPanel() {
         setEditFeedback({ type: 'error', msg: data.error ?? 'Erro ao adicionar produto.' });
       } else {
         setAdminProducts(prev => [...prev, data]);
-        setNewProd({ name: '', description: '', quantity: 1, pscValue: '', skipPsc: false });
-        setEditFeedback({ type: 'success', msg: `Produto "${data.name}" adicionado.` });
+        if (data.pinned) setPinnedItemQtyInputs(prev => ({ ...prev, [data.id]: String(data.quantity) }));
+        setNewProd({ name: '', description: '', quantity: 1, pscValue: '', skipPsc: false, imageUrl: '', isFixed: false });
+        setEditFeedback({ type: 'success', msg: `Produto "${data.name}" adicionado${data.pinned ? ' como fixo deste streamer' : ''}.` });
       }
     } catch {
       setEditFeedback({ type: 'error', msg: 'Erro de conexão.' });
@@ -801,6 +873,81 @@ export default function AdminPanel() {
       setAddingProd(false);
       setTimeout(() => setEditFeedback(null), 3000);
     }
+  };
+
+  const handleSaveFixedQty = async (tmpl: FixedProductTemplate) => {
+    if (!editData) return;
+    const quantity = Math.max(0, Number(fixedQtyInputs[tmpl.name] ?? '0') || 0);
+    setSavingFixedName(tmpl.name);
+    try {
+      const res = await fetch(`/api/admin/streamers/${editData.username}/products`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: tmpl.name, quantity,
+          description: tmpl.description, imageUrl: tmpl.imageUrl,
+          pscValue: tmpl.pscValue, skipPsc: tmpl.skipPsc,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditFeedback({ type: 'error', msg: data.error ?? 'Erro ao salvar quantidade.' });
+      } else {
+        setAdminProducts(prev => {
+          const idx = prev.findIndex(p => p.name === tmpl.name);
+          if (idx >= 0) return prev.map((p, i) => i === idx ? data : p);
+          return [data, ...prev];
+        });
+        setEditFeedback({ type: 'success', msg: `Quantidade de "${tmpl.name}" atualizada.` });
+      }
+    } catch {
+      setEditFeedback({ type: 'error', msg: 'Erro de conexão.' });
+    } finally {
+      setSavingFixedName(null);
+      setTimeout(() => setEditFeedback(null), 3000);
+    }
+  };
+
+  const handleSavePinnedItemQty = async (item: AdminProduct) => {
+    if (!editData) return;
+    const quantity = Math.max(0, Number(pinnedItemQtyInputs[item.id] ?? String(item.quantity)) || 0);
+    setSavingPinnedItemId(item.id);
+    try {
+      const res = await fetch(`/api/admin/streamers/${editData.username}/products`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: item.name, quantity,
+          description: item.description, imageUrl: item.imageUrl,
+          pscValue: item.pscValue, skipPsc: item.skipPsc, pinned: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditFeedback({ type: 'error', msg: data.error ?? 'Erro ao salvar quantidade.' });
+      } else {
+        setAdminProducts(prev => prev.map(p => p.id === item.id ? data : p));
+        setEditFeedback({ type: 'success', msg: `Quantidade de "${item.name}" atualizada.` });
+      }
+    } catch {
+      setEditFeedback({ type: 'error', msg: 'Erro de conexão.' });
+    } finally {
+      setSavingPinnedItemId(null);
+      setTimeout(() => setEditFeedback(null), 3000);
+    }
+  };
+
+  const handleSetFixedProductImage = async (tmpl: FixedProductTemplate, imageUrl: string) => {
+    try {
+      const res = await fetch('/api/admin/fixed-products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tmpl.id, imageUrl }),
+      });
+      const data = await res.json();
+      if (res.ok) setFixedProducts(prev => prev.map(f => f.id === tmpl.id ? data : f));
+    } catch {}
+    setShowFixedImagePicker(false);
   };
 
   const handleDeleteProduct = async (itemId: string) => {
@@ -901,7 +1048,7 @@ export default function AdminPanel() {
         setCreateFeedback({ type: 'error', msg: data.error || 'Erro ao criar streamer.' });
       } else {
         setCreateFeedback({ type: 'success', msg: `Streamer "${data.username}" criado com sucesso!` });
-        setForm({ username: '', displayName: '', password: '', mascot: 'dreads', themeColor: '#BF5AF2', pscBalance: 0, stageTheme: 'cyber-purple', twitchChannel: '', kickChannel: '', youtubeChannel: '' });
+        setForm({ username: '', displayName: '', nome: '', password: '', mascot: 'dreads', themeColor: '#BF5AF2', pscBalance: 0, stageTheme: 'cyber-purple', twitchChannel: '', kickChannel: '', youtubeChannel: '' });
         setMascotImg(null);
         setRaffleMascotImg(null);
         setStageBgImg(null);
@@ -966,6 +1113,33 @@ export default function AdminPanel() {
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
           <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-3 10H7v-2h10v2zm0-3H7V7h10v2z"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'afiliados' as Section,
+      label: 'PROPOSTAS AFILIADOS',
+      icon: (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'vendas' as Section,
+      label: 'DASHBOARD VENDAS',
+      icon: (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'playerskins' as Section,
+      label: 'FINANÇAS',
+      icon: (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 13h2v7H3v-7zm4-6h2v13H7V7zm4 3h2v10h-2V10zm4-7h2v17h-2V3zm4 10h2v7h-2v-7z"/>
         </svg>
       ),
     },
@@ -1235,6 +1409,18 @@ export default function AdminPanel() {
                             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)' }}
                           />
                         </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>NOME REAL (para afiliação)</label>
+                        <input
+                          type="text"
+                          value={form.nome}
+                          onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
+                          placeholder="ex: Felipe Paiva"
+                          className="rounded-xl font-rajdhani text-sm outline-none px-4 py-3"
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)' }}
+                        />
                       </div>
 
                       <div className="flex flex-col gap-1.5">
@@ -1960,6 +2146,17 @@ export default function AdminPanel() {
                                 />
                               </div>
                               <div className="flex-1 flex flex-col gap-1.5">
+                                <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>NOME REAL (afiliação)</label>
+                                <input
+                                  type="text"
+                                  value={(editProfile as any).nome || ''}
+                                  onChange={e => setEditProfile(p => ({ ...p, nome: e.target.value } as any))}
+                                  placeholder="Ex: Felipe Paiva"
+                                  className="rounded-xl font-rajdhani text-sm outline-none px-4 py-3"
+                                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                                />
+                              </div>
+                              <div className="flex-1 flex flex-col gap-1.5">
                                 <label className="font-orbitron tracking-widest" style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>
                                   {editProfile.forceFirstAccess ? 'PRIMEIRO ACESSO (ativado)' : 'NOVA SENHA (opcional)'}
                                 </label>
@@ -2281,10 +2478,167 @@ export default function AdminPanel() {
                         </div>
                         <div className="px-2 py-1 rounded-lg" style={{ background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.2)' }}>
                           <span className="font-orbitron text-xs font-bold" style={{ color: 'rgba(255,180,0,0.8)' }}>
-                            {adminProducts.length} item{adminProducts.length !== 1 ? 's' : ''}
+                            {customAdminProducts.length + pinnedCustomProducts.length} item{(customAdminProducts.length + pinnedCustomProducts.length) !== 1 ? 's' : ''}
                           </span>
                         </div>
                       </div>
+
+                      {/* Produtos fixos — sempre disponíveis para todo streamer, só a quantidade é ajustável aqui */}
+                      {fixedProducts.map(tmpl => (
+                        <div key={tmpl.id} className="flex flex-col gap-2">
+                          <div
+                            className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
+                            style={{ background: 'rgba(0,229,255,0.04)', border: '1px solid rgba(0,229,255,0.18)' }}
+                          >
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
+                                style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.2)' }}>
+                                {tmpl.imageUrl ? (
+                                  <img src={tmpl.imageUrl} alt={tmpl.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(0,229,255,0.7)">
+                                    <path d="M20 6h-2.18c.07-.44.18-.88.18-1.38C18 2.06 15.94 0 13.38 0c-1.3 0-2.48.49-3.38 1.28C9.1.49 7.92 0 6.62 0 4.06 0 2 2.06 2 4.62c0 .5.11.94.18 1.38H0v14h24V6h-4zm-4-1.38C16 3.25 16.85 2 18.12 2c.83 0 1.5.67 1.5 1.5S18.95 5 18.12 5H16v-.38zM8.5 3.5c0-.83.67-1.5 1.5-1.5 1.27 0 2.12 1.25 2.12 3H9.88C9.15 5 8.5 4.33 8.5 3.5z"/>
+                                  </svg>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-orbitron text-xs font-bold truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                                    {tmpl.name}
+                                  </p>
+                                  <span className="font-orbitron" style={{ fontSize: 8, letterSpacing: 1, color: 'rgba(0,229,255,0.6)', border: '1px solid rgba(0,229,255,0.3)', borderRadius: 4, padding: '1px 5px' }}>
+                                    FIXO
+                                  </span>
+                                </div>
+                                <p className="font-rajdhani text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                                  Quantidade sorteável restante. Ao chegar a 0, some da lista do streamer.
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={toggleFixedImagePicker}
+                                className="px-2.5 py-2 rounded-lg font-orbitron font-bold tracking-widest transition-all"
+                                style={{ fontSize: 9, background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.25)', color: 'rgba(0,229,255,0.8)' }}
+                              >
+                                {showFixedImagePicker ? 'FECHAR' : 'IMAGEM'}
+                              </button>
+                              <input
+                                type="number"
+                                min="0"
+                                value={fixedQtyInputs[tmpl.name] ?? '0'}
+                                onChange={e => setFixedQtyInputs(prev => ({ ...prev, [tmpl.name]: e.target.value }))}
+                                className="rounded-lg font-orbitron text-sm outline-none px-3 py-2 text-center"
+                                style={{ width: 72, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                              />
+                              <button
+                                onClick={() => handleSaveFixedQty(tmpl)}
+                                disabled={savingFixedName === tmpl.name}
+                                className="px-3 py-2 rounded-lg font-orbitron text-xs font-bold tracking-widest transition-all"
+                                style={{
+                                  background: savingFixedName === tmpl.name ? 'rgba(255,255,255,0.04)' : 'rgba(0,229,255,0.12)',
+                                  border: `1px solid ${savingFixedName === tmpl.name ? 'rgba(255,255,255,0.08)' : 'rgba(0,229,255,0.35)'}`,
+                                  color: savingFixedName === tmpl.name ? 'rgba(255,255,255,0.2)' : 'rgba(0,229,255,0.9)',
+                                  cursor: savingFixedName === tmpl.name ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                {savingFixedName === tmpl.name ? '...' : 'SALVAR'}
+                              </button>
+                            </div>
+                          </div>
+                          {showFixedImagePicker && (
+                            <div className="p-3 rounded-xl grid grid-cols-6 gap-2 max-h-48 overflow-y-auto"
+                              style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                              {marketingImages.length > 0 ? marketingImages.map(img => (
+                                <button
+                                  type="button"
+                                  key={img.id}
+                                  onClick={() => handleSetFixedProductImage(tmpl, img.imageData)}
+                                  className="rounded-lg overflow-hidden aspect-square"
+                                  style={{ border: '1px solid rgba(255,255,255,0.12)', background: '#000' }}
+                                  title={img.label ?? ''}
+                                >
+                                  <img src={img.imageData} alt={img.label ?? ''} className="w-full h-full object-contain" />
+                                </button>
+                              )) : (
+                                <span className="font-rajdhani text-xs col-span-6 py-2" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                                  Nenhuma imagem cadastrada em Marketing.
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Produtos fixos só para este streamer (marcados como "Fixo" no formulário abaixo) */}
+                      {pinnedCustomProducts.map(item => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
+                          style={{ background: 'rgba(255,180,0,0.04)', border: '1px solid rgba(255,180,0,0.18)' }}
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
+                              style={{ background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.2)' }}>
+                              {item.imageUrl ? (
+                                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,180,0,0.7)">
+                                  <path d="M20 6h-2.18c.07-.44.18-.88.18-1.38C18 2.06 15.94 0 13.38 0c-1.3 0-2.48.49-3.38 1.28C9.1.49 7.92 0 6.62 0 4.06 0 2 2.06 2 4.62c0 .5.11.94.18 1.38H0v14h24V6h-4zm-4-1.38C16 3.25 16.85 2 18.12 2c.83 0 1.5.67 1.5 1.5S18.95 5 18.12 5H16v-.38zM8.5 3.5c0-.83.67-1.5 1.5-1.5 1.27 0 2.12 1.25 2.12 3H9.88C9.15 5 8.5 4.33 8.5 3.5z"/>
+                                </svg>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-orbitron text-xs font-bold truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                                  {item.name}
+                                </p>
+                                <span className="font-orbitron" style={{ fontSize: 8, letterSpacing: 1, color: 'rgba(255,180,0,0.7)', border: '1px solid rgba(255,180,0,0.3)', borderRadius: 4, padding: '1px 5px' }}>
+                                  FIXO
+                                </span>
+                              </div>
+                              <p className="font-rajdhani text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                                Fixo somente para este streamer.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <input
+                              type="number"
+                              min="0"
+                              value={pinnedItemQtyInputs[item.id] ?? String(item.quantity)}
+                              onChange={e => setPinnedItemQtyInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
+                              className="rounded-lg font-orbitron text-sm outline-none px-3 py-2 text-center"
+                              style={{ width: 72, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                            />
+                            <button
+                              onClick={() => handleSavePinnedItemQty(item)}
+                              disabled={savingPinnedItemId === item.id}
+                              className="px-3 py-2 rounded-lg font-orbitron text-xs font-bold tracking-widest transition-all"
+                              style={{
+                                background: savingPinnedItemId === item.id ? 'rgba(255,255,255,0.04)' : 'rgba(255,180,0,0.12)',
+                                border: `1px solid ${savingPinnedItemId === item.id ? 'rgba(255,255,255,0.08)' : 'rgba(255,180,0,0.35)'}`,
+                                color: savingPinnedItemId === item.id ? 'rgba(255,255,255,0.2)' : 'rgba(255,180,0,0.9)',
+                                cursor: savingPinnedItemId === item.id ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              {savingPinnedItemId === item.id ? '...' : 'SALVAR'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProduct(item.id)}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+                              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: 'rgba(239,68,68,0.6)' }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.2)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(239,68,68,0.9)'; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.08)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(239,68,68,0.6)'; }}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
 
                       {/* Existing products list */}
                       {prodLoading ? (
@@ -2294,20 +2648,24 @@ export default function AdminPanel() {
                           </svg>
                           <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Carregando produtos...</span>
                         </div>
-                      ) : adminProducts.length > 0 ? (
+                      ) : customAdminProducts.length > 0 ? (
                         <div className="flex flex-col gap-2">
-                          {adminProducts.map(prod => (
+                          {customAdminProducts.map(prod => (
                             <div
                               key={prod.id}
                               className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
                               style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
                             >
                               <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
                                   style={{ background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.2)' }}>
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,180,0,0.7)">
-                                    <path d="M20 6h-2.18c.07-.44.18-.88.18-1.38C18 2.06 15.94 0 13.38 0c-1.3 0-2.48.49-3.38 1.28C9.1.49 7.92 0 6.62 0 4.06 0 2 2.06 2 4.62c0 .5.11.94.18 1.38H0v14h24V6h-4zm-4-1.38C16 3.25 16.85 2 18.12 2c.83 0 1.5.67 1.5 1.5S18.95 5 18.12 5H16v-.38zM8.5 3.5c0-.83.67-1.5 1.5-1.5 1.27 0 2.12 1.25 2.12 3H9.88C9.15 5 8.5 4.33 8.5 3.5z"/>
-                                  </svg>
+                                  {prod.imageUrl ? (
+                                    <img src={prod.imageUrl} alt={prod.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,180,0,0.7)">
+                                      <path d="M20 6h-2.18c.07-.44.18-.88.18-1.38C18 2.06 15.94 0 13.38 0c-1.3 0-2.48.49-3.38 1.28C9.1.49 7.92 0 6.62 0 4.06 0 2 2.06 2 4.62c0 .5.11.94.18 1.38H0v14h24V6h-4zm-4-1.38C16 3.25 16.85 2 18.12 2c.83 0 1.5.67 1.5 1.5S18.95 5 18.12 5H16v-.38zM8.5 3.5c0-.83.67-1.5 1.5-1.5 1.27 0 2.12 1.25 2.12 3H9.88C9.15 5 8.5 4.33 8.5 3.5z"/>
+                                    </svg>
+                                  )}
                                 </div>
                                 <div className="min-w-0">
                                   <p className="font-orbitron text-xs font-bold truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>
@@ -2375,6 +2733,41 @@ export default function AdminPanel() {
                             className="rounded-xl font-rajdhani text-sm outline-none px-4 py-2.5 col-span-2"
                             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
                           />
+
+                          {/* Imagem do produto — anexada diretamente (upload) */}
+                          <div className="flex flex-col gap-1 col-span-2">
+                            <label className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>IMAGEM (opcional)</label>
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
+                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                                {newProd.imageUrl ? (
+                                  <img src={newProd.imageUrl} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,0.2)">
+                                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                                  </svg>
+                                )}
+                              </div>
+                              <label
+                                className="px-3 py-2 rounded-lg font-orbitron text-xs font-bold tracking-widest cursor-pointer"
+                                style={{ background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.25)', color: 'rgba(255,180,0,0.85)' }}
+                              >
+                                ANEXAR IMAGEM
+                                <input type="file" accept="image/*" className="hidden" onChange={handleNewProdImageFile} />
+                              </label>
+                              {newProd.imageUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => setNewProd(p => ({ ...p, imageUrl: '' }))}
+                                  className="font-rajdhani text-xs"
+                                  style={{ color: 'rgba(239,68,68,0.7)' }}
+                                >
+                                  remover
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
                           <div className="flex flex-col gap-1">
                             <label className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>QUANTIDADE</label>
                             <input
@@ -2399,26 +2792,47 @@ export default function AdminPanel() {
                             />
                           </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <div
-                              onClick={() => setNewProd(p => ({ ...p, skipPsc: !p.skipPsc }))}
-                              className="w-4 h-4 rounded flex items-center justify-center"
-                              style={{
-                                background: newProd.skipPsc ? 'rgba(255,180,0,0.3)' : 'rgba(255,255,255,0.05)',
-                                border: `1px solid ${newProd.skipPsc ? 'rgba(255,180,0,0.6)' : 'rgba(255,255,255,0.12)'}`,
-                              }}
-                            >
-                              {newProd.skipPsc && (
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(255,180,0,0.9)">
-                                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                                </svg>
-                              )}
-                            </div>
-                            <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                              Ignorar PSC (não desconta do saldo)
-                            </span>
-                          </label>
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                          <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <div
+                                onClick={() => setNewProd(p => ({ ...p, skipPsc: !p.skipPsc }))}
+                                className="w-4 h-4 rounded flex items-center justify-center"
+                                style={{
+                                  background: newProd.skipPsc ? 'rgba(255,180,0,0.3)' : 'rgba(255,255,255,0.05)',
+                                  border: `1px solid ${newProd.skipPsc ? 'rgba(255,180,0,0.6)' : 'rgba(255,255,255,0.12)'}`,
+                                }}
+                              >
+                                {newProd.skipPsc && (
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(255,180,0,0.9)">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                  </svg>
+                                )}
+                              </div>
+                              <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                                Ignorar PSC (não desconta do saldo)
+                              </span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <div
+                                onClick={() => setNewProd(p => ({ ...p, isFixed: !p.isFixed }))}
+                                className="w-4 h-4 rounded flex items-center justify-center"
+                                style={{
+                                  background: newProd.isFixed ? 'rgba(0,229,255,0.3)' : 'rgba(255,255,255,0.05)',
+                                  border: `1px solid ${newProd.isFixed ? 'rgba(0,229,255,0.6)' : 'rgba(255,255,255,0.12)'}`,
+                                }}
+                              >
+                                {newProd.isFixed && (
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(0,229,255,0.9)">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                  </svg>
+                                )}
+                              </div>
+                              <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                                Fixo (destaca este produto só para este streamer)
+                              </span>
+                            </label>
+                          </div>
                           <button
                             onClick={handleAddProduct}
                             disabled={addingProd || !newProd.name.trim()}
@@ -2749,6 +3163,15 @@ export default function AdminPanel() {
                 </div>
               </motion.div>
             )}
+
+            {/* ── PROPOSTAS AFILIADOS ── */}
+            {activeSection === 'afiliados' && <AffiliateProposals />}
+
+            {/* ── DASHBOARD VENDAS (ignora despesas de afiliado nas contas) ── */}
+            {activeSection === 'vendas' && <SalesDashboard ignoreAffiliateExpenses scope="vendas" />}
+
+            {/* ── DASHBOARD PLAYERSKINS (mesmo dashboard, sem upload) ── */}
+            {activeSection === 'playerskins' && <SalesDashboard showUpload={false} scope="playerskins" />}
 
           </AnimatePresence>
         </main>

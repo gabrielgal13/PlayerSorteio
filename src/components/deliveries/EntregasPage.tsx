@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import EntregasHistorico from './EntregasHistorico';
+import { getDeliveryMode } from '@/lib/prizeDelivery';
 import type { DeliveryStatus, RaffleResult } from '@/types';
 
 const ERROR_STATUSES: DeliveryStatus[] = ['erro_tradelink', 'erro_entrega', 'erro_compra'];
@@ -55,6 +56,26 @@ const STATUS: Record<DeliveryStatus, {
       </svg>
     ),
   },
+  aguardando_endereco: {
+    label: 'AGUARD. ENDEREÇO', sub: 'Esperando mensagem do vencedor',
+    color: '#A855F7', bg: 'rgba(168,85,247,0.1)', border: 'rgba(168,85,247,0.3)',
+    isError: false,
+    icon: (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+      </svg>
+    ),
+  },
+  endereco_recebido: {
+    label: 'ENDEREÇO RECEBIDO', sub: 'Aguardando envio pelo streamer',
+    color: '#00E5FF', bg: 'rgba(0,229,255,0.08)', border: 'rgba(0,229,255,0.25)',
+    isError: false,
+    icon: (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+      </svg>
+    ),
+  },
   entregue: {
     label: 'ENTREGUE', sub: null,
     color: '#00FFA3', bg: 'rgba(0,255,163,0.1)', border: 'rgba(0,255,163,0.3)',
@@ -98,7 +119,8 @@ const STATUS: Record<DeliveryStatus, {
 };
 
 const STATUS_ORDER: DeliveryStatus[] = [
-  'novo', 'aguardando_tradelink', 'item_comprado', 'tradelocked', 'entregue',
+  'novo', 'aguardando_tradelink', 'item_comprado', 'tradelocked',
+  'aguardando_endereco', 'endereco_recebido', 'entregue',
   'erro_tradelink', 'erro_entrega', 'erro_compra',
 ];
 
@@ -108,6 +130,8 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all',                  label: 'TODOS'         },
   { key: 'aguardando_tradelink', label: 'AGUARD. LINK'  },
   { key: 'item_comprado',        label: 'ITEM COMPRADO' },
+  { key: 'aguardando_endereco',  label: 'AGUARD. ENDEREÇO' },
+  { key: 'endereco_recebido',    label: 'ENDEREÇO OK'   },
   { key: 'entregue',             label: 'ENTREGUES'     },
   { key: 'tradelocked',          label: 'TRADE LOCK'    },
   { key: 'novo',                 label: 'PENDENTES'     },
@@ -488,11 +512,159 @@ function TradeLinkModal({ item, onConfirm, onClose }: {
   );
 }
 
+/* ── Address display (read-only) — prêmios "Camisa" ─────────────────── */
+function AddressDisplay({ value, onInsertClick }: { value: string; onInsertClick: () => void }) {
+  const copy = () => {
+    if (value) navigator.clipboard.writeText(value).catch(() => {});
+  };
+
+  if (!value) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="font-rajdhani" style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>
+          Endereço não informado
+        </span>
+        <button
+          onClick={onInsertClick}
+          className="flex-shrink-0 px-2 py-1 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-125"
+          style={{ fontSize: 9, color: '#FFB300', background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.2)' }}
+        >
+          INSERIR
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <span className="flex-1 min-w-0 truncate font-rajdhani" style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12 }} title={value}>
+        {value}
+      </span>
+      <button
+        onClick={copy}
+        title="Copiar endereço"
+        className="flex-shrink-0 p-1 rounded transition-all hover:bg-white/10"
+        style={{ color: 'rgba(255,180,0,0.6)' }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+/* ── Address modal — inserção manual do endereço (e camisa escolhida) ── */
+function AddressModal({ item, onConfirm, onClose }: {
+  item: RaffleResult;
+  onConfirm: (address: string) => void;
+  onClose: () => void;
+}) {
+  const [value, setValue] = useState(item.deliveryAddress ?? '');
+  const [error, setError] = useState('');
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const mode = getDeliveryMode(item.prize.name);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const handleSave = () => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setError('Informe o endereço completo.');
+      return;
+    }
+    onConfirm(trimmed);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.75)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        className="rounded-2xl p-6 mx-4 w-full"
+        style={{ maxWidth: 520, background: '#0d1117', border: '1px solid rgba(255,180,0,0.25)', boxShadow: '0 24px 80px rgba(0,0,0,0.7)' }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(255,180,0,0.1)', border: '1px solid rgba(255,180,0,0.2)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFB300">
+              <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+            </svg>
+          </div>
+          <h2 className="font-orbitron font-bold tracking-widest text-white" style={{ fontSize: 13 }}>
+            {item.deliveryAddress ? 'EDITAR ENDEREÇO' : 'INSERIR ENDEREÇO'}
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-3 mb-4 p-3 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          {item.prize.imageUrl && (
+            <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <img src={item.prize.imageUrl} alt="" className="w-full h-full object-contain" />
+            </div>
+          )}
+          <div>
+            <p className="font-rajdhani font-bold text-white" style={{ fontSize: 13 }}>{item.prize.name}</p>
+            <p className="font-rajdhani" style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+              Ganhador: <span style={{ color: 'rgba(255,255,255,0.7)' }}>{item.winner.name}</span>
+            </p>
+          </div>
+        </div>
+
+        <textarea
+          ref={inputRef}
+          value={value}
+          onChange={e => { setValue(e.target.value); setError(''); }}
+          onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+          placeholder={mode === 'address_and_shirt'
+            ? 'Endereço completo (com CEP) e qual camisa a pessoa escolheu...'
+            : 'Endereço completo (com CEP)...'}
+          rows={4}
+          className="w-full px-3 py-2.5 rounded-xl font-rajdhani mb-2 outline-none resize-none"
+          style={{
+            background: 'rgba(255,180,0,0.05)',
+            border: `1px solid ${error ? 'rgba(255,68,68,0.5)' : 'rgba(255,180,0,0.2)'}`,
+            color: 'rgba(255,255,255,0.85)',
+            fontSize: 12,
+          }}
+        />
+
+        {error && (
+          <p className="font-rajdhani mb-3" style={{ fontSize: 11, color: '#FF4444' }}>{error}</p>
+        )}
+
+        <div className="flex gap-2 justify-end mt-4">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-125"
+            style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+          >
+            CANCELAR
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-110"
+            style={{ fontSize: 10, color: '#000', background: '#FFB300', border: 'none' }}
+          >
+            SALVAR
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 /* ── Main component ─────────────────────────────────────────────────── */
 interface EntregasPageProps {
   historyOverride?: RaffleResult[];
   onHistoryRefresh?: () => Promise<void>;
-  onUpdateDelivery?: (id: string, tradeLink?: string, deliveryStatus?: DeliveryStatus) => void;
+  onUpdateDelivery?: (id: string, tradeLink?: string, deliveryStatus?: DeliveryStatus, deliveryAddress?: string) => void;
 }
 
 export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpdateDelivery }: EntregasPageProps = {}) {
@@ -505,6 +677,7 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
   const [search, setSearch]             = useState('');
   const [refreshing, setRefreshing]     = useState(false);
   const [tradeLinkModalId, setTradeLinkModalId] = useState<string | null>(null);
+  const [addressModalId, setAddressModalId] = useState<string | null>(null);
 
   const myHistory = (historyOverride ?? history.filter(r => r.streamer === currentUser?.username))
     .sort((a, b) => b.timestamp - a.timestamp);
@@ -533,6 +706,8 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
     tradelocked:          dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'tradelocked').length,
     aguardando_tradelink: dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'aguardando_tradelink').length,
     item_comprado:        dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'item_comprado').length,
+    aguardando_endereco:  dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'aguardando_endereco').length,
+    endereco_recebido:    dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'endereco_recebido').length,
     novo:                 dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'novo').length,
     erro:                 dayHistory.filter(r => ERROR_STATUSES.includes((r.deliveryStatus ?? 'novo') as DeliveryStatus)).length,
     erro_tradelink:       dayHistory.filter(r => (r.deliveryStatus ?? 'novo') === 'erro_tradelink').length,
@@ -546,12 +721,13 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
 
   const exportCSV = () => {
     const rows = [
-      ['Item', 'PSC', 'Ganhador', 'Trade Link', 'Status', 'Data'],
+      ['Item', 'PSC', 'Ganhador', 'Trade Link', 'Endereço', 'Status', 'Data'],
       ...dayHistory.map(r => [
         r.prize.name,
         r.prize.pscValue?.toString() ?? '',
         r.winner.name,
         r.tradeLink ?? '',
+        r.deliveryAddress ?? '',
         STATUS[(r.deliveryStatus ?? 'novo') as DeliveryStatus]?.label ?? r.deliveryStatus ?? '',
         new Date(r.timestamp).toLocaleString('pt-BR'),
       ]),
@@ -581,15 +757,16 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
     setRefreshing(false);
   };
 
-  // Auto-polling quando há itens aguardando trade link
+  // Auto-polling quando há itens aguardando trade link ou endereço
   useEffect(() => {
     if (!selectedDate) return;
-    const hasWaiting = dayHistory.some(r => (r.deliveryStatus ?? 'novo') === 'aguardando_tradelink');
+    const hasWaiting = dayHistory.some(r =>
+      ['aguardando_tradelink', 'aguardando_endereco'].includes(r.deliveryStatus ?? 'novo'));
     if (!hasWaiting) return;
     const interval = setInterval(() => { refreshHistory(); }, 15_000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate, counts.aguardando_tradelink]);
+  }, [selectedDate, counts.aguardando_tradelink, counts.aguardando_endereco]);
 
   const modalItem = tradeLinkModalId ? dayHistory.find(r => r.id === tradeLinkModalId) : null;
 
@@ -622,6 +799,14 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
     }
   };
 
+  const addressModalItem = addressModalId ? dayHistory.find(r => r.id === addressModalId) : null;
+
+  const handleAddressConfirm = (address: string) => {
+    if (!addressModalId) return;
+    handleUpdateDelivery(addressModalId, undefined, 'endereco_recebido', address);
+    setAddressModalId(null);
+  };
+
   const displayDate = selectedDate
     ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : null;
@@ -640,6 +825,13 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
             item={modalItem}
             onConfirm={handleModalConfirm}
             onClose={() => setTradeLinkModalId(null)}
+          />
+        )}
+        {addressModalItem && (
+          <AddressModal
+            item={addressModalItem}
+            onConfirm={handleAddressConfirm}
+            onClose={() => setAddressModalId(null)}
           />
         )}
       </AnimatePresence>
@@ -819,7 +1011,7 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
             <table className="w-full" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['ITEM', 'GANHADOR', 'TRADE LINK', 'STATUS', 'DATA SORTEIO'].map(h => (
+                  {['ITEM', 'GANHADOR', 'ENTREGA', 'STATUS', 'DATA SORTEIO'].map(h => (
                     <th key={h} className="font-orbitron text-white/30 tracking-widest text-left px-4 py-3"
                       style={{ fontSize: 9, fontWeight: 700, background: 'rgba(255,255,255,0.02)' }}>
                       {h}
@@ -833,6 +1025,7 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
                     const status = (r.deliveryStatus ?? 'novo') as DeliveryStatus;
                     const cfg = STATUS[status] ?? STATUS.novo;
                     const hasPsc = (r.prize.pscValue ?? 0) > 0;
+                    const isAddressMode = getDeliveryMode(r.prize.name) !== 'trade_link';
                     const dt = new Date(r.timestamp);
 
                     const rowBg = cfg.isError
@@ -905,12 +1098,19 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
                           </div>
                         </td>
 
-                        {/* TRADE LINK */}
+                        {/* ENTREGA (trade link ou endereço, dependendo do prêmio) */}
                         <td className="px-4 py-3" style={{ minWidth: 200, maxWidth: 280 }}>
-                          <TradeLinkDisplay
-                            value={r.tradeLink ?? ''}
-                            onInsertClick={() => setTradeLinkModalId(r.id)}
-                          />
+                          {isAddressMode ? (
+                            <AddressDisplay
+                              value={r.deliveryAddress ?? ''}
+                              onInsertClick={() => setAddressModalId(r.id)}
+                            />
+                          ) : (
+                            <TradeLinkDisplay
+                              value={r.tradeLink ?? ''}
+                              onInsertClick={() => setTradeLinkModalId(r.id)}
+                            />
+                          )}
                         </td>
 
                         {/* STATUS */}

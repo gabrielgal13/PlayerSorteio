@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
+import { getDeliveryMode } from '@/lib/prizeDelivery';
 import type { DeliveryStatus } from '@/types';
 
 const STATUS: Record<DeliveryStatus, { label: string; color: string; bg: string; border: string }> = {
@@ -9,6 +10,8 @@ const STATUS: Record<DeliveryStatus, { label: string; color: string; bg: string;
   aguardando_tradelink: { label: 'AGUARD. TRADE LINK',      color: '#A855F7', bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.35)'  },
   item_comprado:        { label: 'ITEM COMPRADO',           color: '#60A5FA', bg: 'rgba(96,165,250,0.12)',  border: 'rgba(96,165,250,0.35)'  },
   tradelocked:          { label: 'TRADE LOCK 7D',           color: '#FFD166', bg: 'rgba(255,209,102,0.12)', border: 'rgba(255,209,102,0.35)' },
+  aguardando_endereco:  { label: 'AGUARD. ENDEREÇO',        color: '#A855F7', bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.35)'  },
+  endereco_recebido:    { label: 'ENDEREÇO RECEBIDO',       color: '#60A5FA', bg: 'rgba(96,165,250,0.12)',  border: 'rgba(96,165,250,0.35)'  },
   entregue:             { label: 'ENTREGUE',                color: '#00FFA3', bg: 'rgba(0,255,163,0.12)',   border: 'rgba(0,255,163,0.35)'   },
   erro_tradelink:       { label: 'ERRO TRADE LINK',         color: '#FF4444', bg: 'rgba(255,68,68,0.12)',   border: 'rgba(255,68,68,0.35)'   },
   erro_entrega:         { label: 'ERRO AO ENVIAR',          color: '#FF4444', bg: 'rgba(255,68,68,0.12)',   border: 'rgba(255,68,68,0.35)'   },
@@ -16,7 +19,8 @@ const STATUS: Record<DeliveryStatus, { label: string; color: string; bg: string;
 };
 
 const STATUS_ORDER: DeliveryStatus[] = [
-  'novo', 'aguardando_tradelink', 'item_comprado', 'tradelocked', 'entregue',
+  'novo', 'aguardando_tradelink', 'item_comprado', 'tradelocked',
+  'aguardando_endereco', 'endereco_recebido', 'entregue',
   'erro_tradelink', 'erro_entrega', 'erro_compra',
 ];
 
@@ -35,6 +39,30 @@ export default function EntregasPanel({ onClose }: Props) {
   const [tradeLinkDraft, setTradeLinkDraft] = useState<Record<string, string>>(() =>
     Object.fromEntries(myHistory.map(r => [r.id, r.tradeLink ?? '']))
   );
+
+  // Local state para os inputs de endereço (prêmios "Camisa")
+  const [addressDraft, setAddressDraft] = useState<Record<string, string>>(() =>
+    Object.fromEntries(myHistory.map(r => [r.id, r.deliveryAddress ?? '']))
+  );
+
+  // Sincroniza caso o histórico mude externamente
+  useEffect(() => {
+    setAddressDraft(prev => {
+      const next = { ...prev };
+      for (const r of myHistory) {
+        if (!(r.id in next)) next[r.id] = r.deliveryAddress ?? '';
+      }
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history.length]);
+
+  const commitAddress = (id: string) => {
+    const value = (addressDraft[id] ?? '').trim();
+    const entry = myHistory.find(r => r.id === id);
+    if (!entry || entry.deliveryAddress === value) return;
+    updateDelivery(id, undefined, value ? 'endereco_recebido' : undefined, value);
+  };
 
   // Sincroniza caso o histórico mude externamente
   useEffect(() => {
@@ -169,6 +197,7 @@ export default function EntregasPanel({ onClose }: Props) {
                 const status = (r.deliveryStatus ?? 'novo') as DeliveryStatus;
                 const cfg = STATUS[status];
                 const hasPsc = (r.prize.pscValue ?? 0) > 0;
+                const isAddressMode = getDeliveryMode(r.prize.name) !== 'trade_link';
 
                 return (
                   <motion.div
@@ -257,6 +286,26 @@ export default function EntregasPanel({ onClose }: Props) {
                               fontSize: '11px',
                             }}
                             onFocus={e => (e.currentTarget.style.borderColor = 'rgba(0,229,255,0.3)')}
+                          />
+                        </div>
+                      ) : isAddressMode ? (
+                        <div className="flex items-center gap-2 pt-2.5">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="rgba(255,180,0,0.5)" className="flex-shrink-0">
+                            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                          </svg>
+                          <input
+                            type="text"
+                            placeholder="Endereço completo do ganhador..."
+                            value={addressDraft[r.id] ?? ''}
+                            onChange={e => setAddressDraft(prev => ({ ...prev, [r.id]: e.target.value }))}
+                            onBlur={() => commitAddress(r.id)}
+                            className="flex-1 font-rajdhani text-xs text-white/70 outline-none rounded-lg px-2.5 py-1.5 transition-all"
+                            style={{
+                              background: 'rgba(255,255,255,0.04)',
+                              border: '1px solid rgba(255,255,255,0.08)',
+                              fontSize: '11px',
+                            }}
+                            onFocus={e => (e.currentTarget.style.borderColor = 'rgba(255,180,0,0.3)')}
                           />
                         </div>
                       ) : (

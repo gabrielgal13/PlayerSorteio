@@ -90,7 +90,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   const [saveListLoading, setSaveListLoading] = useState(false);
   const [saveListError, setSaveListError] = useState<string | null>(null);
   const [saveListSuccess, setSaveListSuccess] = useState(false);
-  const [stageQtyError, setStageQtyError] = useState(false);
+  const [stageQtyError, setStageQtyError] = useState<string | null>(null);
   const [quickListDismissed, setQuickListDismissed] = useState(false);
   const [confirmClearStaged, setConfirmClearStaged] = useState(false);
   const [quickSaveItems, setQuickSaveItems] = useState<PrizeFormData[] | null>(null);
@@ -494,8 +494,16 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   };
 
   const applyAdminProduct = (item: typeof adminProducts[number]) => {
+    const alreadyStaged = staged.find(p => p.name === item.name)?.quantity ?? 0;
+    const remaining = item.quantity - alreadyStaged;
+    if (remaining <= 0) {
+      setSaveError(`Todas as unidades de "${item.name}" já foram adicionadas a este sorteio.`);
+      setTimeout(() => setSaveError(null), 4000);
+      return;
+    }
+    const addQty = Math.min(form.quantity, remaining);
     if (!item.skipPsc && item.pscValue !== null) {
-      const newCost = item.pscValue * form.quantity;
+      const newCost = item.pscValue * addQty;
       if (pscBalance - alreadySpent - stagedCost - newCost < 0) {
         setSaveError('Saldo insuficiente para adicionar este prêmio.');
         setTimeout(() => setSaveError(null), 4000);
@@ -505,13 +513,13 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     setStaged(s => {
       const idx = s.findIndex(p => p.name === item.name);
       if (idx >= 0) {
-        return s.map((p, i) => i === idx ? { ...p, quantity: p.quantity + form.quantity } : p);
+        return s.map((p, i) => i === idx ? { ...p, quantity: p.quantity + addQty } : p);
       }
       return [...s, {
         name: item.name,
         description: item.description ?? '',
         imageUrl: item.imageUrl ?? '',
-        quantity: form.quantity,
+        quantity: addQty,
         pscValue: item.pscValue ?? undefined,
         skipPsc: item.skipPsc,
       }];
@@ -676,12 +684,21 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   const changeStageQty = (idx: number, delta: number) => {
     setStaged(s => {
       const item = s[idx];
-      if (delta > 0 && item && !item.skipPsc && item.pscValue !== undefined) {
-        const currentCost = s.filter(p => !p.skipPsc).reduce((sum, p) => sum + (p.pscValue ?? 0) * p.quantity, 0);
-        if (pscBalance - alreadySpent - currentCost - item.pscValue < 0) {
-          setStageQtyError(true);
-          setTimeout(() => setStageQtyError(false), 3000);
+      if (!item) return s;
+      if (delta > 0) {
+        const adminMatch = adminProducts.find(p => p.name === item.name);
+        if (adminMatch && item.quantity + delta > adminMatch.quantity) {
+          setStageQtyError(`Só há ${adminMatch.quantity}x "${adminMatch.name}" disponível para este streamer.`);
+          setTimeout(() => setStageQtyError(null), 3000);
           return s;
+        }
+        if (!item.skipPsc && item.pscValue !== undefined) {
+          const currentCost = s.filter(p => !p.skipPsc).reduce((sum, p) => sum + (p.pscValue ?? 0) * p.quantity, 0);
+          if (pscBalance - alreadySpent - currentCost - item.pscValue < 0) {
+            setStageQtyError('Saldo insuficiente para adicionar este prêmio.');
+            setTimeout(() => setStageQtyError(null), 3000);
+            return s;
+          }
         }
       }
       return s.map((p, i) => i === idx ? { ...p, quantity: Math.max(1, p.quantity + delta) } : p);
@@ -1487,7 +1504,9 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                                     {item.description}
                                   </p>
                                 )}
-                                <span className="font-orbitron" style={{ fontSize: '8px', color: '#FFB300', letterSpacing: '0.12em', opacity: 0.7 }}>EXCLUSIVO</span>
+                                <span className="font-orbitron" style={{ fontSize: '8px', color: '#FFB300', letterSpacing: '0.12em', opacity: 0.7 }}>
+                                  EXCLUSIVO · RESTAM {item.quantity - (staged.find(p => p.name === item.name)?.quantity ?? 0)}x
+                                </span>
                               </div>
                               {isAffiliate && item.pscValue !== null && !item.skipPsc && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
@@ -1859,7 +1878,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="#FF4444"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                           <span className="font-rajdhani font-bold" style={{ fontSize: '11px', color: '#FF6B6B', letterSpacing: '0.02em' }}>
-                            Saldo insuficiente para adicionar este prêmio.
+                            {stageQtyError}
                           </span>
                         </motion.div>
                       )}

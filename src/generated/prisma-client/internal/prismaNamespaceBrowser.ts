@@ -56,6 +56,8 @@ export const ModelName = {
   PrizeListItem: 'PrizeListItem',
   PscTransaction: 'PscTransaction',
   MarketingImage: 'MarketingImage',
+  AffiliateProposal: 'AffiliateProposal',
+  Sale: 'Sale',
   RaffleHistory: 'RaffleHistory',
   BotCommand: 'BotCommand',
   AppConfig: 'AppConfig'
@@ -83,6 +85,7 @@ export const StreamerScalarFieldEnum = {
   passwordHash: 'passwordHash',
   mascot: 'mascot',
   displayName: 'displayName',
+  nome: 'nome',
   isAdmin: 'isAdmin',
   twitchChannel: 'twitchChannel',
   kickChannel: 'kickChannel',
@@ -170,6 +173,50 @@ export const MarketingImageScalarFieldEnum = {
 } as const
 
 export type MarketingImageScalarFieldEnum = (typeof MarketingImageScalarFieldEnum)[keyof typeof MarketingImageScalarFieldEnum]
+
+
+export const AffiliateProposalScalarFieldEnum = {
+  id: 'id',
+  streamerName: 'streamerName',
+  coupon: 'coupon',
+  profitPct: 'profitPct',
+  status: 'status',
+  accountConfirmed: 'accountConfirmed',
+  shirtsConfirmed: 'shirtsConfirmed',
+  startedAt: 'startedAt',
+  contractMonths: 'contractMonths',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AffiliateProposalScalarFieldEnum = (typeof AffiliateProposalScalarFieldEnum)[keyof typeof AffiliateProposalScalarFieldEnum]
+
+
+export const SaleScalarFieldEnum = {
+  id: 'id',
+  orderNumber: 'orderNumber',
+  date: 'date',
+  contactName: 'contactName',
+  cpfCnpj: 'cpfCnpj',
+  email: 'email',
+  city: 'city',
+  state: 'state',
+  productDescription: 'productDescription',
+  quantity: 'quantity',
+  unitPrice: 'unitPrice',
+  totalPrice: 'totalPrice',
+  discount: 'discount',
+  shipping: 'shipping',
+  status: 'status',
+  affiliateUsername: 'affiliateUsername',
+  trackingCode: 'trackingCode',
+  observations: 'observations',
+  source: 'source',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SaleScalarFieldEnum = (typeof SaleScalarFieldEnum)[keyof typeof SaleScalarFieldEnum]
 
 
 export const RaffleHistoryScalarFieldEnum = {

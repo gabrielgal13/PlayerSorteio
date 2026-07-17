@@ -9,6 +9,7 @@ import AffiliateProposals from '@/components/admin/AffiliateProposals';
 import SalesDashboard from '@/components/admin/SalesDashboard';
 import type { RaffleResult, DeliveryStatus } from '@/types';
 import { INFINITE_QUANTITY } from '@/types';
+import { fileToResizedDataUrl } from '@/lib/imageResize';
 
 interface StreamerRow { username: string; displayName: string | null; pscBalance: number; isAffiliate: boolean; }
 interface AdminProduct { id: string; name: string; description: string | null; imageUrl: string | null; quantity: number; pscValue: number | null; skipPsc: boolean; pinned: boolean; }
@@ -2432,9 +2433,7 @@ export default function AdminPanel() {
                                         onChange={e => {
                                           const f = e.target.files?.[0];
                                           if (!f) return;
-                                          const r = new FileReader();
-                                          r.onload = ev => setEditProfile(p => ({ ...p, chatWarsSprite: ev.target?.result as string }));
-                                          r.readAsDataURL(f);
+                                          fileToResizedDataUrl(f).then(dataUrl => setEditProfile(p => ({ ...p, chatWarsSprite: dataUrl })));
                                           e.target.value = '';
                                         }} />
                                     </label>
@@ -2473,9 +2472,7 @@ export default function AdminPanel() {
                                         onChange={e => {
                                           const f = e.target.files?.[0];
                                           if (!f) return;
-                                          const r = new FileReader();
-                                          r.onload = ev => setEditProfile(p => ({ ...p, chatWarsBossSprite: ev.target?.result as string }));
-                                          r.readAsDataURL(f);
+                                          fileToResizedDataUrl(f).then(dataUrl => setEditProfile(p => ({ ...p, chatWarsBossSprite: dataUrl })));
                                           e.target.value = '';
                                         }} />
                                     </label>

@@ -49,7 +49,7 @@ export default function Dashboard() {
     obsMode, setObsMode,
     audioEnabled, setAudioEnabled,
     raffleStage, setRaffleStage,
-    eventBackground,
+    eventBackground, setEventBackground,
     pscBalance,
     isAffiliate,
   } = useStore();
@@ -67,6 +67,15 @@ export default function Dashboard() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // eventBackground (fundo do mascote na hora do sorteio) também não sobrevive
+  // a um refresh — só currentUser fica salvo. Se ainda não tem fundo custom
+  // escolhido, reaplica o padrão do mascote a partir do que já está persistido.
+  useEffect(() => {
+    if (eventBackground) return;
+    if (currentUser?.mascot === 'dreads') setEventBackground('/fundo-ganja.png');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.mascot]);
 
   // pscBalance/isAffiliate não sobrevivem a um refresh de página (não ficam no
   // localStorage) — resincroniza com o saldo real do banco assim que monta,

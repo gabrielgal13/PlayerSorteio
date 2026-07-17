@@ -584,6 +584,7 @@ export default function RaffleEngine() {
     chatTriggerCommand,
     raffleAnimationStyle,
     setPendingMarketplaceDelivery,
+    audioEnabled,
   } = useStore();
 
   const eventMusic = useEventMusic();
@@ -679,12 +680,15 @@ export default function RaffleEngine() {
     return () => clearInterval(interval);
   }, [twitchConnected, twitchConfig.channel, currentUser?.kickChannel, currentUser?.youtubeChannel]);
 
-  // Música ambiente do evento — toca enquanto a engine estiver montada
+  // Música ambiente do evento — toca enquanto a engine estiver montada, e
+  // reage ao mute (audioEnabled) em tempo real: sem isso, apertar mute
+  // durante o sorteio não parava a música já tocando.
   useEffect(() => {
-    eventMusic.start();
+    if (audioEnabled) eventMusic.start();
+    else eventMusic.stop();
     return () => eventMusic.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [audioEnabled]);
 
   // Auto-scroll chat to bottom
   useEffect(() => {

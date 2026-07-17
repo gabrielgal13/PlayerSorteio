@@ -131,11 +131,20 @@ export const TUNING = {
   bossHitPerSec: 16,          // damage the boss deals back to a touching player
   bossPlayerGrowthPerDamage: 0.8, // fração do dano no boss que vira massa pro jogador que bateu (2x o ganho normal de dreno)
   giantHuntMaxDrainFraction: 1 / 3, // Caça ao Gigante: o chat pode tirar no máximo 1/3 da vida do alvo
+  bossRadiusScale: 3,         // boss aparece bem maior que uma bola comum da mesma massa/vida
+  bossRadiusFloor: 50,        // tamanho mínimo do boss em px, mesmo com pouca vida (lobby pequeno)
 } as const;
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 export function radiusForMass(mass: number): number {
   return Math.sqrt(Math.max(mass, 1)) * TUNING.radiusK;
+}
+
+/** O boss usa a mesma "vida = massa" pro dano, mas aparece bem maior na tela —
+ * o tamanho dele acompanha a vida (encolhe conforme apanha), só que numa
+ * escala bem mais generosa que uma bola comum, com um piso pra nunca sumir. */
+export function radiusForBoss(mass: number): number {
+  return Math.max(TUNING.bossRadiusFloor, radiusForMass(mass) * TUNING.bossRadiusScale);
 }
 
 function hashHue(s: string): number {
@@ -391,7 +400,7 @@ export function triggerBoss(w: World) {
   const ball: Ball = {
     id, name: 'CHEFE DO CHAT', source: 'twitch', color: '#ff2d2d', hue: 0,
     x: w.width / 2, y: w.height / 2, vx: 0, vy: 0,
-    mass: hp, radius: radiusForMass(hp),
+    mass: hp, radius: radiusForBoss(hp),
     streak: 0, lastMsgAt: w.time, lastText: '', spawnAt: w.time,
     hitFlash: 0, wobble: 0, wanderAngle: 0,
     ghost: false, isStreamer: false, isBoss: true, threatId: null,
@@ -519,7 +528,7 @@ export function stepWorld(w: World, dtMs: number): void {
     b.x += b.vx * dt; b.y += b.vy * dt;
 
     // ease radius toward mass-derived target
-    const target = radiusForMass(b.mass);
+    const target = b.isBoss ? radiusForBoss(b.mass) : radiusForMass(b.mass);
     b.radius += (target - b.radius) * Math.min(TUNING.radiusEase * dt, 1);
 
     // walls

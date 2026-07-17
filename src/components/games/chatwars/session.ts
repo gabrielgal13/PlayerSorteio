@@ -16,8 +16,11 @@ import {
 } from './engine';
 import { useStore } from '@/store/useStore';
 
-const WORLD_W = 2000;
-const WORLD_H = 1200;
+// Mundo menor que antes — com poucos jogadores (streams pequenas) as bolinhas
+// se espalhavam por uma área tão grande que a câmera precisava dar um zoom-out
+// enorme pra caber todo mundo, deixando tudo minúsculo e ilegível.
+const WORLD_W = 1300;
+const WORLD_H = 820;
 
 export type FinalStats = MatchStats & { elapsedMs: number };
 

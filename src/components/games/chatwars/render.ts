@@ -15,7 +15,7 @@ export interface Camera {
 }
 
 export function createCamera(w: World): Camera {
-  return { x: w.width / 2, y: w.height / 2, zoom: 0.5, shake: 0 };
+  return { x: w.width / 2, y: w.height / 2, zoom: 0.6, shake: 0 };
 }
 
 /* ── Star field (cached per world size) ──────────────────────────────────── */
@@ -78,13 +78,16 @@ export function updateCamera(cam: Camera, w: World, viewW: number, viewH: number
       maxX = Math.max(maxX, b.x + b.radius); maxY = Math.max(maxY, b.y + b.radius);
     }
     if (any) {
-      const pad = 160;
+      const pad = 120;
       const bw = (maxX - minX) + pad * 2, bh = (maxY - minY) + pad * 2;
       tx = (minX + maxX) / 2; ty = (minY + maxY) / 2;
       tzoom = Math.min(viewW / bw, viewH / bh);
     }
   }
-  tzoom = Math.max(0.28, Math.min(1.4, tzoom));
+  // Piso alto de propósito: as bolinhas precisam continuar bem visíveis mesmo
+  // quando o grupo está espalhado — preferimos cortar quem ficou muito longe
+  // do enxame a encolher todo mundo até ficar ilegível.
+  tzoom = Math.max(0.55, Math.min(1.4, tzoom));
 
   const ease = focus ? 4 : 1.8;
   const k = Math.min(ease * dt, 1);
@@ -246,8 +249,8 @@ function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: Proc
     return;
   }
 
-  // flame trail on the leader / boss (behind body)
-  if (isLeader || b.isBoss) drawFlames(ctx, r, w.time, b.hue);
+  // flame trail on the leader (behind body)
+  if (isLeader) drawFlames(ctx, r, w.time, b.hue);
   // boss horns (behind body)
   if (b.isBoss) drawHorns(ctx, r);
 

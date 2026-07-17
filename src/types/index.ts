@@ -1,5 +1,8 @@
 export type MascotType = 'careca' | 'dreads';
 
+/** Sentinel usado em `PrizeListItem.quantity` (produtos exclusivos do admin) para representar estoque ilimitado. */
+export const INFINITE_QUANTITY = -1;
+
 export interface StreamerProfile {
   username: string;
   password: string;

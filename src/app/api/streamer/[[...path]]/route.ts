@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { ensureDeliveryAddressColumn } from '@/lib/deliveryCapture';
 import { recordRaffleCompleted, recordGameCompleted, getRankStatus } from '@/lib/rankEngine';
+import { INFINITE_QUANTITY } from '@/types';
 
 const ADMIN_LIST_NAME = '__admin_products__';
 
@@ -375,9 +376,9 @@ export async function POST(
     });
     if (adminList) {
       const adminItem = await prisma.prizeListItem.findFirst({
-        where: { prizeListId: adminList.id, name: result.prize.name, quantity: { gt: 0 } },
+        where: { prizeListId: adminList.id, name: result.prize.name },
       });
-      if (adminItem) {
+      if (adminItem && adminItem.quantity !== INFINITE_QUANTITY && adminItem.quantity > 0) {
         await prisma.prizeListItem.update({
           where: { id: adminItem.id },
           data: { quantity: adminItem.quantity - 1 },

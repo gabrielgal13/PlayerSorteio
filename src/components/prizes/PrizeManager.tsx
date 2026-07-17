@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import type { Prize, SavedPrizeList } from '@/types';
+import { INFINITE_QUANTITY } from '@/types';
 import CreateSavedListModal from './CreateSavedListModal';
 
 interface CS2Item {
@@ -494,14 +495,15 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
   };
 
   const applyAdminProduct = (item: typeof adminProducts[number]) => {
+    const isInfinite = item.quantity === INFINITE_QUANTITY;
     const alreadyStaged = staged.find(p => p.name === item.name)?.quantity ?? 0;
     const remaining = item.quantity - alreadyStaged;
-    if (remaining <= 0) {
+    if (!isInfinite && remaining <= 0) {
       setSaveError(`Todas as unidades de "${item.name}" já foram adicionadas a este sorteio.`);
       setTimeout(() => setSaveError(null), 4000);
       return;
     }
-    const addQty = Math.min(form.quantity, remaining);
+    const addQty = isInfinite ? form.quantity : Math.min(form.quantity, remaining);
     if (!item.skipPsc && item.pscValue !== null) {
       const newCost = item.pscValue * addQty;
       if (pscBalance - alreadySpent - stagedCost - newCost < 0) {
@@ -687,7 +689,7 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
       if (!item) return s;
       if (delta > 0) {
         const adminMatch = adminProducts.find(p => p.name === item.name);
-        if (adminMatch && item.quantity + delta > adminMatch.quantity) {
+        if (adminMatch && adminMatch.quantity !== INFINITE_QUANTITY && item.quantity + delta > adminMatch.quantity) {
           setStageQtyError(`Só há ${adminMatch.quantity}x "${adminMatch.name}" disponível para este streamer.`);
           setTimeout(() => setStageQtyError(null), 3000);
           return s;
@@ -1505,7 +1507,9 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                                   </p>
                                 )}
                                 <span className="font-orbitron" style={{ fontSize: '8px', color: '#FFB300', letterSpacing: '0.12em', opacity: 0.7 }}>
-                                  EXCLUSIVO · RESTAM {item.quantity - (staged.find(p => p.name === item.name)?.quantity ?? 0)}x
+                                  EXCLUSIVO · {item.quantity === INFINITE_QUANTITY
+                                    ? 'ILIMITADO'
+                                    : `RESTAM ${item.quantity - (staged.find(p => p.name === item.name)?.quantity ?? 0)}x`}
                                 </span>
                               </div>
                               {isAffiliate && item.pscValue !== null && !item.skipPsc && (

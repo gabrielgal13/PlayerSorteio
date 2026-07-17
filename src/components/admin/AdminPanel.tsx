@@ -8,6 +8,7 @@ import MarketingSection from '@/components/admin/MarketingSection';
 import AffiliateProposals from '@/components/admin/AffiliateProposals';
 import SalesDashboard from '@/components/admin/SalesDashboard';
 import type { RaffleResult, DeliveryStatus } from '@/types';
+import { INFINITE_QUANTITY } from '@/types';
 
 interface StreamerRow { username: string; displayName: string | null; pscBalance: number; isAffiliate: boolean; }
 interface AdminProduct { id: string; name: string; description: string | null; imageUrl: string | null; quantity: number; pscValue: number | null; skipPsc: boolean; pinned: boolean; }
@@ -587,10 +588,13 @@ export default function AdminPanel() {
   const [editPscInput, setEditPscInput] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [editFeedback, setEditFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [pscSaving, setPscSaving] = useState(false);
+  const [pscSaveFeedback, setPscSaveFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [adminProducts, setAdminProducts] = useState<AdminProduct[]>([]);
   const [prodLoading, setProdLoading] = useState(false);
-  const [newProd, setNewProd] = useState({ name: '', description: '', quantity: 1, pscValue: '', skipPsc: false, imageUrl: '', isFixed: false });
+  const [newProd, setNewProd] = useState({ name: '', description: '', quantity: 1, infiniteQty: false, pscValue: '', skipPsc: false, imageUrl: '', isFixed: false });
   const [addingProd, setAddingProd] = useState(false);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [fixedProducts, setFixedProducts] = useState<FixedProductTemplate[]>([]);
   const [fixedQtyInputs, setFixedQtyInputs] = useState<Record<string, string>>({});
   const [savingFixedName, setSavingFixedName] = useState<string | null>(null);
@@ -797,6 +801,65 @@ export default function AdminPanel() {
     setEditStreamer(username);
     loadEditStreamer(username);
     setEditFeedback(null);
+    setPscSaveFeedback(null);
+  };
+
+  // Atualiza o saldo PSC exibido em tempo real enquanto o painel de edição está aberto
+  useEffect(() => {
+    if (!editStreamer) return;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/admin/streamers/${editStreamer}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.error) return;
+        setEditData(d => (d && d.username === editStreamer ? { ...d, pscBalance: data.pscBalance } : d));
+        setStreamers(prev => prev.map(s => s.username === editStreamer ? { ...s, pscBalance: data.pscBalance } : s));
+      } catch {}
+    };
+    const id = setInterval(poll, 5000);
+    return () => clearInterval(id);
+  }, [editStreamer]);
+
+  const handleSavePsc = async () => {
+    if (!editData) return;
+    const pscValue = Number(editPscInput);
+    if (isNaN(pscValue) || pscValue < 0) {
+      setPscSaveFeedback({ type: 'error', msg: 'Valor PSC inválido.' });
+      setTimeout(() => setPscSaveFeedback(null), 3000);
+      return;
+    }
+    setPscSaving(true);
+    try {
+      const res = await fetch(`/api/admin/streamers/${editData.username}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pscBalance: pscValue }),
+      });
+      let data: Record<string, unknown>;
+      try {
+        data = await res.json();
+      } catch {
+        setPscSaveFeedback({ type: 'error', msg: `Erro no servidor (HTTP ${res.status}).` });
+        return;
+      }
+      if (!res.ok) {
+        setPscSaveFeedback({ type: 'error', msg: (data.error as string) ?? 'Erro ao salvar.' });
+      } else {
+        setEditData(d => d ? { ...d, pscBalance: data.pscBalance as number } : d);
+        setEditPscInput(String(data.pscBalance));
+        setStreamers(prev => prev.map(s => s.username === editData.username
+          ? { ...s, pscBalance: data.pscBalance as number }
+          : s
+        ));
+        setPscSaveFeedback({ type: 'success', msg: 'Saldo PSC atualizado!' });
+      }
+    } catch {
+      setPscSaveFeedback({ type: 'error', msg: 'Falha de conexão.' });
+    } finally {
+      setPscSaving(false);
+      setTimeout(() => setPscSaveFeedback(null), 3000);
+    }
   };
 
   const handleToggleAffiliate = () => {
@@ -897,7 +960,7 @@ export default function AdminPanel() {
           name: trimmedName,
           description: newProd.description || null,
           imageUrl: newProd.imageUrl || null,
-          quantity: newProd.quantity,
+          quantity: newProd.infiniteQty ? INFINITE_QUANTITY : newProd.quantity,
           pscValue: newProd.pscValue !== '' ? Number(newProd.pscValue) : null,
           skipPsc: newProd.skipPsc,
           pinned: newProd.isFixed,
@@ -909,7 +972,8 @@ export default function AdminPanel() {
       } else {
         setAdminProducts(prev => [...prev, data]);
         if (data.pinned) setPinnedItemQtyInputs(prev => ({ ...prev, [data.id]: String(data.quantity) }));
-        setNewProd({ name: '', description: '', quantity: 1, pscValue: '', skipPsc: false, imageUrl: '', isFixed: false });
+        setNewProd({ name: '', description: '', quantity: 1, infiniteQty: false, pscValue: '', skipPsc: false, imageUrl: '', isFixed: false });
+        setShowAddProductModal(false);
         setEditFeedback({ type: 'success', msg: `Produto "${data.name}" adicionado${data.pinned ? ' como fixo deste streamer' : ''}.` });
       }
     } catch {
@@ -2522,25 +2586,71 @@ export default function AdminPanel() {
                           SALDO PSC
                         </span>
                         {editData && (
-                          <div className="px-2 py-0.5 rounded-md"
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md"
                             style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.2)' }}>
+                            <motion.span
+                              className="inline-block w-1.5 h-1.5 rounded-full"
+                              style={{ background: '#4ADE80', boxShadow: '0 0 4px #4ADE8099' }}
+                              animate={{ opacity: [1, 0.3, 1] }}
+                              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                            />
                             <span className="font-orbitron text-xs font-bold" style={{ color: 'rgba(0,229,255,0.8)' }}>
                               ATUAL: {editData.pscBalance.toLocaleString('pt-BR')}
                             </span>
                           </div>
                         )}
                       </div>
-                      <input
-                        type="number"
-                        min="0"
-                        value={editPscInput}
-                        onChange={e => setEditPscInput(e.target.value)}
-                        placeholder="Novo saldo..."
-                        className="rounded-xl font-orbitron text-sm outline-none px-4 py-3"
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
-                      />
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          min="0"
+                          value={editPscInput}
+                          onChange={e => setEditPscInput(e.target.value)}
+                          placeholder="Novo saldo..."
+                          className="flex-1 rounded-xl font-orbitron text-sm outline-none px-4 py-3"
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                        />
+                        <button
+                          onClick={handleSavePsc}
+                          disabled={pscSaving || !editData}
+                          className="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-xl font-orbitron text-xs font-bold tracking-widest transition-all"
+                          style={{
+                            background: pscSaving ? 'rgba(255,255,255,0.04)' : 'linear-gradient(135deg, rgba(0,229,255,0.25), rgba(0,150,200,0.15))',
+                            border: `1px solid ${pscSaving ? 'rgba(255,255,255,0.08)' : 'rgba(0,229,255,0.5)'}`,
+                            color: pscSaving ? 'rgba(255,255,255,0.25)' : 'rgba(0,229,255,1)',
+                            cursor: pscSaving || !editData ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {pscSaving ? (
+                            <motion.span
+                              className="inline-block w-3 h-3 border-2 rounded-full"
+                              style={{ borderColor: 'rgba(255,255,255,0.15)', borderTopColor: 'rgba(255,255,255,0.4)' }}
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                            />
+                          ) : (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+                            </svg>
+                          )}
+                          SALVAR
+                        </button>
+                      </div>
+                      <AnimatePresence>
+                        {pscSaveFeedback && (
+                          <motion.p
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="font-rajdhani text-xs font-semibold"
+                            style={{ color: pscSaveFeedback.type === 'success' ? 'rgba(74,222,128,0.9)' : 'rgba(239,68,68,0.9)' }}
+                          >
+                            {pscSaveFeedback.msg}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
                       <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                        Define o saldo absoluto. A diferença será registrada como transação PSC.
+                        Define o saldo absoluto. A diferença será registrada como transação PSC. O valor &quot;ATUAL&quot; é atualizado automaticamente a cada 5s.
                       </p>
                     </div>
 
@@ -2686,27 +2796,39 @@ export default function AdminPanel() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <input
-                              type="number"
-                              min="0"
-                              value={pinnedItemQtyInputs[item.id] ?? String(item.quantity)}
-                              onChange={e => setPinnedItemQtyInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
-                              className="rounded-lg font-orbitron text-sm outline-none px-3 py-2 text-center"
-                              style={{ width: 72, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
-                            />
-                            <button
-                              onClick={() => handleSavePinnedItemQty(item)}
-                              disabled={savingPinnedItemId === item.id}
-                              className="px-3 py-2 rounded-lg font-orbitron text-xs font-bold tracking-widest transition-all"
-                              style={{
-                                background: savingPinnedItemId === item.id ? 'rgba(255,255,255,0.04)' : 'rgba(255,180,0,0.12)',
-                                border: `1px solid ${savingPinnedItemId === item.id ? 'rgba(255,255,255,0.08)' : 'rgba(255,180,0,0.35)'}`,
-                                color: savingPinnedItemId === item.id ? 'rgba(255,255,255,0.2)' : 'rgba(255,180,0,0.9)',
-                                cursor: savingPinnedItemId === item.id ? 'not-allowed' : 'pointer',
-                              }}
-                            >
-                              {savingPinnedItemId === item.id ? '...' : 'SALVAR'}
-                            </button>
+                            {item.quantity === INFINITE_QUANTITY ? (
+                              <span
+                                className="px-3 py-2 rounded-lg font-orbitron text-xs font-bold tracking-widest"
+                                style={{ background: 'rgba(255,180,0,0.1)', border: '1px solid rgba(255,180,0,0.3)', color: 'rgba(255,180,0,0.85)' }}
+                                title="Estoque ilimitado — para tornar limitado, exclua e recadastre o produto."
+                              >
+                                ∞ ILIMITADO
+                              </span>
+                            ) : (
+                              <>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={pinnedItemQtyInputs[item.id] ?? String(item.quantity)}
+                                  onChange={e => setPinnedItemQtyInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                  className="rounded-lg font-orbitron text-sm outline-none px-3 py-2 text-center"
+                                  style={{ width: 72, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                                />
+                                <button
+                                  onClick={() => handleSavePinnedItemQty(item)}
+                                  disabled={savingPinnedItemId === item.id}
+                                  className="px-3 py-2 rounded-lg font-orbitron text-xs font-bold tracking-widest transition-all"
+                                  style={{
+                                    background: savingPinnedItemId === item.id ? 'rgba(255,255,255,0.04)' : 'rgba(255,180,0,0.12)',
+                                    border: `1px solid ${savingPinnedItemId === item.id ? 'rgba(255,255,255,0.08)' : 'rgba(255,180,0,0.35)'}`,
+                                    color: savingPinnedItemId === item.id ? 'rgba(255,255,255,0.2)' : 'rgba(255,180,0,0.9)',
+                                    cursor: savingPinnedItemId === item.id ? 'not-allowed' : 'pointer',
+                                  }}
+                                >
+                                  {savingPinnedItemId === item.id ? '...' : 'SALVAR'}
+                                </button>
+                              </>
+                            )}
                             <button
                               onClick={() => handleDeleteProduct(item.id)}
                               className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
@@ -2755,7 +2877,7 @@ export default function AdminPanel() {
                                   </p>
                                   <div className="flex items-center gap-2 mt-0.5">
                                     <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                                      Qtd: {prod.quantity}
+                                      Qtd: {prod.quantity === INFINITE_QUANTITY ? '∞' : prod.quantity}
                                     </span>
                                     {prod.pscValue != null && (
                                       <span className="font-rajdhani text-xs font-semibold" style={{ color: 'rgba(0,229,255,0.6)' }}>
@@ -2790,150 +2912,218 @@ export default function AdminPanel() {
                         </p>
                       )}
 
-                      {/* Add new product form */}
-                      <div
-                        className="flex flex-col gap-3 pt-4"
-                        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-                      >
-                        <p className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                      {/* Add new product — abre modal */}
+                      <div className="pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                        <button
+                          onClick={() => setShowAddProductModal(true)}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-orbitron text-xs font-bold tracking-widest transition-all"
+                          style={{ background: 'rgba(255,180,0,0.1)', border: '1px solid rgba(255,180,0,0.3)', color: 'rgba(255,180,0,0.9)' }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                          </svg>
                           ADICIONAR PRODUTO
-                        </p>
-                        <div className="grid grid-cols-2 gap-3">
-                          <input
-                            type="text"
-                            value={newProd.name}
-                            onChange={e => setNewProd(p => ({ ...p, name: e.target.value }))}
-                            placeholder="Nome do produto *"
-                            className="rounded-xl font-rajdhani text-sm outline-none px-4 py-2.5 col-span-2"
-                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
-                          />
-                          <input
-                            type="text"
-                            value={newProd.description}
-                            onChange={e => setNewProd(p => ({ ...p, description: e.target.value }))}
-                            placeholder="Descrição (opcional)"
-                            className="rounded-xl font-rajdhani text-sm outline-none px-4 py-2.5 col-span-2"
-                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
-                          />
-
-                          {/* Imagem do produto — anexada diretamente (upload) */}
-                          <div className="flex flex-col gap-1 col-span-2">
-                            <label className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>IMAGEM (opcional)</label>
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
-                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }}>
-                                {newProd.imageUrl ? (
-                                  <img src={newProd.imageUrl} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,0.2)">
-                                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                                  </svg>
-                                )}
-                              </div>
-                              <label
-                                className="px-3 py-2 rounded-lg font-orbitron text-xs font-bold tracking-widest cursor-pointer"
-                                style={{ background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.25)', color: 'rgba(255,180,0,0.85)' }}
-                              >
-                                ANEXAR IMAGEM
-                                <input type="file" accept="image/*" className="hidden" onChange={handleNewProdImageFile} />
-                              </label>
-                              {newProd.imageUrl && (
-                                <button
-                                  type="button"
-                                  onClick={() => setNewProd(p => ({ ...p, imageUrl: '' }))}
-                                  className="font-rajdhani text-xs"
-                                  style={{ color: 'rgba(239,68,68,0.7)' }}
-                                >
-                                  remover
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <label className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>QUANTIDADE</label>
-                            <input
-                              type="number"
-                              min="1"
-                              value={newProd.quantity}
-                              onChange={e => setNewProd(p => ({ ...p, quantity: Math.max(1, Number(e.target.value)) }))}
-                              className="rounded-xl font-orbitron text-sm outline-none px-4 py-2.5"
-                              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <label className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>VALOR PSC (opcional)</label>
-                            <input
-                              type="number"
-                              min="0"
-                              value={newProd.pscValue}
-                              onChange={e => setNewProd(p => ({ ...p, pscValue: e.target.value }))}
-                              placeholder="0"
-                              className="rounded-xl font-orbitron text-sm outline-none px-4 py-2.5"
-                              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between flex-wrap gap-3">
-                          <div className="flex items-center gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer select-none">
-                              <div
-                                onClick={() => setNewProd(p => ({ ...p, skipPsc: !p.skipPsc }))}
-                                className="w-4 h-4 rounded flex items-center justify-center"
-                                style={{
-                                  background: newProd.skipPsc ? 'rgba(255,180,0,0.3)' : 'rgba(255,255,255,0.05)',
-                                  border: `1px solid ${newProd.skipPsc ? 'rgba(255,180,0,0.6)' : 'rgba(255,255,255,0.12)'}`,
-                                }}
-                              >
-                                {newProd.skipPsc && (
-                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(255,180,0,0.9)">
-                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                                  </svg>
-                                )}
-                              </div>
-                              <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                                Ignorar PSC (não desconta do saldo)
-                              </span>
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer select-none">
-                              <div
-                                onClick={() => setNewProd(p => ({ ...p, isFixed: !p.isFixed }))}
-                                className="w-4 h-4 rounded flex items-center justify-center"
-                                style={{
-                                  background: newProd.isFixed ? 'rgba(0,229,255,0.3)' : 'rgba(255,255,255,0.05)',
-                                  border: `1px solid ${newProd.isFixed ? 'rgba(0,229,255,0.6)' : 'rgba(255,255,255,0.12)'}`,
-                                }}
-                              >
-                                {newProd.isFixed && (
-                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(0,229,255,0.9)">
-                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                                  </svg>
-                                )}
-                              </div>
-                              <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                                Fixo (destaca este produto só para este streamer)
-                              </span>
-                            </label>
-                          </div>
-                          <button
-                            onClick={handleAddProduct}
-                            disabled={addingProd || !newProd.name.trim()}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-orbitron text-xs font-bold tracking-widest transition-all"
-                            style={{
-                              background: addingProd || !newProd.name.trim() ? 'rgba(255,255,255,0.04)' : 'rgba(255,180,0,0.12)',
-                              border: `1px solid ${addingProd || !newProd.name.trim() ? 'rgba(255,255,255,0.08)' : 'rgba(255,180,0,0.35)'}`,
-                              color: addingProd || !newProd.name.trim() ? 'rgba(255,255,255,0.2)' : 'rgba(255,180,0,0.9)',
-                              cursor: addingProd || !newProd.name.trim() ? 'not-allowed' : 'pointer',
-                            }}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                            </svg>
-                            {addingProd ? 'ADICIONANDO...' : 'ADICIONAR'}
-                          </button>
-                        </div>
+                        </button>
                       </div>
                     </div>
+
+                    {/* ── MODAL: ADICIONAR PRODUTO EXCLUSIVO ── */}
+                    <AnimatePresence>
+                      {showAddProductModal && (
+                        <motion.div
+                          className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          style={{ background: 'rgba(0,0,0,0.75)' }}
+                          onClick={() => setShowAddProductModal(false)}
+                        >
+                          <motion.div
+                            className="relative w-full max-w-lg rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+                            initial={{ scale: 0.9, opacity: 0, y: 16 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ type: 'spring', damping: 26, stiffness: 380 }}
+                            style={{
+                              background: 'linear-gradient(145deg, rgba(20,16,8,0.99), rgba(10,8,4,0.99))',
+                              border: '1px solid rgba(255,180,0,0.25)',
+                              boxShadow: '0 0 100px rgba(255,180,0,0.08)',
+                            }}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <div style={{ height: '3px', background: 'linear-gradient(90deg, rgba(255,180,0,0.9), rgba(255,180,0,0.2))' }} />
+                            <div className="flex flex-col gap-4" style={{ padding: '24px' }}>
+                              <div className="flex items-center justify-between">
+                                <span className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(255,180,0,0.9)' }}>
+                                  ADICIONAR PRODUTO
+                                </span>
+                                <button
+                                  onClick={() => setShowAddProductModal(false)}
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/70 transition-all"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3">
+                                <input
+                                  type="text"
+                                  value={newProd.name}
+                                  onChange={e => setNewProd(p => ({ ...p, name: e.target.value }))}
+                                  placeholder="Nome do produto *"
+                                  className="rounded-xl font-rajdhani text-sm outline-none px-4 py-2.5 col-span-2"
+                                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                                />
+                                <input
+                                  type="text"
+                                  value={newProd.description}
+                                  onChange={e => setNewProd(p => ({ ...p, description: e.target.value }))}
+                                  placeholder="Descrição (opcional)"
+                                  className="rounded-xl font-rajdhani text-sm outline-none px-4 py-2.5 col-span-2"
+                                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                                />
+
+                                {/* Imagem do produto — anexada diretamente (upload) */}
+                                <div className="flex flex-col gap-1 col-span-2">
+                                  <label className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>IMAGEM (opcional)</label>
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
+                                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                                      {newProd.imageUrl ? (
+                                        <img src={newProd.imageUrl} alt="" className="w-full h-full object-cover" />
+                                      ) : (
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,0.2)">
+                                          <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                                        </svg>
+                                      )}
+                                    </div>
+                                    <label
+                                      className="px-3 py-2 rounded-lg font-orbitron text-xs font-bold tracking-widest cursor-pointer"
+                                      style={{ background: 'rgba(255,180,0,0.08)', border: '1px solid rgba(255,180,0,0.25)', color: 'rgba(255,180,0,0.85)' }}
+                                    >
+                                      ANEXAR IMAGEM
+                                      <input type="file" accept="image/*" className="hidden" onChange={handleNewProdImageFile} />
+                                    </label>
+                                    {newProd.imageUrl && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setNewProd(p => ({ ...p, imageUrl: '' }))}
+                                        className="font-rajdhani text-xs"
+                                        style={{ color: 'rgba(239,68,68,0.7)' }}
+                                      >
+                                        remover
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col gap-1">
+                                  <label className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>QUANTIDADE</label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    disabled={newProd.infiniteQty}
+                                    value={newProd.quantity}
+                                    onChange={e => setNewProd(p => ({ ...p, quantity: Math.max(1, Number(e.target.value)) }))}
+                                    className="rounded-xl font-orbitron text-sm outline-none px-4 py-2.5 disabled:opacity-30"
+                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                                  />
+                                  <label className="flex items-center gap-2 cursor-pointer select-none mt-1">
+                                    <div
+                                      onClick={() => setNewProd(p => ({ ...p, infiniteQty: !p.infiniteQty }))}
+                                      className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+                                      style={{
+                                        background: newProd.infiniteQty ? 'rgba(255,180,0,0.3)' : 'rgba(255,255,255,0.05)',
+                                        border: `1px solid ${newProd.infiniteQty ? 'rgba(255,180,0,0.6)' : 'rgba(255,255,255,0.12)'}`,
+                                      }}
+                                    >
+                                      {newProd.infiniteQty && (
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(255,180,0,0.9)">
+                                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                        </svg>
+                                      )}
+                                    </div>
+                                    <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                                      Quantidade infinita
+                                    </span>
+                                  </label>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>VALOR PSC (opcional)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={newProd.pscValue}
+                                    onChange={e => setNewProd(p => ({ ...p, pscValue: e.target.value }))}
+                                    placeholder="0"
+                                    className="rounded-xl font-orbitron text-sm outline-none px-4 py-2.5"
+                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between flex-wrap gap-3">
+                                <div className="flex items-center gap-4">
+                                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <div
+                                      onClick={() => setNewProd(p => ({ ...p, skipPsc: !p.skipPsc }))}
+                                      className="w-4 h-4 rounded flex items-center justify-center"
+                                      style={{
+                                        background: newProd.skipPsc ? 'rgba(255,180,0,0.3)' : 'rgba(255,255,255,0.05)',
+                                        border: `1px solid ${newProd.skipPsc ? 'rgba(255,180,0,0.6)' : 'rgba(255,255,255,0.12)'}`,
+                                      }}
+                                    >
+                                      {newProd.skipPsc && (
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(255,180,0,0.9)">
+                                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                        </svg>
+                                      )}
+                                    </div>
+                                    <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                                      Ignorar PSC (não desconta do saldo)
+                                    </span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <div
+                                      onClick={() => setNewProd(p => ({ ...p, isFixed: !p.isFixed }))}
+                                      className="w-4 h-4 rounded flex items-center justify-center"
+                                      style={{
+                                        background: newProd.isFixed ? 'rgba(0,229,255,0.3)' : 'rgba(255,255,255,0.05)',
+                                        border: `1px solid ${newProd.isFixed ? 'rgba(0,229,255,0.6)' : 'rgba(255,255,255,0.12)'}`,
+                                      }}
+                                    >
+                                      {newProd.isFixed && (
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(0,229,255,0.9)">
+                                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                        </svg>
+                                      )}
+                                    </div>
+                                    <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                                      Fixo (destaca este produto só para este streamer)
+                                    </span>
+                                  </label>
+                                </div>
+                              </div>
+                              <button
+                                onClick={handleAddProduct}
+                                disabled={addingProd || !newProd.name.trim()}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-orbitron text-xs font-bold tracking-widest transition-all"
+                                style={{
+                                  background: addingProd || !newProd.name.trim() ? 'rgba(255,255,255,0.04)' : 'rgba(255,180,0,0.12)',
+                                  border: `1px solid ${addingProd || !newProd.name.trim() ? 'rgba(255,255,255,0.08)' : 'rgba(255,180,0,0.35)'}`,
+                                  color: addingProd || !newProd.name.trim() ? 'rgba(255,255,255,0.2)' : 'rgba(255,180,0,0.9)',
+                                  cursor: addingProd || !newProd.name.trim() ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                                </svg>
+                                {addingProd ? 'ADICIONANDO...' : 'ADICIONAR'}
+                              </button>
+                            </div>
+                          </motion.div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     {/* ── COMANDOS DO BOT ── */}
                     <div

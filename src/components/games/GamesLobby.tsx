@@ -87,15 +87,19 @@ interface Props {
 
 export default function GamesLobby({ onSelectGame }: Props) {
   const [disabledGames, setDisabledGames] = useState<string[]>([]);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   useEffect(() => {
     fetch('/api/streamer/games-config')
       .then(r => r.json())
       .then((data: { disabled: string[] }) => setDisabledGames(data.disabled ?? []))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setConfigLoaded(true));
   }, []);
 
   const visibleGames = GAMES.filter(g => !disabledGames.includes(g.id));
+
+  if (!configLoaded) return null;
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto px-6 py-10">

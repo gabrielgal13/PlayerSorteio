@@ -88,6 +88,7 @@ export interface World {
   events: ActiveEvents;
   golden: GoldenZone | null;
   huntedId: string | null;            // crowned target (Caça ao Gigante)
+  huntedStartMass: number | null;     // massa do alvo no instante em que foi marcado (cap de dreno)
   streamerId: string | null;
   bossId: string | null;              // active LIVE BOSS
   moment: LiveMoment | null;
@@ -124,9 +125,12 @@ export const TUNING = {
   streamerFeed: 6,
   streamerTroll: 5,
   xpMultiplier: 2,            // global multiplier applied to all points earned from chat
-  bossMass: 2600,             // LIVE BOSS starting HP (shown as its mass)
+  bossMassPerPlayer: 2,       // LIVE BOSS HP = playerCount * this (ex: 10 jogadores → 20 de vida)
+  bossMassFloor: 20,          // piso de vida do boss quando tem poucos jogadores no chat
   bossDamageBySec: 80,        // how fast a player chips the boss on contact
   bossHitPerSec: 16,          // damage the boss deals back to a touching player
+  bossPlayerGrowthPerDamage: 0.8, // fração do dano no boss que vira massa pro jogador que bateu (2x o ganho normal de dreno)
+  giantHuntMaxDrainFraction: 1 / 3, // Caça ao Gigante: o chat pode tirar no máximo 1/3 da vida do alvo
 } as const;
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -168,6 +172,7 @@ export function createWorld(width: number, height: number): World {
     events: { xpRain: 0, smallRevolt: 0, giantHunt: 0, happyHour: 0 },
     golden: null,
     huntedId: null,
+    huntedStartMass: null,
     streamerId: null,
     bossId: null,
     moment: null,
@@ -342,6 +347,7 @@ export function triggerGiantHunt(w: World) {
   const big = biggestBall(w);
   if (!big) return;
   w.huntedId = big.id;
+  w.huntedStartMass = big.mass;
   w.events.giantHunt = w.time + 30_000;
   w.stats.events++;
   setMoment(w, 'CAÇA AO GIGANTE', `${big.name} está marcado! encostem nele!`, 8, big.id);
@@ -379,10 +385,13 @@ export function triggerMeteor(w: World) {
 export function triggerBoss(w: World) {
   if (w.bossId) return;
   const id = '__boss__';
+  // Vida do boss escala com o tamanho do chat: 2x o nº de jogadores ativos
+  // (ex: 10 bolas no jogo → 20 de vida, ou seja, 20 "porradas" pra matar).
+  const hp = Math.max(TUNING.bossMassFloor, playerCount(w) * TUNING.bossMassPerPlayer);
   const ball: Ball = {
     id, name: 'CHEFE DO CHAT', source: 'twitch', color: '#ff2d2d', hue: 0,
     x: w.width / 2, y: w.height / 2, vx: 0, vy: 0,
-    mass: TUNING.bossMass, radius: radiusForMass(TUNING.bossMass),
+    mass: hp, radius: radiusForMass(hp),
     streak: 0, lastMsgAt: w.time, lastText: '', spawnAt: w.time,
     hitFlash: 0, wobble: 0, wanderAngle: 0,
     ghost: false, isStreamer: false, isBoss: true, threatId: null,
@@ -429,7 +438,7 @@ export function stepWorld(w: World, dtMs: number): void {
   const smallRevolt = w.time < w.events.smallRevolt;
   const giantHunt = w.time < w.events.giantHunt && w.huntedId !== null;
   const hunted = giantHunt ? w.balls.get(w.huntedId!) ?? null : null;
-  if (hunted && hunted.ghost) { w.huntedId = null; }
+  if (hunted && hunted.ghost) { w.huntedId = null; w.huntedStartMass = null; }
 
   // expire golden zone
   if (w.golden && w.time > w.golden.until) w.golden = null;
@@ -640,7 +649,7 @@ function interact(w: World, a: Ball, b: Ball, dt: number, flags: StepFlags) {
     if (pl.isBoss) return; // safety
     const dmg = TUNING.bossDamageBySec * dt;
     boss.mass -= dmg;
-    pl.mass += dmg * 0.4;            // attacking the boss makes you grow
+    pl.mass += dmg * TUNING.bossPlayerGrowthPerDamage; // atacar o boss faz crescer 2x mais que o normal
     boss.hitFlash = 1;
     pl.mass = Math.max(TUNING.minMass, pl.mass - TUNING.bossHitPerSec * dt);
     // knock the player outward from the boss
@@ -669,7 +678,13 @@ function interact(w: World, a: Ball, b: Ball, dt: number, flags: StepFlags) {
     let rate = TUNING.drainPerSec;
     if (hunted && prey.id === hunted.id) rate *= 2.4;
     if (flags.smallRevolt && predator.mass < prey.mass) rate *= 1.8;
-    const amount = Math.min(rate * dt, prey.mass - 1);
+    let amount = Math.min(rate * dt, prey.mass - 1);
+    // Caça ao Gigante: por mais gente que cerque o alvo, o total dreanado no
+    // evento não passa de 1/3 da vida que ele tinha quando foi marcado.
+    if (hunted && prey.id === hunted.id && w.huntedStartMass !== null) {
+      const floor = w.huntedStartMass * (1 - TUNING.giantHuntMaxDrainFraction);
+      amount = Math.min(amount, Math.max(0, prey.mass - floor));
+    }
     if (amount > 0) {
       prey.mass -= amount;
       predator.mass += amount;
@@ -699,6 +714,7 @@ function eliminate(w: World, b: Ball) {
   }
   if (wasHunted) {
     w.huntedId = null;
+    w.huntedStartMass = null;
     w.events.giantHunt = 0;
     setMoment(w, `${b.name} FOI DESTRONADO!`, 'o gigante caiu 👑💥', 6, null);
   } else if (wasStreamer) {

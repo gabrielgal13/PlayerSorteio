@@ -7,6 +7,10 @@ export interface StreamerProfile {
   mascot: MascotType;
   displayName?: string;
   twitchChannel?: string;
+  /** true quando o admin marcou este streamer como Afiliado/Parceiro Twitch de verdade — habilita OAuth real + "Por Sub". */
+  twitchAffiliateEnabled?: boolean;
+  /** true quando o streamer autenticou de verdade a própria conta Twitch (OAuth), habilitando leitura de inscritos. */
+  twitchSubsConnected?: boolean;
   kickChannel?: string;
   kickChatroomId?: number;
   youtubeChannel?: string;

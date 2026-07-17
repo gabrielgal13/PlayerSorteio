@@ -15,6 +15,8 @@ import { processSprite, getTintedSprite, type ProcessedSprite } from './chatwars
 import type { ChatMessage } from '@/types';
 
 const EVENT_COOLDOWN = 12_000;
+// Rank da comunidade: só pontua "jogo concluído" se teve interação de chat real.
+const MIN_MESSAGES_FOR_RANK = 5;
 
 interface Props { onBack: () => void }
 
@@ -172,6 +174,9 @@ export default function PoolWarsGame({ onBack }: Props) {
     poolWarsSession.finalize();
     setFinalRows(poolWarsSession.finalRows); setFinalStats(poolWarsSession.finalStats);
     setRunning(false); setFinished(true);
+    if (poolWarsSession.finalStats.messages >= MIN_MESSAGES_FOR_RANK) {
+      fetch('/api/streamer/rank-game-completed', { method: 'POST' }).catch(() => {});
+    }
   }, []);
   const handleContinue = useCallback(() => { poolWarsSession.continueGame(); setFinished(false); setRunning(true); }, []);
 

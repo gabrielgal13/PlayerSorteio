@@ -149,9 +149,9 @@ export async function POST(
     const isKickWinner = !winnerSource || winnerSource === 'kick';
     const deliveryMode = prizeName ? getDeliveryMode(prizeName) : 'trade_link';
     const askText = deliveryMode === 'address_and_shirt'
-      ? 'seu endereço completo (com CEP) e qual camisa você quer'
+      ? 'seu endereço no formato Rua/Numero/Bairro/Estado/CEP e a Camiseta que você quer'
       : deliveryMode === 'address'
-      ? 'seu endereço completo (com CEP)'
+      ? 'seu endereço no formato Rua/Numero/Bairro/Estado/CEP'
       : 'seu Steam trade link';
     const instruction = isKickWinner
       ? ` | Para receber, marque @${botName} aqui no chat com ${askText}!`

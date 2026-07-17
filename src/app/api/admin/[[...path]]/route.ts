@@ -207,7 +207,7 @@ export async function GET(
       select: {
         username: true, displayName: true, pscBalance: true, isAffiliate: true,
         themeColor: true, twitchChannel: true, kickChannel: true, youtubeChannel: true,
-        forcePasswordChange: true, chatWarsSprite: true,
+        forcePasswordChange: true, chatWarsSprite: true, twitchAffiliateEnabled: true,
       },
     });
     if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
@@ -330,6 +330,14 @@ export async function GET(
   if (seg0 === 'bot-config') {
     const row = await prisma.appConfig.findUnique({ where: { key: 'bot_messages_muted' } });
     return NextResponse.json({ muted: row?.value === 'true' });
+  }
+
+  // GET /api/admin/games-config
+  if (seg0 === 'games-config') {
+    const row = await prisma.appConfig.findUnique({ where: { key: 'games_disabled' } });
+    let disabled: string[] = [];
+    try { disabled = row ? JSON.parse(row.value) : []; } catch { disabled = []; }
+    return NextResponse.json({ disabled });
   }
 
   // GET /api/admin/find-affiliate?name=...
@@ -578,7 +586,7 @@ export async function POST(
 
   // POST /api/admin/streamers
   if (seg0 === 'streamers' && !seg1) {
-    const { username, displayName, nome, password, mascot, themeColor, raffleEffect, pscBalance } = await req.json();
+    const { username, displayName, nome, password, mascot, themeColor, raffleEffect, pscBalance, twitchAffiliateEnabled } = await req.json();
     if (!username || !password)
       return NextResponse.json({ error: 'Username e senha são obrigatórios.' }, { status: 400 });
     const existing = await prisma.streamer.findFirst({
@@ -597,6 +605,7 @@ export async function POST(
         eventEffect: raffleEffect || 'confetti',
         pscBalance: typeof pscBalance === 'number' && pscBalance >= 0 ? pscBalance : 0,
         isAdmin: false,
+        twitchAffiliateEnabled: twitchAffiliateEnabled === true,
       },
     });
     return NextResponse.json({ username: streamer.username }, { status: 201 });
@@ -678,6 +687,22 @@ export async function POST(
       update: { value: muted ? 'true' : 'false' },
     });
     return NextResponse.json({ ok: true, muted });
+  }
+
+  // POST /api/admin/games-config  { gameId, enabled }
+  if (seg0 === 'games-config') {
+    const { gameId, enabled } = await req.json() as { gameId: string; enabled: boolean };
+    if (!gameId) return NextResponse.json({ error: 'gameId é obrigatório.' }, { status: 400 });
+    const row = await prisma.appConfig.findUnique({ where: { key: 'games_disabled' } });
+    let disabled: string[] = [];
+    try { disabled = row ? JSON.parse(row.value) : []; } catch { disabled = []; }
+    disabled = enabled ? disabled.filter(id => id !== gameId) : [...new Set([...disabled, gameId])];
+    await prisma.appConfig.upsert({
+      where: { key: 'games_disabled' },
+      create: { key: 'games_disabled', value: JSON.stringify(disabled) },
+      update: { value: JSON.stringify(disabled) },
+    });
+    return NextResponse.json({ ok: true, disabled });
   }
 
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -824,7 +849,8 @@ export async function PATCH(
         isAffiliate?: boolean; pscBalance?: number; displayName?: string | null; nome?: string | null;
         passwordHash?: string; forcePasswordChange?: boolean; themeColor?: string;
         twitchChannel?: string | null; kickChannel?: string | null; youtubeChannel?: string | null;
-        chatWarsSprite?: string | null;
+        chatWarsSprite?: string | null; twitchAffiliateEnabled?: boolean;
+        twitchUserId?: string | null; twitchUserAccessToken?: string | null; twitchUserRefreshToken?: string | null;
       } = {};
       if (typeof body.isAffiliate === 'boolean') updateData.isAffiliate = body.isAffiliate;
       if (typeof body.pscBalance === 'number' && body.pscBalance >= 0) {
@@ -855,12 +881,21 @@ export async function PATCH(
       if (body.kickChannel !== undefined) updateData.kickChannel = body.kickChannel || null;
       if (body.youtubeChannel !== undefined) updateData.youtubeChannel = body.youtubeChannel || null;
       if (body.chatWarsSprite !== undefined) updateData.chatWarsSprite = body.chatWarsSprite || null;
+      if (typeof body.twitchAffiliateEnabled === 'boolean') {
+        updateData.twitchAffiliateEnabled = body.twitchAffiliateEnabled;
+        // Revogar afiliação limpa o OAuth do streamer — volta pro fluxo manual antigo.
+        if (!body.twitchAffiliateEnabled) {
+          updateData.twitchUserId = null;
+          updateData.twitchUserAccessToken = null;
+          updateData.twitchUserRefreshToken = null;
+        }
+      }
       if (Object.keys(updateData).length === 0)
         return NextResponse.json({ error: 'Nenhum campo válido para atualizar.' }, { status: 400 });
       const updated = await prisma.streamer.update({
         where: { username },
         data: updateData,
-        select: { username: true, displayName: true, nome: true, pscBalance: true, isAffiliate: true, themeColor: true, twitchChannel: true, kickChannel: true, youtubeChannel: true, forcePasswordChange: true },
+        select: { username: true, displayName: true, nome: true, pscBalance: true, isAffiliate: true, themeColor: true, twitchChannel: true, kickChannel: true, youtubeChannel: true, forcePasswordChange: true, twitchAffiliateEnabled: true },
       });
       return NextResponse.json(updated);
     } catch (e) {

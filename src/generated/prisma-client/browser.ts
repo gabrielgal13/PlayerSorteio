@@ -23,6 +23,11 @@ export * from './enums';
  */
 export type Streamer = Prisma.StreamerModel
 /**
+ * Model RankEvent
+ * 
+ */
+export type RankEvent = Prisma.RankEventModel
+/**
  * Model PrizeList
  * 
  */

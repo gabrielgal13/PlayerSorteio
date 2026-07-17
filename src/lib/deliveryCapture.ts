@@ -8,6 +8,63 @@ export const STEAM_LINK_REGEX = /https:\/\/steamcommunity\.com\/tradeoffer\/new\
 // não confundir uma linha de chat qualquer com o endereço real.
 export const MIN_ADDRESS_LENGTH = 15;
 
+// ── Validação de campos do endereço ─────────────────────────────────────────
+// O ganhador de uma "Camisa" precisa mandar o endereço nesse formato:
+//   Rua:
+//   Numero:
+//   Bairro:
+//   Estado:
+//   CEP:
+//   Camiseta:   (só quando o prêmio exige escolha de camiseta)
+// Cada campo é "detectado" checando se o rótulo (ou, no caso do CEP, o
+// próprio padrão numérico) aparece em algum lugar da mensagem.
+interface AddressFieldDef {
+  label: string;
+  test: (text: string) => boolean;
+}
+
+const ADDRESS_FIELDS: AddressFieldDef[] = [
+  { label: 'Rua', test: (t) => /\brua\b/i.test(t) },
+  { label: 'Numero', test: (t) => /\bn[uú]mero\b/i.test(t) || /\bn[ºo°]\.?\s*\d/i.test(t) },
+  { label: 'Bairro', test: (t) => /\bbairro\b/i.test(t) },
+  { label: 'Estado', test: (t) => /\bestado\b/i.test(t) },
+  { label: 'CEP', test: (t) => /\bcep\b/i.test(t) || /\b\d{5}-?\d{3}\b/.test(t) },
+];
+
+const SHIRT_FIELD: AddressFieldDef = { label: 'Camiseta', test: (t) => /\bcamis(a|eta)\b/i.test(t) };
+
+function getRequiredAddressFields(mode: DeliveryMode): AddressFieldDef[] {
+  return mode === 'address_and_shirt' ? [...ADDRESS_FIELDS, SHIRT_FIELD] : ADDRESS_FIELDS;
+}
+
+// Retorna os rótulos que faltam na mensagem (lista vazia = endereço completo).
+export function findMissingAddressFields(text: string, mode: DeliveryMode): string[] {
+  return getRequiredAddressFields(mode).filter(f => !f.test(text)).map(f => f.label);
+}
+
+function addressFormatTemplate(mode: DeliveryMode): string {
+  const lines = ['Rua:', 'Numero:', 'Bairro:', 'Estado:', 'CEP:'];
+  if (mode === 'address_and_shirt') lines.push('Camiseta:');
+  return lines.join('\n');
+}
+
+// Mensagem pedindo o endereço pela primeira vez (whisper enviado assim que o
+// ganhador é anunciado, ou primeira resposta quando ele chama o bot).
+export function buildAddressRequestMessage(mode: DeliveryMode): string {
+  return `Parabéns pela Camisa! 🎁 Pra eu providenciar o envio, me manda o endereço completo nesse formato:\n${addressFormatTemplate(mode)}`;
+}
+
+// Mensagem apontando o que faltou preencher, reforçando o formato esperado.
+export function buildMissingFieldsMessage(missing: string[], mode: DeliveryMode): string {
+  return `Faltou informar: ${missing.join(', ')}. Manda de novo com tudo, nesse formato:\n${addressFormatTemplate(mode)}`;
+}
+
+// Mensagem final de confirmação, quando todos os campos foram encontrados.
+export function buildAddressConfirmationMessage(mode: DeliveryMode): string {
+  const what = mode === 'address_and_shirt' ? 'Endereço e camiseta confirmados' : 'Endereço confirmado';
+  return `${what}! ✅ Sua camisa será enviada o mais rápido possível. 🎁`;
+}
+
 // "PrizeListItem".pinned e "RaffleHistory".deliveryAddress são colunas bolt-on
 // (fora do client tipado) — garantimos a coluna antes de ler/escrever nela.
 let deliveryAddressColumnReady = false;

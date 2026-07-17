@@ -62,7 +62,39 @@
       "PowerShell(npx next build 2>&1 | Out-File -FilePath \"$env:TEMP\\\\nextbuild.log\" -Encoding utf8; Get-Content \"$env:TEMP\\\\nextbuild.log\" -Tail 40)",
       "Bash(rtk lint *)",
       "Bash(git ls-remote *)",
-      "Bash(node node_modules/eslint/bin/eslint.js src/components/games/ChatWarsGame.tsx)"
+      "Bash(node node_modules/eslint/bin/eslint.js src/components/games/ChatWarsGame.tsx)",
+      "Bash(mkdir -p \"c:\\\\Users\\\\DDK\\\\Downloads\\\\SorteioPlayerSKIN\\\\raffle-app\\\\src\\\\app\\\\api\\\\streamer\\\\[\\\\[...path\\\\]\\\\]\")",
+      "Bash(rtk npm *)",
+      "Bash(./node_modules/.bin/prisma migrate *)",
+      "Bash(./node_modules/.bin/prisma generate *)",
+      "Bash(./node_modules/.bin/prisma db *)",
+      "Bash(rm -f checknome.ts)",
+      "Bash(rm -rf .next/dev)",
+      "Bash(tasklist)",
+      "Bash(taskkill //F //PID 12676)",
+      "Bash(rm -rf .next)",
+      "Bash(break)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('deps:', JSON.stringify\\({...p.dependencies, ...p.devDependencies}, null, 1\\)\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Read(//c/Users/DDK/Downloads/**)",
+      "Bash(python3 -c ' *)",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(chromium-cli --help)",
+      "Bash(npm ls *)",
+      "Read(//tmp/**)",
+      "Read(//c/Users/DDK/AppData/Local/rtk/tee/**)",
+      "Bash(curl -s -b /tmp/cookies2.txt -X DELETE \"http://localhost:3000/api/admin/streamers/Nakelas/products?itemId=cmrj90wty000020wylvh847p3\" --max-time 15)",
+      "Bash(curl -s -b /tmp/cookies2.txt http://localhost:3000/api/admin/streamers/Nakelas/products --max-time 15)",
+      "Bash(curl -s -b /tmp/cookies2.txt -X PATCH http://localhost:3000/api/admin/fixed-products -H \"Content-Type: application/json\" -d '{\"id\":\"a6165b52-8a72-4744-ad2f-acbc0e0a893a\",\"imageUrl\":null}' --max-time 15)",
+      "Bash(node node_modules/prisma/build/index.js db execute --file /tmp/query.sql)",
+      "Bash(grep -i \"^pg$\\\\|^pg-\\\\|postgres\")",
+      "Bash(node \"C:/Users/DDK/AppData/Local/Temp/claude/c--Users-DDK-Downloads-SorteioPlayerSKIN-raffle-app/34e9e3a6-f4ad-41b7-9aa0-13db6a00c3b6/scratchpad/check_twitch.mjs\")",
+      "Bash(node scratch_check_twitch.mjs)",
+      "Bash(node scratch_check_migrations.mjs)",
+      "Bash(rm -f scratch_check_migrations.mjs)",
+      "Bash(node scratch_check_tables.mjs)",
+      "Bash(git restore *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\streamers",
@@ -70,7 +102,8 @@
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\admin\\marketing",
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\pokemon-showdown-master\\server",
       "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\twitch",
-      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\youtube"
+      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\youtube",
+      "c:\\Users\\DDK\\Downloads\\SorteioPlayerSKIN\\raffle-app\\src\\app\\api\\streamer\\[\\[...path\\]"
     ]
   }
 }

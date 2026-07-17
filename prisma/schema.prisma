@@ -18,6 +18,12 @@ model Streamer {
   // Canais
   twitchChannel  String?
   kickChannel    String?
+  // OAuth do streamer (não do bot) — usado pra ler a lista de inscritos do canal.
+  // Só disponível pra quem é Afiliado/Parceiro Twitch de verdade (setado manualmente pelo admin).
+  twitchAffiliateEnabled Boolean @default(false)
+  twitchUserId           String?
+  twitchUserAccessToken  String?
+  twitchUserRefreshToken String?
   kickChatroomId Int?
   youtubeChannel     String?
   youtubeDisplayName String?
@@ -56,15 +62,33 @@ model Streamer {
   // Chat Wars — sprite neutro (data URL base64) usado como base das bolinhas
   chatWarsSprite String?
 
+  // Rank da Comunidade — cache calculado a partir de RankEvent (fonte da verdade)
+  rankPoints         Int       @default(0)
+  rankStreakCount     Int       @default(0)
+  rankLastActiveDate  DateTime?
+  rankLastRaffleAt    DateTime?
+
   history         RaffleHistory[]
   pscTransactions PscTransaction[]
   prizeLists      PrizeList[]
   botCommands     BotCommand[]
+  rankEvents      RankEvent[]
 
   forcePasswordChange Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model RankEvent {
+  id         String   @id @default(cuid())
+  streamer   Streamer @relation(fields: [streamerId], references: [id])
+  streamerId String
+  type       String   // 'sorteio' | 'jogo_concluido' | 'streak_bonus'
+  points     Int
+  createdAt  DateTime @default(now())
+
+  @@index([streamerId, type, createdAt])
 }
 
 model PrizeList {

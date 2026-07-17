@@ -33,10 +33,12 @@ export default function ParticipantImport() {
     participants, setParticipants, setActiveTab,
     chatRegistrationActive,
     setChatRegistrationRequested, setChatRegistrationStopRequested,
-    twitchConfig, excelImportEnabled,
+    twitchConfig, excelImportEnabled, currentUser,
   } = useStore();
 
   const [isRequestingChat, setIsRequestingChat] = useState(false);
+  const [isImportingSubs, setIsImportingSubs] = useState(false);
+  const [subsError, setSubsError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errors, setErrors] = useState<ImportError[]>([]);
@@ -173,6 +175,34 @@ export default function ParticipantImport() {
   };
 
   const fileImported = importCount > 0 && !isProcessing;
+  const twitchAffiliateEnabled = Boolean(currentUser?.twitchAffiliateEnabled);
+  const twitchSubsConnected = Boolean(currentUser?.twitchSubsConnected);
+
+  const handleImportSubs = async () => {
+    setIsImportingSubs(true);
+    setSubsError('');
+    try {
+      const res = await fetch('/api/streamer/twitch-subscribers');
+      const data = await res.json() as { subscribers?: { userId: string; userName: string }[]; error?: string };
+      if (!res.ok) { setSubsError(data.error || 'Erro ao buscar inscritos'); return; }
+
+      const existingNames = new Set(participants.map(p => p.name.toLowerCase()));
+      let nextNumber = participants.reduce((max, p) => Math.max(max, p.number), 0) + 1;
+      const added: Participant[] = [];
+      for (const sub of data.subscribers ?? []) {
+        const key = sub.userName.toLowerCase();
+        if (existingNames.has(key)) continue;
+        existingNames.add(key);
+        added.push({ id: `sub_${sub.userId}`, number: nextNumber++, name: sub.userName, source: 'twitch' });
+      }
+      if (added.length > 0) setParticipants([...participants, ...added]);
+      else if (!data.error) setSubsError('Nenhum inscrito novo encontrado');
+    } catch {
+      setSubsError('Erro de conexão ao buscar inscritos');
+    } finally {
+      setIsImportingSubs(false);
+    }
+  };
 
   useEffect(() => { if (chatRegistrationActive) setIsRequestingChat(false); }, [chatRegistrationActive]);
 
@@ -432,7 +462,37 @@ export default function ParticipantImport() {
                     </svg>
                     <span style={{ marginTop: '5px', marginBottom: '5px' }}>POR JOGO</span>
                   </motion.button>
+
+                  {twitchAffiliateEnabled && (
+                    <motion.button
+                      onClick={handleImportSubs}
+                      disabled={!twitchSubsConnected || isImportingSubs}
+                      whileHover={twitchSubsConnected && !isImportingSubs ? { scale: 1.02 } : {}}
+                      whileTap={twitchSubsConnected && !isImportingSubs ? { scale: 0.98 } : {}}
+                      title={!twitchSubsConnected ? 'Autentique sua conta Twitch em Configurações → Plataformas' : undefined}
+                      className="flex-1 py-3 rounded-xl font-rajdhani font-bold tracking-widest text-xs flex items-center justify-center gap-2"
+                      style={{
+                        background: 'rgba(145,71,255,0.08)', border: '1px solid rgba(145,71,255,0.25)', color: '#9147FF',
+                        opacity: !twitchSubsConnected || isImportingSubs ? 0.45 : 1,
+                        cursor: !twitchSubsConnected ? 'not-allowed' : isImportingSubs ? 'wait' : 'pointer',
+                      }}
+                    >
+                      {isImportingSubs ? (
+                        <span style={{ marginTop: '5px', marginBottom: '5px' }}>CARREGANDO...</span>
+                      ) : (
+                        <>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
+                            <path d="M11.64 5.93h1.43v4.28h-1.43m3.93-4.28H17v4.28h-1.43M7 2L3.43 5.57v12.86h4.28V22l3.58-3.57h2.85L20.57 12V2m-1.43 9.29l-2.85 2.85h-2.86l-2.5 2.5v-2.5H7.89V3.43h11.25z"/>
+                          </svg>
+                          <span style={{ marginTop: '5px', marginBottom: '5px' }}>POR SUB</span>
+                        </>
+                      )}
+                    </motion.button>
+                  )}
                 </div>
+              )}
+              {subsError && (
+                <p className="font-rajdhani text-xs mt-2" style={{ color: '#FF5555' }}>{subsError}</p>
               )}
             </div>
 

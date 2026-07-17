@@ -266,7 +266,7 @@ const SETTINGS_TABS: { id: SettingsTab; label: string; subtitle: string }[] = [
 ];
 
 export default function EventConfig() {
-  const { participants, prizes, setRaffleStage, currentUser, twitchConfig, setTwitchConfig, saveConfigToDB, setYoutubeChannel: saveYoutubeChannel, setKickChannel: saveKickChannel, excelImportEnabled, setExcelImportEnabled, excelPrizesImportEnabled, setExcelPrizesImportEnabled, autoRevealWinner, setAutoRevealWinner, spinEffect, setSpinEffect, socoChuteModeEnabled, setSocoChuteModeEnabled, raffleTriggerMode, setRaffleTriggerMode, autoRoundDelay, setAutoRoundDelay, chatTriggerCount, setChatTriggerCount, chatTriggerCommand, setChatTriggerCommand, themeColor, eventBackground, setEventBackground, eventMusic, setEventMusic, eventEffect, setEventEffect, raffleAnimationStyle, setRaffleAnimationStyle, isAffiliate, pscBalance } = useStore();
+  const { participants, prizes, setRaffleStage, currentUser, twitchConfig, setTwitchConfig, setTwitchAuthenticated, saveConfigToDB, setYoutubeChannel: saveYoutubeChannel, setKickChannel: saveKickChannel, excelImportEnabled, setExcelImportEnabled, excelPrizesImportEnabled, setExcelPrizesImportEnabled, autoRevealWinner, setAutoRevealWinner, spinEffect, setSpinEffect, socoChuteModeEnabled, setSocoChuteModeEnabled, raffleTriggerMode, setRaffleTriggerMode, autoRoundDelay, setAutoRoundDelay, chatTriggerCount, setChatTriggerCount, chatTriggerCommand, setChatTriggerCommand, themeColor, eventBackground, setEventBackground, eventMusic, setEventMusic, eventEffect, setEventEffect, raffleAnimationStyle, setRaffleAnimationStyle, isAffiliate, pscBalance } = useStore();
   const prizeManagerRef = useRef<PrizeManagerHandle>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('plataformas');
@@ -274,9 +274,14 @@ export default function EventConfig() {
   const [youtubeChannel, setYoutubeChannel] = useState(currentUser?.youtubeChannel || '');
   const [youtubeDisplayName, setYoutubeDisplayNameLocal] = useState(currentUser?.youtubeDisplayName || '');
   const [kickChannel, setKickChannel] = useState(currentUser?.kickChannel || '');
-  const [twitchConnectedUI, setTwitchConnectedUI] = useState(Boolean(twitchConfig.channel || currentUser?.twitchChannel));
+  const twitchAffiliateEnabled = Boolean(currentUser?.twitchAffiliateEnabled);
+  const [twitchConnectedUI, setTwitchConnectedUI] = useState(
+    twitchAffiliateEnabled ? Boolean(currentUser?.twitchSubsConnected) : Boolean(twitchConfig.channel || currentUser?.twitchChannel)
+  );
   const [twitchVerifying, setTwitchVerifying] = useState(false);
   const [twitchError, setTwitchError] = useState('');
+  const twitchPopupRef = useRef<Window | null>(null);
+  const twitchPopupTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [youtubeConnectedUI, setYoutubeConnectedUI] = useState(Boolean(currentUser?.youtubeChannel));
   const [youtubeVerifying, setYoutubeVerifying] = useState(false);
   const [youtubeError, setYoutubeError] = useState('');
@@ -327,7 +332,8 @@ export default function EventConfig() {
     kickConnectedUIVal: boolean;
   } | null>(null);
 
-  async function handleTwitchConnect() {
+  // Fluxo antigo (canais não-afiliados): só valida se o canal existe, sem OAuth de verdade.
+  async function handleTwitchConnectManual() {
     const channel = (twitchConfig.channel || currentUser?.twitchChannel || '').trim();
     if (!channel) { setTwitchError('Digite o nome do canal'); return; }
     setTwitchVerifying(true);
@@ -345,6 +351,59 @@ export default function EventConfig() {
       setTwitchVerifying(false);
     }
   }
+
+  // Fluxo novo (afiliados): autentica a conta Twitch de verdade (OAuth, popup) — necessário pra ler a lista de inscritos.
+  function handleTwitchConnectOAuth() {
+    setTwitchError('');
+    setTwitchVerifying(true);
+    const popup = window.open('/api/streamer/twitch-streamer-auth', 'twitch-oauth', 'width=500,height=720');
+    if (!popup) {
+      setTwitchVerifying(false);
+      setTwitchError('Não foi possível abrir a janela de autenticação (bloqueador de pop-up?)');
+      return;
+    }
+    twitchPopupRef.current = popup;
+    if (twitchPopupTimerRef.current) clearInterval(twitchPopupTimerRef.current);
+    twitchPopupTimerRef.current = setInterval(() => {
+      if (popup.closed) {
+        if (twitchPopupTimerRef.current) clearInterval(twitchPopupTimerRef.current);
+        setTwitchVerifying(false);
+      }
+    }, 500);
+  }
+
+  function handleTwitchConnect() {
+    if (twitchAffiliateEnabled) handleTwitchConnectOAuth();
+    else handleTwitchConnectManual();
+  }
+
+  async function handleTwitchDisconnect() {
+    setTwitchConnectedUI(false);
+    setTwitchError('');
+    if (twitchAffiliateEnabled) {
+      setTwitchAuthenticated('', false);
+      fetch('/api/streamer/twitch-streamer-disconnect', { method: 'POST' }).catch(() => {});
+    }
+  }
+
+  useEffect(() => {
+    function onTwitchOAuthMessage(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      const data = e.data as { type?: string; ok?: boolean; channel?: string } | undefined;
+      if (data?.type !== 'twitch-streamer-oauth') return;
+      if (twitchPopupTimerRef.current) clearInterval(twitchPopupTimerRef.current);
+      setTwitchVerifying(false);
+      if (data.ok) {
+        setTwitchConnectedUI(true);
+        setTwitchError('');
+        setTwitchAuthenticated(data.channel ?? '', true);
+      } else {
+        setTwitchError('Falha ao autenticar com a Twitch. Tente novamente.');
+      }
+    }
+    window.addEventListener('message', onTwitchOAuthMessage);
+    return () => window.removeEventListener('message', onTwitchOAuthMessage);
+  }, [setTwitchAuthenticated]);
 
   async function handleYoutubeConnect() {
     const handle = youtubeChannel.trim();
@@ -639,6 +698,19 @@ export default function EventConfig() {
                                         #{twitchConfig.channel || currentUser?.twitchChannel}
                                       </span>
                                     </motion.div>
+                                  ) : twitchAffiliateEnabled ? (
+                                    <motion.div
+                                      key="twitch-oauth-hint"
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      exit={{ opacity: 0 }}
+                                      transition={{ duration: 0.15 }}
+                                      style={{ padding: '6px 2px', textAlign: 'center' }}
+                                    >
+                                      <span className="font-rajdhani" style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', lineHeight: 1.4 }}>
+                                        Autentique sua conta Twitch pra conectar o chat e importar inscritos
+                                      </span>
+                                    </motion.div>
                                   ) : (
                                     <motion.div
                                       key="twitch-input"
@@ -683,7 +755,7 @@ export default function EventConfig() {
                                     {twitchConnectedUI ? 'CONECTADO' : 'DESCONECTADO'}
                                   </span>
                                   <button
-                                    onClick={twitchConnectedUI ? () => { setTwitchConnectedUI(false); setTwitchError(''); } : handleTwitchConnect}
+                                    onClick={twitchConnectedUI ? handleTwitchDisconnect : handleTwitchConnect}
                                     disabled={twitchVerifying}
                                     style={{
                                       fontSize: '8px', fontFamily: 'Orbitron, sans-serif', fontWeight: 700,

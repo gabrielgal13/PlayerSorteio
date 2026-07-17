@@ -280,31 +280,6 @@ export default function LoginScreen() {
                 </span>
               </motion.button>
             </motion.form>
-
-            {/* Demo credentials hint */}
-            <div className="mt-6 pt-4 border-t border-white/5">
-              <p className="text-center font-rajdhani text-xs text-white/20 mb-2 tracking-widest uppercase">Acesso Rápido</p>
-              <div className="flex gap-2 justify-center">
-                {[
-                  { name: 'Nakelas', mascot: 'Careca' },
-                  { name: 'ShadowGanjaK', mascot: 'Dreads' }
-                ].map(s => (
-                  <button
-                    key={s.name}
-                    onClick={() => { setUsername(s.name); setPassword('123'); }}
-                    className="px-3 py-1 rounded text-xs font-rajdhani tracking-wide transition-all hover:border-neon-purple/50"
-                    style={{
-                      background: 'rgba(0,229,255,0.06)',
-                      border: '1px solid rgba(0,229,255,0.15)',
-                      color: 'rgba(255,255,255,0.4)',
-                    }}
-                  >
-                    {s.name}
-                    <span className="ml-1 text-neon-purple/60">({s.mascot})</span>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </motion.div>

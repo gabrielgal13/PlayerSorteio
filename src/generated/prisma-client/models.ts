@@ -9,6 +9,7 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/Streamer'
+export type * from './models/RankEvent'
 export type * from './models/PrizeList'
 export type * from './models/PrizeListItem'
 export type * from './models/PscTransaction'

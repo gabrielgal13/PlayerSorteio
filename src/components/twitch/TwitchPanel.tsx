@@ -4,8 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import { getDeliveryMode } from '@/lib/prizeDelivery';
 
-const MIN_ADDRESS_LENGTH = 15;
-
 export default function TwitchPanel() {
   const {
     currentUser,
@@ -213,21 +211,20 @@ export default function TwitchPanel() {
         const mode = getDeliveryMode(prizeName);
 
         if (mode !== 'trade_link') {
-          // Prêmio físico (Camisa) — texto livre com endereço (e camisa escolhida)
+          // Prêmio físico (Camisa) — texto livre com endereço (e camisa escolhida).
+          // O servidor valida os campos (Rua/Numero/Bairro/Estado/CEP[/Camiseta])
+          // e devolve o que falta ou a confirmação, já prontos pra mandar no chat.
           const cleaned = message.replace(new RegExp(`@${botName}`, 'ig'), '').trim();
-          if (cleaned.length >= MIN_ADDRESS_LENGTH) {
-            fetch('/api/chat-trade-link', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ winnerName: displayName, text: cleaned, source }),
-            }).catch(() => {});
-          } else {
-            sendChatError(
-              mode === 'address_and_shirt'
-                ? 'preciso do endereço completo (com CEP) e qual camisa você quer, tudo em uma mensagem!'
-                : 'preciso do endereço completo (com CEP), pode mandar em uma mensagem!',
-            );
-          }
+          fetch('/api/chat-trade-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ winnerName: displayName, text: cleaned, source }),
+          })
+            .then(res => res.json())
+            .then((data: { ok?: boolean; message?: string }) => {
+              if (data?.message) sendChatError(data.message);
+            })
+            .catch(() => {});
         } else {
           const steamMatch = message.match(/https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/);
           if (steamMatch) {

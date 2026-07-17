@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkStock, buyItem } from '@/lib/waxpeer';
 import { getDeliveryMode } from '@/lib/prizeDelivery';
-import { ensureDeliveryAddressColumn, saveDeliveryAddress, MIN_ADDRESS_LENGTH } from '@/lib/deliveryCapture';
+import {
+  ensureDeliveryAddressColumn,
+  saveDeliveryAddress,
+  findMissingAddressFields,
+  buildMissingFieldsMessage,
+  buildAddressConfirmationMessage,
+} from '@/lib/deliveryCapture';
 
 const STEAM_REGEX = /https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/;
 const WINNER_CUTOFF_MS = 6 * 60 * 60 * 1000; // 6 h
@@ -259,21 +265,26 @@ export async function GET(req: NextRequest) {
       const mode = getDeliveryMode(winner.prizeName);
 
       // ── Prêmio físico (Camisa) — coleta endereço (e camisa escolhida) em vez de trade link ──
+      // "winner" já veio filtrado pelo nick exato do ganhador (winnerMap acima) —
+      // mensagens de qualquer outra pessoa nem chegam aqui (continue no !winner acima).
       if (mode !== 'trade_link') {
-        if (msg.text.trim().length >= MIN_ADDRESS_LENGTH) {
-          await saveDeliveryAddress(winner.id, msg.text.trim());
+        const text = msg.text.trim();
+        const missing = findMissingAddressFields(text, mode);
+        if (missing.length === 0) {
+          await saveDeliveryAddress(winner.id, text);
           await sendYoutubeMessage(
             liveChatId,
-            `@${msg.authorDisplayName} endereço recebido! O streamer vai providenciar o envio. 🎁`,
+            `@${msg.authorDisplayName} ${buildAddressConfirmationMessage(mode)}`,
             accessToken,
           );
           winnerMap.delete(sender);
           processed++;
-        } else if (msg.text.toLowerCase().includes(`@${botName}`)) {
-          const askMore = mode === 'address_and_shirt'
-            ? 'preciso do seu endereço completo (com CEP) e qual camisa você quer, tudo em uma mensagem!'
-            : 'preciso do seu endereço completo (com CEP)!';
-          await sendYoutubeMessage(liveChatId, `@${msg.authorDisplayName} ${askMore}`, accessToken);
+        } else if (text.toLowerCase().includes(`@${botName}`)) {
+          await sendYoutubeMessage(
+            liveChatId,
+            `@${msg.authorDisplayName} ${buildMissingFieldsMessage(missing, mode)}`,
+            accessToken,
+          );
         }
         continue;
       }

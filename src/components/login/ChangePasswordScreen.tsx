@@ -80,7 +80,7 @@ export default function ChangePasswordScreen() {
             className="absolute w-full h-64 rounded-full"
             style={{
               bottom: `${i * 8}%`,
-              background: `radial-gradient(ellipse, rgba(191,90,242,${0.03 - i * 0.006}) 0%, transparent 70%)`,
+              background: `radial-gradient(ellipse, rgba(0,229,255,${0.03 - i * 0.006}) 0%, transparent 70%)`,
               filter: 'blur(40px)',
             }}
             animate={{ scaleX: [1, 1.1, 0.95, 1], opacity: [0.5, 0.8, 0.6, 0.5] }}
@@ -99,7 +99,7 @@ export default function ChangePasswordScreen() {
         <motion.div
           className="absolute -inset-px rounded-2xl"
           style={{
-            background: 'linear-gradient(135deg, rgba(191,90,242,0.5), rgba(120,50,200,0.2), rgba(191,90,242,0.5))',
+            background: 'linear-gradient(135deg, rgba(0,229,255,0.4), rgba(0,207,255,0.2), rgba(0,229,255,0.4))',
           }}
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 3, repeat: Infinity }}
@@ -107,9 +107,9 @@ export default function ChangePasswordScreen() {
 
         <div
           className="relative rounded-2xl overflow-hidden"
-          style={{ background: 'rgba(8,8,17,0.90)', border: '1px solid rgba(191,90,242,0.25)' }}
+          style={{ background: 'rgba(8,8,17,0.85)', border: '1px solid rgba(0,229,255,0.2)' }}
         >
-          <div className="h-0.5 w-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(191,90,242,0.8), transparent)' }} />
+          <div className="h-0.5 w-full neon-progress" />
 
           <div className="p-8 md:p-10">
             {/* Icon */}
@@ -121,12 +121,12 @@ export default function ChangePasswordScreen() {
               <div
                 className="w-16 h-16 rounded-xl flex items-center justify-center"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(191,90,242,0.3), rgba(120,50,200,0.2))',
-                  border: '1px solid rgba(191,90,242,0.4)',
-                  boxShadow: '0 0 30px rgba(191,90,242,0.4)',
+                  background: 'linear-gradient(135deg, rgba(0,229,255,0.3), rgba(0,207,255,0.2))',
+                  border: '1px solid rgba(0,229,255,0.4)',
+                  boxShadow: '0 0 30px rgba(0,229,255,0.4)',
                 }}
               >
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="rgba(191,90,242,0.9)">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="rgba(0,229,255,0.9)">
                   <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
                 </svg>
               </div>
@@ -138,7 +138,7 @@ export default function ChangePasswordScreen() {
             <p className="text-center text-white/40 text-xs tracking-widest uppercase mb-2 font-rajdhani">
               Primeiro acesso detectado
             </p>
-            <p className="text-center font-rajdhani text-sm mb-8" style={{ color: 'rgba(191,90,242,0.75)' }}>
+            <p className="text-center font-rajdhani text-sm mb-8" style={{ color: 'rgba(0,229,255,0.75)' }}>
               Por segurança, defina uma nova senha antes de continuar.
             </p>
 
@@ -163,7 +163,7 @@ export default function ChangePasswordScreen() {
                     className="w-full pr-12 py-3 rounded-lg font-rajdhani text-sm tracking-wide outline-none px-4"
                     style={{
                       background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(191,90,242,0.25)',
+                      border: '1px solid rgba(0,229,255,0.25)',
                       color: 'rgba(255,255,255,0.85)',
                     }}
                   />
@@ -202,7 +202,7 @@ export default function ChangePasswordScreen() {
                     className="w-full pr-12 py-3 rounded-lg font-rajdhani text-sm tracking-wide outline-none px-4"
                     style={{
                       background: 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${confirmPassword && confirmPassword !== newPassword ? 'rgba(255,68,68,0.4)' : 'rgba(191,90,242,0.25)'}`,
+                      border: `1px solid ${confirmPassword && confirmPassword !== newPassword ? 'rgba(255,68,68,0.4)' : 'rgba(0,229,255,0.25)'}`,
                       color: 'rgba(255,255,255,0.85)',
                     }}
                   />
@@ -253,9 +253,9 @@ export default function ChangePasswordScreen() {
                 className="relative w-full py-3.5 rounded-lg font-orbitron font-bold tracking-widest text-sm overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed"
                 style={{
                   background: isLoading
-                    ? 'rgba(191,90,242,0.3)'
-                    : 'linear-gradient(135deg, #BF5AF2 0%, #9030C8 50%, #6A1FA0 100%)',
-                  boxShadow: '0 0 30px rgba(191,90,242,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
+                    ? 'rgba(0,229,255,0.3)'
+                    : 'linear-gradient(135deg, #00E5FF 0%, #1F8CFF 50%, #0066BB 100%)',
+                  boxShadow: '0 0 30px rgba(0,229,255,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
                   color: 'white',
                 }}
               >

@@ -30,6 +30,7 @@ interface AppActions {
   setTwitchConnected: (connected: boolean) => void;
   setYoutubeChannel: (channel: string, displayName?: string) => void;
   setKickChannel: (channel: string, chatroomId?: number) => void;
+  setTwitchAuthenticated: (channel: string, connected: boolean) => void;
   setValidationCountdown: (seconds: number) => void;
   setAudioEnabled: (enabled: boolean) => void;
   setExcelImportEnabled: (enabled: boolean) => void;
@@ -279,6 +280,8 @@ export const useStore = create<AppState & AppActions>()(
           mascot: data.mascot,
           displayName: data.displayName,
           twitchChannel: data.twitchChannel,
+          twitchAffiliateEnabled: data.twitchAffiliateEnabled,
+          twitchSubsConnected: data.twitchSubsConnected,
           kickChannel: data.kickChannel,
           kickChatroomId: data.kickChatroomId,
           youtubeChannel: data.youtubeChannel,
@@ -457,6 +460,15 @@ export const useStore = create<AppState & AppActions>()(
           body: JSON.stringify({ username: currentUser.username, kickChannel: channel || null, kickChatroomId: chatroomId ?? null }),
         }).catch(() => {});
       },
+      setTwitchAuthenticated: (channel, connected) => {
+        const { currentUser, twitchConfig } = get();
+        if (!currentUser) return;
+        set({
+          currentUser: { ...currentUser, twitchChannel: channel || currentUser.twitchChannel, twitchSubsConnected: connected },
+          twitchConfig: { ...twitchConfig, channel: channel || twitchConfig.channel },
+        });
+      },
+
       setValidationCountdown: (validationCountdown) => set({ validationCountdown }),
 
       setAudioEnabled: (audioEnabled) => {
@@ -597,6 +609,9 @@ export const useStore = create<AppState & AppActions>()(
       name: 'playerskins-raffle-store',
       partialize: (state) => ({
         // Mantido como cache local para carregamento imediato enquanto DB responde
+        isLoggedIn: state.isLoggedIn,
+        currentUser: state.currentUser,
+        forcePasswordChange: state.forcePasswordChange,
         twitchConfig: state.twitchConfig,
         audioEnabled: state.audioEnabled,
         excelImportEnabled: state.excelImportEnabled,

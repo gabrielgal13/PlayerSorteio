@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 
 type GameId = 'hangman' | 'worldguessr' | 'skribll' | 'chatwars' | 'poolwars';
@@ -85,6 +86,17 @@ interface Props {
 }
 
 export default function GamesLobby({ onSelectGame }: Props) {
+  const [disabledGames, setDisabledGames] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch('/api/streamer/games-config')
+      .then(r => r.json())
+      .then((data: { disabled: string[] }) => setDisabledGames(data.disabled ?? []))
+      .catch(() => {});
+  }, []);
+
+  const visibleGames = GAMES.filter(g => !disabledGames.includes(g.id));
+
   return (
     <div className="flex-1 flex flex-col overflow-y-auto px-6 py-10">
       {/* Title */}
@@ -107,7 +119,7 @@ export default function GamesLobby({ onSelectGame }: Props) {
         className="grid gap-5 mx-auto w-full"
         style={{ maxWidth: 900, gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}
       >
-        {GAMES.map((game, idx) => (
+        {visibleGames.map((game, idx) => (
           <motion.div
             key={game.id}
             initial={{ opacity: 0, y: 24 }}

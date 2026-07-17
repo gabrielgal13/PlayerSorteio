@@ -3,7 +3,15 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { checkStock, buyItem } from '@/lib/waxpeer';
 import { getDeliveryMode } from '@/lib/prizeDelivery';
-import { findPendingDelivery, saveDeliveryAddress, STEAM_LINK_REGEX, MIN_ADDRESS_LENGTH } from '@/lib/deliveryCapture';
+import {
+  findPendingDelivery,
+  saveDeliveryAddress,
+  STEAM_LINK_REGEX,
+  findMissingAddressFields,
+  buildAddressRequestMessage,
+  buildMissingFieldsMessage,
+  buildAddressConfirmationMessage,
+} from '@/lib/deliveryCapture';
 
 // Resolve a origin real mesmo atrás de proxy/Vercel
 function getOrigin(req: NextRequest): string {
@@ -97,6 +105,16 @@ async function sendBotChatMessage(broadcasterId: string, message: string): Promi
     return { ok: false, dropped: true, reason: sent.drop_reason, twitchResponse: msgData };
   }
   return { ok: res.ok, sent: sent?.is_sent ?? null, twitchResponse: msgData };
+}
+
+async function getTwitchUserIdByLogin(login: string): Promise<string | null> {
+  const appToken = await getAppToken();
+  const res = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(login)}`, {
+    headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${appToken}` },
+  });
+  if (!res.ok) return null;
+  const data = await res.json() as { data?: { id: string }[] };
+  return data.data?.[0]?.id ?? null;
 }
 
 async function sendTwitchWhisper(toUserId: string, message: string): Promise<void> {
@@ -349,14 +367,24 @@ export async function POST(
     const isTwitchWinner = !winnerSource || winnerSource === 'twitch';
     const deliveryMode = prizeName ? getDeliveryMode(prizeName) : 'trade_link';
     const askText = deliveryMode === 'address_and_shirt'
-      ? 'mande seu endereço completo (com CEP) e qual camisa você quer, tudo em uma mensagem'
+      ? 'mande seu endereço no formato Rua/Numero/Bairro/Estado/CEP e a Camiseta que você quer'
       : deliveryMode === 'address'
-      ? 'mande seu endereço completo (com CEP)'
+      ? 'mande seu endereço no formato Rua/Numero/Bairro/Estado/CEP'
       : 'mande seu Steam trade link';
     const instruction = isTwitchWinner ? ` | Para receber, ${askText} por WHISPER para @${botName}` : '';
     const message = `${e1} @${winnerName} ${g}!${prizePart}${instruction} ${e2}`;
 
     const result = await sendBotChatMessage(broadcasterId, message);
+
+    // Prêmio físico (Camisa) — além do anúncio público, já manda o pedido de
+    // endereço por whisper direto, sem esperar o ganhador chamar o bot primeiro.
+    if (isTwitchWinner && deliveryMode !== 'trade_link') {
+      const winnerUserId = await getTwitchUserIdByLogin(winnerName);
+      if (winnerUserId) {
+        await sendTwitchWhisper(winnerUserId, buildAddressRequestMessage(deliveryMode));
+      }
+    }
+
     return NextResponse.json({ ...result, message });
   }
 
@@ -451,15 +479,16 @@ export async function POST(
 
       // ── Prêmio físico (Camisa) — coleta endereço (e camisa escolhida) em vez de trade link ──
       if (pending.mode !== 'trade_link') {
-        if (text.length < MIN_ADDRESS_LENGTH) {
-          const askMore = pending.mode === 'address_and_shirt'
-            ? 'Preciso do seu endereço completo (com CEP) e qual camisa você quer, tudo em uma mensagem!'
-            : 'Preciso do seu endereço completo (com CEP)!';
-          await sendTwitchWhisper(fromUserId, askMore);
+        // O nick de quem manda o whisper já veio verificado pelo findPendingDelivery
+        // acima (que só encontra entrega pendente pro nick exato do ganhador) —
+        // mensagens de qualquer outra pessoa caem no "Nenhuma entrega pendente" acima.
+        const missing = findMissingAddressFields(text, pending.mode);
+        if (missing.length > 0) {
+          await sendTwitchWhisper(fromUserId, buildMissingFieldsMessage(missing, pending.mode));
           return new NextResponse('ok', { status: 200 });
         }
         await saveDeliveryAddress(pending.id, text);
-        await sendTwitchWhisper(fromUserId, 'Endereço recebido! O streamer vai providenciar o envio. 🎁');
+        await sendTwitchWhisper(fromUserId, buildAddressConfirmationMessage(pending.mode));
         return new NextResponse('ok', { status: 200 });
       }
 

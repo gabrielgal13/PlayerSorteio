@@ -52,6 +52,7 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   Streamer: 'Streamer',
+  RankEvent: 'RankEvent',
   PrizeList: 'PrizeList',
   PrizeListItem: 'PrizeListItem',
   PscTransaction: 'PscTransaction',
@@ -89,6 +90,10 @@ export const StreamerScalarFieldEnum = {
   isAdmin: 'isAdmin',
   twitchChannel: 'twitchChannel',
   kickChannel: 'kickChannel',
+  twitchAffiliateEnabled: 'twitchAffiliateEnabled',
+  twitchUserId: 'twitchUserId',
+  twitchUserAccessToken: 'twitchUserAccessToken',
+  twitchUserRefreshToken: 'twitchUserRefreshToken',
   kickChatroomId: 'kickChatroomId',
   youtubeChannel: 'youtubeChannel',
   youtubeDisplayName: 'youtubeDisplayName',
@@ -114,12 +119,27 @@ export const StreamerScalarFieldEnum = {
   chatTriggerCommand: 'chatTriggerCommand',
   raffleAnimationStyle: 'raffleAnimationStyle',
   chatWarsSprite: 'chatWarsSprite',
+  rankPoints: 'rankPoints',
+  rankStreakCount: 'rankStreakCount',
+  rankLastActiveDate: 'rankLastActiveDate',
+  rankLastRaffleAt: 'rankLastRaffleAt',
   forcePasswordChange: 'forcePasswordChange',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type StreamerScalarFieldEnum = (typeof StreamerScalarFieldEnum)[keyof typeof StreamerScalarFieldEnum]
+
+
+export const RankEventScalarFieldEnum = {
+  id: 'id',
+  streamerId: 'streamerId',
+  type: 'type',
+  points: 'points',
+  createdAt: 'createdAt'
+} as const
+
+export type RankEventScalarFieldEnum = (typeof RankEventScalarFieldEnum)[keyof typeof RankEventScalarFieldEnum]
 
 
 export const PrizeListScalarFieldEnum = {

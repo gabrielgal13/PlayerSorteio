@@ -29,6 +29,8 @@ export async function POST(
       displayName: streamer.displayName,
       forcePasswordChange: streamer.forcePasswordChange,
       twitchChannel: streamer.twitchChannel,
+      twitchAffiliateEnabled: streamer.twitchAffiliateEnabled,
+      twitchSubsConnected: Boolean(streamer.twitchUserId && streamer.twitchUserAccessToken),
       kickChannel: streamer.kickChannel,
       kickChatroomId: streamer.kickChatroomId,
       youtubeChannel: streamer.youtubeChannel,

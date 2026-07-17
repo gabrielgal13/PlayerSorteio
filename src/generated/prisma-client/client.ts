@@ -47,6 +47,11 @@ export { Prisma }
  */
 export type Streamer = Prisma.StreamerModel
 /**
+ * Model RankEvent
+ * 
+ */
+export type RankEvent = Prisma.RankEventModel
+/**
  * Model PrizeList
  * 
  */

@@ -385,6 +385,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   Streamer: 'Streamer',
+  RankEvent: 'RankEvent',
   PrizeList: 'PrizeList',
   PrizeListItem: 'PrizeListItem',
   PscTransaction: 'PscTransaction',
@@ -409,7 +410,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "streamer" | "prizeList" | "prizeListItem" | "pscTransaction" | "marketingImage" | "affiliateProposal" | "sale" | "raffleHistory" | "botCommand" | "appConfig"
+    modelProps: "streamer" | "rankEvent" | "prizeList" | "prizeListItem" | "pscTransaction" | "marketingImage" | "affiliateProposal" | "sale" | "raffleHistory" | "botCommand" | "appConfig"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -484,6 +485,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.StreamerCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.StreamerCountAggregateOutputType> | number
+        }
+      }
+    }
+    RankEvent: {
+      payload: Prisma.$RankEventPayload<ExtArgs>
+      fields: Prisma.RankEventFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RankEventFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RankEventPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RankEventFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RankEventPayload>
+        }
+        findFirst: {
+          args: Prisma.RankEventFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RankEventPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RankEventFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RankEventPayload>
+        }
+        findMany: {
+          args: Prisma.RankEventFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RankEventPayload>[]
+        }
+        create: {
+          args: Prisma.RankEventCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RankEventPayload>
+        }
+        createMany: {
+          args: Prisma.RankEventCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RankEventCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RankEventPayload>[]
+        }
+        delete: {
+          args: Prisma.RankEventDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RankEventPayload>
+        }
+        update: {
+          args: Prisma.RankEventUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RankEventPayload>
+        }
+        deleteMany: {
+          args: Prisma.RankEventDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RankEventUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RankEventUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RankEventPayload>[]
+        }
+        upsert: {
+          args: Prisma.RankEventUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RankEventPayload>
+        }
+        aggregate: {
+          args: Prisma.RankEventAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRankEvent>
+        }
+        groupBy: {
+          args: Prisma.RankEventGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RankEventGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RankEventCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RankEventCountAggregateOutputType> | number
         }
       }
     }
@@ -1202,6 +1277,10 @@ export const StreamerScalarFieldEnum = {
   isAdmin: 'isAdmin',
   twitchChannel: 'twitchChannel',
   kickChannel: 'kickChannel',
+  twitchAffiliateEnabled: 'twitchAffiliateEnabled',
+  twitchUserId: 'twitchUserId',
+  twitchUserAccessToken: 'twitchUserAccessToken',
+  twitchUserRefreshToken: 'twitchUserRefreshToken',
   kickChatroomId: 'kickChatroomId',
   youtubeChannel: 'youtubeChannel',
   youtubeDisplayName: 'youtubeDisplayName',
@@ -1227,12 +1306,27 @@ export const StreamerScalarFieldEnum = {
   chatTriggerCommand: 'chatTriggerCommand',
   raffleAnimationStyle: 'raffleAnimationStyle',
   chatWarsSprite: 'chatWarsSprite',
+  rankPoints: 'rankPoints',
+  rankStreakCount: 'rankStreakCount',
+  rankLastActiveDate: 'rankLastActiveDate',
+  rankLastRaffleAt: 'rankLastRaffleAt',
   forcePasswordChange: 'forcePasswordChange',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type StreamerScalarFieldEnum = (typeof StreamerScalarFieldEnum)[keyof typeof StreamerScalarFieldEnum]
+
+
+export const RankEventScalarFieldEnum = {
+  id: 'id',
+  streamerId: 'streamerId',
+  type: 'type',
+  points: 'points',
+  createdAt: 'createdAt'
+} as const
+
+export type RankEventScalarFieldEnum = (typeof RankEventScalarFieldEnum)[keyof typeof RankEventScalarFieldEnum]
 
 
 export const PrizeListScalarFieldEnum = {
@@ -1579,6 +1673,7 @@ export type PrismaClientOptions = ({
 }
 export type GlobalOmitConfig = {
   streamer?: Prisma.StreamerOmit
+  rankEvent?: Prisma.RankEventOmit
   prizeList?: Prisma.PrizeListOmit
   prizeListItem?: Prisma.PrizeListItemOmit
   pscTransaction?: Prisma.PscTransactionOmit

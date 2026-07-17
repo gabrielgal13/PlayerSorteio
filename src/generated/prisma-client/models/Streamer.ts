@@ -32,6 +32,8 @@ export type StreamerAvgAggregateOutputType = {
   pscBalance: number | null
   autoRoundDelay: number | null
   chatTriggerCount: number | null
+  rankPoints: number | null
+  rankStreakCount: number | null
 }
 
 export type StreamerSumAggregateOutputType = {
@@ -40,6 +42,8 @@ export type StreamerSumAggregateOutputType = {
   pscBalance: number | null
   autoRoundDelay: number | null
   chatTriggerCount: number | null
+  rankPoints: number | null
+  rankStreakCount: number | null
 }
 
 export type StreamerMinAggregateOutputType = {
@@ -52,6 +56,10 @@ export type StreamerMinAggregateOutputType = {
   isAdmin: boolean | null
   twitchChannel: string | null
   kickChannel: string | null
+  twitchAffiliateEnabled: boolean | null
+  twitchUserId: string | null
+  twitchUserAccessToken: string | null
+  twitchUserRefreshToken: string | null
   kickChatroomId: number | null
   youtubeChannel: string | null
   youtubeDisplayName: string | null
@@ -77,6 +85,10 @@ export type StreamerMinAggregateOutputType = {
   chatTriggerCommand: string | null
   raffleAnimationStyle: string | null
   chatWarsSprite: string | null
+  rankPoints: number | null
+  rankStreakCount: number | null
+  rankLastActiveDate: Date | null
+  rankLastRaffleAt: Date | null
   forcePasswordChange: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -92,6 +104,10 @@ export type StreamerMaxAggregateOutputType = {
   isAdmin: boolean | null
   twitchChannel: string | null
   kickChannel: string | null
+  twitchAffiliateEnabled: boolean | null
+  twitchUserId: string | null
+  twitchUserAccessToken: string | null
+  twitchUserRefreshToken: string | null
   kickChatroomId: number | null
   youtubeChannel: string | null
   youtubeDisplayName: string | null
@@ -117,6 +133,10 @@ export type StreamerMaxAggregateOutputType = {
   chatTriggerCommand: string | null
   raffleAnimationStyle: string | null
   chatWarsSprite: string | null
+  rankPoints: number | null
+  rankStreakCount: number | null
+  rankLastActiveDate: Date | null
+  rankLastRaffleAt: Date | null
   forcePasswordChange: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -132,6 +152,10 @@ export type StreamerCountAggregateOutputType = {
   isAdmin: number
   twitchChannel: number
   kickChannel: number
+  twitchAffiliateEnabled: number
+  twitchUserId: number
+  twitchUserAccessToken: number
+  twitchUserRefreshToken: number
   kickChatroomId: number
   youtubeChannel: number
   youtubeDisplayName: number
@@ -157,6 +181,10 @@ export type StreamerCountAggregateOutputType = {
   chatTriggerCommand: number
   raffleAnimationStyle: number
   chatWarsSprite: number
+  rankPoints: number
+  rankStreakCount: number
+  rankLastActiveDate: number
+  rankLastRaffleAt: number
   forcePasswordChange: number
   createdAt: number
   updatedAt: number
@@ -170,6 +198,8 @@ export type StreamerAvgAggregateInputType = {
   pscBalance?: true
   autoRoundDelay?: true
   chatTriggerCount?: true
+  rankPoints?: true
+  rankStreakCount?: true
 }
 
 export type StreamerSumAggregateInputType = {
@@ -178,6 +208,8 @@ export type StreamerSumAggregateInputType = {
   pscBalance?: true
   autoRoundDelay?: true
   chatTriggerCount?: true
+  rankPoints?: true
+  rankStreakCount?: true
 }
 
 export type StreamerMinAggregateInputType = {
@@ -190,6 +222,10 @@ export type StreamerMinAggregateInputType = {
   isAdmin?: true
   twitchChannel?: true
   kickChannel?: true
+  twitchAffiliateEnabled?: true
+  twitchUserId?: true
+  twitchUserAccessToken?: true
+  twitchUserRefreshToken?: true
   kickChatroomId?: true
   youtubeChannel?: true
   youtubeDisplayName?: true
@@ -215,6 +251,10 @@ export type StreamerMinAggregateInputType = {
   chatTriggerCommand?: true
   raffleAnimationStyle?: true
   chatWarsSprite?: true
+  rankPoints?: true
+  rankStreakCount?: true
+  rankLastActiveDate?: true
+  rankLastRaffleAt?: true
   forcePasswordChange?: true
   createdAt?: true
   updatedAt?: true
@@ -230,6 +270,10 @@ export type StreamerMaxAggregateInputType = {
   isAdmin?: true
   twitchChannel?: true
   kickChannel?: true
+  twitchAffiliateEnabled?: true
+  twitchUserId?: true
+  twitchUserAccessToken?: true
+  twitchUserRefreshToken?: true
   kickChatroomId?: true
   youtubeChannel?: true
   youtubeDisplayName?: true
@@ -255,6 +299,10 @@ export type StreamerMaxAggregateInputType = {
   chatTriggerCommand?: true
   raffleAnimationStyle?: true
   chatWarsSprite?: true
+  rankPoints?: true
+  rankStreakCount?: true
+  rankLastActiveDate?: true
+  rankLastRaffleAt?: true
   forcePasswordChange?: true
   createdAt?: true
   updatedAt?: true
@@ -270,6 +318,10 @@ export type StreamerCountAggregateInputType = {
   isAdmin?: true
   twitchChannel?: true
   kickChannel?: true
+  twitchAffiliateEnabled?: true
+  twitchUserId?: true
+  twitchUserAccessToken?: true
+  twitchUserRefreshToken?: true
   kickChatroomId?: true
   youtubeChannel?: true
   youtubeDisplayName?: true
@@ -295,6 +347,10 @@ export type StreamerCountAggregateInputType = {
   chatTriggerCommand?: true
   raffleAnimationStyle?: true
   chatWarsSprite?: true
+  rankPoints?: true
+  rankStreakCount?: true
+  rankLastActiveDate?: true
+  rankLastRaffleAt?: true
   forcePasswordChange?: true
   createdAt?: true
   updatedAt?: true
@@ -397,6 +453,10 @@ export type StreamerGroupByOutputType = {
   isAdmin: boolean
   twitchChannel: string | null
   kickChannel: string | null
+  twitchAffiliateEnabled: boolean
+  twitchUserId: string | null
+  twitchUserAccessToken: string | null
+  twitchUserRefreshToken: string | null
   kickChatroomId: number | null
   youtubeChannel: string | null
   youtubeDisplayName: string | null
@@ -422,6 +482,10 @@ export type StreamerGroupByOutputType = {
   chatTriggerCommand: string
   raffleAnimationStyle: string
   chatWarsSprite: string | null
+  rankPoints: number
+  rankStreakCount: number
+  rankLastActiveDate: Date | null
+  rankLastRaffleAt: Date | null
   forcePasswordChange: boolean
   createdAt: Date
   updatedAt: Date
@@ -460,6 +524,10 @@ export type StreamerWhereInput = {
   isAdmin?: Prisma.BoolFilter<"Streamer"> | boolean
   twitchChannel?: Prisma.StringNullableFilter<"Streamer"> | string | null
   kickChannel?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFilter<"Streamer"> | boolean
+  twitchUserId?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  twitchUserAccessToken?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  twitchUserRefreshToken?: Prisma.StringNullableFilter<"Streamer"> | string | null
   kickChatroomId?: Prisma.IntNullableFilter<"Streamer"> | number | null
   youtubeChannel?: Prisma.StringNullableFilter<"Streamer"> | string | null
   youtubeDisplayName?: Prisma.StringNullableFilter<"Streamer"> | string | null
@@ -485,6 +553,10 @@ export type StreamerWhereInput = {
   chatTriggerCommand?: Prisma.StringFilter<"Streamer"> | string
   raffleAnimationStyle?: Prisma.StringFilter<"Streamer"> | string
   chatWarsSprite?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  rankPoints?: Prisma.IntFilter<"Streamer"> | number
+  rankStreakCount?: Prisma.IntFilter<"Streamer"> | number
+  rankLastActiveDate?: Prisma.DateTimeNullableFilter<"Streamer"> | Date | string | null
+  rankLastRaffleAt?: Prisma.DateTimeNullableFilter<"Streamer"> | Date | string | null
   forcePasswordChange?: Prisma.BoolFilter<"Streamer"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Streamer"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Streamer"> | Date | string
@@ -492,6 +564,7 @@ export type StreamerWhereInput = {
   pscTransactions?: Prisma.PscTransactionListRelationFilter
   prizeLists?: Prisma.PrizeListListRelationFilter
   botCommands?: Prisma.BotCommandListRelationFilter
+  rankEvents?: Prisma.RankEventListRelationFilter
 }
 
 export type StreamerOrderByWithRelationInput = {
@@ -504,6 +577,10 @@ export type StreamerOrderByWithRelationInput = {
   isAdmin?: Prisma.SortOrder
   twitchChannel?: Prisma.SortOrderInput | Prisma.SortOrder
   kickChannel?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitchAffiliateEnabled?: Prisma.SortOrder
+  twitchUserId?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitchUserAccessToken?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitchUserRefreshToken?: Prisma.SortOrderInput | Prisma.SortOrder
   kickChatroomId?: Prisma.SortOrderInput | Prisma.SortOrder
   youtubeChannel?: Prisma.SortOrderInput | Prisma.SortOrder
   youtubeDisplayName?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -529,6 +606,10 @@ export type StreamerOrderByWithRelationInput = {
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
   chatWarsSprite?: Prisma.SortOrderInput | Prisma.SortOrder
+  rankPoints?: Prisma.SortOrder
+  rankStreakCount?: Prisma.SortOrder
+  rankLastActiveDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  rankLastRaffleAt?: Prisma.SortOrderInput | Prisma.SortOrder
   forcePasswordChange?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -536,6 +617,7 @@ export type StreamerOrderByWithRelationInput = {
   pscTransactions?: Prisma.PscTransactionOrderByRelationAggregateInput
   prizeLists?: Prisma.PrizeListOrderByRelationAggregateInput
   botCommands?: Prisma.BotCommandOrderByRelationAggregateInput
+  rankEvents?: Prisma.RankEventOrderByRelationAggregateInput
 }
 
 export type StreamerWhereUniqueInput = Prisma.AtLeast<{
@@ -551,6 +633,10 @@ export type StreamerWhereUniqueInput = Prisma.AtLeast<{
   isAdmin?: Prisma.BoolFilter<"Streamer"> | boolean
   twitchChannel?: Prisma.StringNullableFilter<"Streamer"> | string | null
   kickChannel?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFilter<"Streamer"> | boolean
+  twitchUserId?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  twitchUserAccessToken?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  twitchUserRefreshToken?: Prisma.StringNullableFilter<"Streamer"> | string | null
   kickChatroomId?: Prisma.IntNullableFilter<"Streamer"> | number | null
   youtubeChannel?: Prisma.StringNullableFilter<"Streamer"> | string | null
   youtubeDisplayName?: Prisma.StringNullableFilter<"Streamer"> | string | null
@@ -576,6 +662,10 @@ export type StreamerWhereUniqueInput = Prisma.AtLeast<{
   chatTriggerCommand?: Prisma.StringFilter<"Streamer"> | string
   raffleAnimationStyle?: Prisma.StringFilter<"Streamer"> | string
   chatWarsSprite?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  rankPoints?: Prisma.IntFilter<"Streamer"> | number
+  rankStreakCount?: Prisma.IntFilter<"Streamer"> | number
+  rankLastActiveDate?: Prisma.DateTimeNullableFilter<"Streamer"> | Date | string | null
+  rankLastRaffleAt?: Prisma.DateTimeNullableFilter<"Streamer"> | Date | string | null
   forcePasswordChange?: Prisma.BoolFilter<"Streamer"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Streamer"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Streamer"> | Date | string
@@ -583,6 +673,7 @@ export type StreamerWhereUniqueInput = Prisma.AtLeast<{
   pscTransactions?: Prisma.PscTransactionListRelationFilter
   prizeLists?: Prisma.PrizeListListRelationFilter
   botCommands?: Prisma.BotCommandListRelationFilter
+  rankEvents?: Prisma.RankEventListRelationFilter
 }, "id" | "username">
 
 export type StreamerOrderByWithAggregationInput = {
@@ -595,6 +686,10 @@ export type StreamerOrderByWithAggregationInput = {
   isAdmin?: Prisma.SortOrder
   twitchChannel?: Prisma.SortOrderInput | Prisma.SortOrder
   kickChannel?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitchAffiliateEnabled?: Prisma.SortOrder
+  twitchUserId?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitchUserAccessToken?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitchUserRefreshToken?: Prisma.SortOrderInput | Prisma.SortOrder
   kickChatroomId?: Prisma.SortOrderInput | Prisma.SortOrder
   youtubeChannel?: Prisma.SortOrderInput | Prisma.SortOrder
   youtubeDisplayName?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -620,6 +715,10 @@ export type StreamerOrderByWithAggregationInput = {
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
   chatWarsSprite?: Prisma.SortOrderInput | Prisma.SortOrder
+  rankPoints?: Prisma.SortOrder
+  rankStreakCount?: Prisma.SortOrder
+  rankLastActiveDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  rankLastRaffleAt?: Prisma.SortOrderInput | Prisma.SortOrder
   forcePasswordChange?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -643,6 +742,10 @@ export type StreamerScalarWhereWithAggregatesInput = {
   isAdmin?: Prisma.BoolWithAggregatesFilter<"Streamer"> | boolean
   twitchChannel?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
   kickChannel?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
+  twitchAffiliateEnabled?: Prisma.BoolWithAggregatesFilter<"Streamer"> | boolean
+  twitchUserId?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
+  twitchUserAccessToken?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
+  twitchUserRefreshToken?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
   kickChatroomId?: Prisma.IntNullableWithAggregatesFilter<"Streamer"> | number | null
   youtubeChannel?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
   youtubeDisplayName?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
@@ -668,6 +771,10 @@ export type StreamerScalarWhereWithAggregatesInput = {
   chatTriggerCommand?: Prisma.StringWithAggregatesFilter<"Streamer"> | string
   raffleAnimationStyle?: Prisma.StringWithAggregatesFilter<"Streamer"> | string
   chatWarsSprite?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
+  rankPoints?: Prisma.IntWithAggregatesFilter<"Streamer"> | number
+  rankStreakCount?: Prisma.IntWithAggregatesFilter<"Streamer"> | number
+  rankLastActiveDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Streamer"> | Date | string | null
+  rankLastRaffleAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Streamer"> | Date | string | null
   forcePasswordChange?: Prisma.BoolWithAggregatesFilter<"Streamer"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Streamer"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Streamer"> | Date | string
@@ -683,6 +790,10 @@ export type StreamerCreateInput = {
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
@@ -708,6 +819,10 @@ export type StreamerCreateInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -715,6 +830,7 @@ export type StreamerCreateInput = {
   pscTransactions?: Prisma.PscTransactionCreateNestedManyWithoutStreamerInput
   prizeLists?: Prisma.PrizeListCreateNestedManyWithoutStreamerInput
   botCommands?: Prisma.BotCommandCreateNestedManyWithoutStreamerInput
+  rankEvents?: Prisma.RankEventCreateNestedManyWithoutStreamerInput
 }
 
 export type StreamerUncheckedCreateInput = {
@@ -727,6 +843,10 @@ export type StreamerUncheckedCreateInput = {
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
@@ -752,6 +872,10 @@ export type StreamerUncheckedCreateInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -759,6 +883,7 @@ export type StreamerUncheckedCreateInput = {
   pscTransactions?: Prisma.PscTransactionUncheckedCreateNestedManyWithoutStreamerInput
   prizeLists?: Prisma.PrizeListUncheckedCreateNestedManyWithoutStreamerInput
   botCommands?: Prisma.BotCommandUncheckedCreateNestedManyWithoutStreamerInput
+  rankEvents?: Prisma.RankEventUncheckedCreateNestedManyWithoutStreamerInput
 }
 
 export type StreamerUpdateInput = {
@@ -771,6 +896,10 @@ export type StreamerUpdateInput = {
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -796,6 +925,10 @@ export type StreamerUpdateInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -803,6 +936,7 @@ export type StreamerUpdateInput = {
   pscTransactions?: Prisma.PscTransactionUpdateManyWithoutStreamerNestedInput
   prizeLists?: Prisma.PrizeListUpdateManyWithoutStreamerNestedInput
   botCommands?: Prisma.BotCommandUpdateManyWithoutStreamerNestedInput
+  rankEvents?: Prisma.RankEventUpdateManyWithoutStreamerNestedInput
 }
 
 export type StreamerUncheckedUpdateInput = {
@@ -815,6 +949,10 @@ export type StreamerUncheckedUpdateInput = {
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -840,6 +978,10 @@ export type StreamerUncheckedUpdateInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -847,6 +989,7 @@ export type StreamerUncheckedUpdateInput = {
   pscTransactions?: Prisma.PscTransactionUncheckedUpdateManyWithoutStreamerNestedInput
   prizeLists?: Prisma.PrizeListUncheckedUpdateManyWithoutStreamerNestedInput
   botCommands?: Prisma.BotCommandUncheckedUpdateManyWithoutStreamerNestedInput
+  rankEvents?: Prisma.RankEventUncheckedUpdateManyWithoutStreamerNestedInput
 }
 
 export type StreamerCreateManyInput = {
@@ -859,6 +1002,10 @@ export type StreamerCreateManyInput = {
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
@@ -884,6 +1031,10 @@ export type StreamerCreateManyInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -899,6 +1050,10 @@ export type StreamerUpdateManyMutationInput = {
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -924,6 +1079,10 @@ export type StreamerUpdateManyMutationInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -939,6 +1098,10 @@ export type StreamerUncheckedUpdateManyInput = {
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -964,6 +1127,10 @@ export type StreamerUncheckedUpdateManyInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -979,6 +1146,10 @@ export type StreamerCountOrderByAggregateInput = {
   isAdmin?: Prisma.SortOrder
   twitchChannel?: Prisma.SortOrder
   kickChannel?: Prisma.SortOrder
+  twitchAffiliateEnabled?: Prisma.SortOrder
+  twitchUserId?: Prisma.SortOrder
+  twitchUserAccessToken?: Prisma.SortOrder
+  twitchUserRefreshToken?: Prisma.SortOrder
   kickChatroomId?: Prisma.SortOrder
   youtubeChannel?: Prisma.SortOrder
   youtubeDisplayName?: Prisma.SortOrder
@@ -1004,6 +1175,10 @@ export type StreamerCountOrderByAggregateInput = {
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
   chatWarsSprite?: Prisma.SortOrder
+  rankPoints?: Prisma.SortOrder
+  rankStreakCount?: Prisma.SortOrder
+  rankLastActiveDate?: Prisma.SortOrder
+  rankLastRaffleAt?: Prisma.SortOrder
   forcePasswordChange?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -1015,6 +1190,8 @@ export type StreamerAvgOrderByAggregateInput = {
   pscBalance?: Prisma.SortOrder
   autoRoundDelay?: Prisma.SortOrder
   chatTriggerCount?: Prisma.SortOrder
+  rankPoints?: Prisma.SortOrder
+  rankStreakCount?: Prisma.SortOrder
 }
 
 export type StreamerMaxOrderByAggregateInput = {
@@ -1027,6 +1204,10 @@ export type StreamerMaxOrderByAggregateInput = {
   isAdmin?: Prisma.SortOrder
   twitchChannel?: Prisma.SortOrder
   kickChannel?: Prisma.SortOrder
+  twitchAffiliateEnabled?: Prisma.SortOrder
+  twitchUserId?: Prisma.SortOrder
+  twitchUserAccessToken?: Prisma.SortOrder
+  twitchUserRefreshToken?: Prisma.SortOrder
   kickChatroomId?: Prisma.SortOrder
   youtubeChannel?: Prisma.SortOrder
   youtubeDisplayName?: Prisma.SortOrder
@@ -1052,6 +1233,10 @@ export type StreamerMaxOrderByAggregateInput = {
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
   chatWarsSprite?: Prisma.SortOrder
+  rankPoints?: Prisma.SortOrder
+  rankStreakCount?: Prisma.SortOrder
+  rankLastActiveDate?: Prisma.SortOrder
+  rankLastRaffleAt?: Prisma.SortOrder
   forcePasswordChange?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -1067,6 +1252,10 @@ export type StreamerMinOrderByAggregateInput = {
   isAdmin?: Prisma.SortOrder
   twitchChannel?: Prisma.SortOrder
   kickChannel?: Prisma.SortOrder
+  twitchAffiliateEnabled?: Prisma.SortOrder
+  twitchUserId?: Prisma.SortOrder
+  twitchUserAccessToken?: Prisma.SortOrder
+  twitchUserRefreshToken?: Prisma.SortOrder
   kickChatroomId?: Prisma.SortOrder
   youtubeChannel?: Prisma.SortOrder
   youtubeDisplayName?: Prisma.SortOrder
@@ -1092,6 +1281,10 @@ export type StreamerMinOrderByAggregateInput = {
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
   chatWarsSprite?: Prisma.SortOrder
+  rankPoints?: Prisma.SortOrder
+  rankStreakCount?: Prisma.SortOrder
+  rankLastActiveDate?: Prisma.SortOrder
+  rankLastRaffleAt?: Prisma.SortOrder
   forcePasswordChange?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -1103,6 +1296,8 @@ export type StreamerSumOrderByAggregateInput = {
   pscBalance?: Prisma.SortOrder
   autoRoundDelay?: Prisma.SortOrder
   chatTriggerCount?: Prisma.SortOrder
+  rankPoints?: Prisma.SortOrder
+  rankStreakCount?: Prisma.SortOrder
 }
 
 export type StreamerScalarRelationFilter = {
@@ -1144,6 +1339,20 @@ export type IntFieldUpdateOperationsInput = {
 
 export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
+}
+
+export type StreamerCreateNestedOneWithoutRankEventsInput = {
+  create?: Prisma.XOR<Prisma.StreamerCreateWithoutRankEventsInput, Prisma.StreamerUncheckedCreateWithoutRankEventsInput>
+  connectOrCreate?: Prisma.StreamerCreateOrConnectWithoutRankEventsInput
+  connect?: Prisma.StreamerWhereUniqueInput
+}
+
+export type StreamerUpdateOneRequiredWithoutRankEventsNestedInput = {
+  create?: Prisma.XOR<Prisma.StreamerCreateWithoutRankEventsInput, Prisma.StreamerUncheckedCreateWithoutRankEventsInput>
+  connectOrCreate?: Prisma.StreamerCreateOrConnectWithoutRankEventsInput
+  upsert?: Prisma.StreamerUpsertWithoutRankEventsInput
+  connect?: Prisma.StreamerWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StreamerUpdateToOneWithWhereWithoutRankEventsInput, Prisma.StreamerUpdateWithoutRankEventsInput>, Prisma.StreamerUncheckedUpdateWithoutRankEventsInput>
 }
 
 export type StreamerCreateNestedOneWithoutPrizeListsInput = {
@@ -1202,7 +1411,7 @@ export type StreamerUpdateOneRequiredWithoutBotCommandsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.StreamerUpdateToOneWithWhereWithoutBotCommandsInput, Prisma.StreamerUpdateWithoutBotCommandsInput>, Prisma.StreamerUncheckedUpdateWithoutBotCommandsInput>
 }
 
-export type StreamerCreateWithoutPrizeListsInput = {
+export type StreamerCreateWithoutRankEventsInput = {
   id?: string
   username: string
   passwordHash: string
@@ -1212,6 +1421,10 @@ export type StreamerCreateWithoutPrizeListsInput = {
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
@@ -1237,12 +1450,241 @@ export type StreamerCreateWithoutPrizeListsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
+  forcePasswordChange?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  history?: Prisma.RaffleHistoryCreateNestedManyWithoutStreamerInput
+  pscTransactions?: Prisma.PscTransactionCreateNestedManyWithoutStreamerInput
+  prizeLists?: Prisma.PrizeListCreateNestedManyWithoutStreamerInput
+  botCommands?: Prisma.BotCommandCreateNestedManyWithoutStreamerInput
+}
+
+export type StreamerUncheckedCreateWithoutRankEventsInput = {
+  id?: string
+  username: string
+  passwordHash: string
+  mascot?: string
+  displayName?: string | null
+  nome?: string | null
+  isAdmin?: boolean
+  twitchChannel?: string | null
+  kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
+  kickChatroomId?: number | null
+  youtubeChannel?: string | null
+  youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
+  registrationCommand?: string
+  claimCommand?: string
+  validationTimeout?: number
+  isAffiliate?: boolean
+  pscBalance?: number
+  audioEnabled?: boolean
+  excelImportEnabled?: boolean
+  excelPrizesImportEnabled?: boolean
+  eventMusic?: string
+  eventEffect?: string
+  spinEffect?: string
+  themeColor?: string
+  socoChuteModeEnabled?: boolean
+  raffleTriggerMode?: string
+  autoRoundDelay?: number
+  chatTriggerCount?: number
+  chatTriggerCommand?: string
+  raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
+  forcePasswordChange?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  history?: Prisma.RaffleHistoryUncheckedCreateNestedManyWithoutStreamerInput
+  pscTransactions?: Prisma.PscTransactionUncheckedCreateNestedManyWithoutStreamerInput
+  prizeLists?: Prisma.PrizeListUncheckedCreateNestedManyWithoutStreamerInput
+  botCommands?: Prisma.BotCommandUncheckedCreateNestedManyWithoutStreamerInput
+}
+
+export type StreamerCreateOrConnectWithoutRankEventsInput = {
+  where: Prisma.StreamerWhereUniqueInput
+  create: Prisma.XOR<Prisma.StreamerCreateWithoutRankEventsInput, Prisma.StreamerUncheckedCreateWithoutRankEventsInput>
+}
+
+export type StreamerUpsertWithoutRankEventsInput = {
+  update: Prisma.XOR<Prisma.StreamerUpdateWithoutRankEventsInput, Prisma.StreamerUncheckedUpdateWithoutRankEventsInput>
+  create: Prisma.XOR<Prisma.StreamerCreateWithoutRankEventsInput, Prisma.StreamerUncheckedCreateWithoutRankEventsInput>
+  where?: Prisma.StreamerWhereInput
+}
+
+export type StreamerUpdateToOneWithWhereWithoutRankEventsInput = {
+  where?: Prisma.StreamerWhereInput
+  data: Prisma.XOR<Prisma.StreamerUpdateWithoutRankEventsInput, Prisma.StreamerUncheckedUpdateWithoutRankEventsInput>
+}
+
+export type StreamerUpdateWithoutRankEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.StringFieldUpdateOperationsInput | string
+  displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
+  claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
+  validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
+  audioEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  excelImportEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  excelPrizesImportEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  eventMusic?: Prisma.StringFieldUpdateOperationsInput | string
+  eventEffect?: Prisma.StringFieldUpdateOperationsInput | string
+  spinEffect?: Prisma.StringFieldUpdateOperationsInput | string
+  themeColor?: Prisma.StringFieldUpdateOperationsInput | string
+  socoChuteModeEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  raffleTriggerMode?: Prisma.StringFieldUpdateOperationsInput | string
+  autoRoundDelay?: Prisma.IntFieldUpdateOperationsInput | number
+  chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
+  chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
+  raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  history?: Prisma.RaffleHistoryUpdateManyWithoutStreamerNestedInput
+  pscTransactions?: Prisma.PscTransactionUpdateManyWithoutStreamerNestedInput
+  prizeLists?: Prisma.PrizeListUpdateManyWithoutStreamerNestedInput
+  botCommands?: Prisma.BotCommandUpdateManyWithoutStreamerNestedInput
+}
+
+export type StreamerUncheckedUpdateWithoutRankEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  mascot?: Prisma.StringFieldUpdateOperationsInput | string
+  displayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  nome?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeNextPageToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeLiveChatCheckedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
+  claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
+  validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
+  audioEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  excelImportEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  excelPrizesImportEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  eventMusic?: Prisma.StringFieldUpdateOperationsInput | string
+  eventEffect?: Prisma.StringFieldUpdateOperationsInput | string
+  spinEffect?: Prisma.StringFieldUpdateOperationsInput | string
+  themeColor?: Prisma.StringFieldUpdateOperationsInput | string
+  socoChuteModeEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  raffleTriggerMode?: Prisma.StringFieldUpdateOperationsInput | string
+  autoRoundDelay?: Prisma.IntFieldUpdateOperationsInput | number
+  chatTriggerCount?: Prisma.IntFieldUpdateOperationsInput | number
+  chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
+  raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
+  chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  history?: Prisma.RaffleHistoryUncheckedUpdateManyWithoutStreamerNestedInput
+  pscTransactions?: Prisma.PscTransactionUncheckedUpdateManyWithoutStreamerNestedInput
+  prizeLists?: Prisma.PrizeListUncheckedUpdateManyWithoutStreamerNestedInput
+  botCommands?: Prisma.BotCommandUncheckedUpdateManyWithoutStreamerNestedInput
+}
+
+export type StreamerCreateWithoutPrizeListsInput = {
+  id?: string
+  username: string
+  passwordHash: string
+  mascot?: string
+  displayName?: string | null
+  nome?: string | null
+  isAdmin?: boolean
+  twitchChannel?: string | null
+  kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
+  kickChatroomId?: number | null
+  youtubeChannel?: string | null
+  youtubeDisplayName?: string | null
+  youtubeLiveChatId?: string | null
+  youtubeNextPageToken?: string | null
+  youtubeLiveChatCheckedAt?: Date | string | null
+  registrationCommand?: string
+  claimCommand?: string
+  validationTimeout?: number
+  isAffiliate?: boolean
+  pscBalance?: number
+  audioEnabled?: boolean
+  excelImportEnabled?: boolean
+  excelPrizesImportEnabled?: boolean
+  eventMusic?: string
+  eventEffect?: string
+  spinEffect?: string
+  themeColor?: string
+  socoChuteModeEnabled?: boolean
+  raffleTriggerMode?: string
+  autoRoundDelay?: number
+  chatTriggerCount?: number
+  chatTriggerCommand?: string
+  raffleAnimationStyle?: string
+  chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   history?: Prisma.RaffleHistoryCreateNestedManyWithoutStreamerInput
   pscTransactions?: Prisma.PscTransactionCreateNestedManyWithoutStreamerInput
   botCommands?: Prisma.BotCommandCreateNestedManyWithoutStreamerInput
+  rankEvents?: Prisma.RankEventCreateNestedManyWithoutStreamerInput
 }
 
 export type StreamerUncheckedCreateWithoutPrizeListsInput = {
@@ -1255,6 +1697,10 @@ export type StreamerUncheckedCreateWithoutPrizeListsInput = {
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
@@ -1280,12 +1726,17 @@ export type StreamerUncheckedCreateWithoutPrizeListsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   history?: Prisma.RaffleHistoryUncheckedCreateNestedManyWithoutStreamerInput
   pscTransactions?: Prisma.PscTransactionUncheckedCreateNestedManyWithoutStreamerInput
   botCommands?: Prisma.BotCommandUncheckedCreateNestedManyWithoutStreamerInput
+  rankEvents?: Prisma.RankEventUncheckedCreateNestedManyWithoutStreamerInput
 }
 
 export type StreamerCreateOrConnectWithoutPrizeListsInput = {
@@ -1314,6 +1765,10 @@ export type StreamerUpdateWithoutPrizeListsInput = {
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1339,12 +1794,17 @@ export type StreamerUpdateWithoutPrizeListsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   history?: Prisma.RaffleHistoryUpdateManyWithoutStreamerNestedInput
   pscTransactions?: Prisma.PscTransactionUpdateManyWithoutStreamerNestedInput
   botCommands?: Prisma.BotCommandUpdateManyWithoutStreamerNestedInput
+  rankEvents?: Prisma.RankEventUpdateManyWithoutStreamerNestedInput
 }
 
 export type StreamerUncheckedUpdateWithoutPrizeListsInput = {
@@ -1357,6 +1817,10 @@ export type StreamerUncheckedUpdateWithoutPrizeListsInput = {
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1382,12 +1846,17 @@ export type StreamerUncheckedUpdateWithoutPrizeListsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   history?: Prisma.RaffleHistoryUncheckedUpdateManyWithoutStreamerNestedInput
   pscTransactions?: Prisma.PscTransactionUncheckedUpdateManyWithoutStreamerNestedInput
   botCommands?: Prisma.BotCommandUncheckedUpdateManyWithoutStreamerNestedInput
+  rankEvents?: Prisma.RankEventUncheckedUpdateManyWithoutStreamerNestedInput
 }
 
 export type StreamerCreateWithoutPscTransactionsInput = {
@@ -1400,6 +1869,10 @@ export type StreamerCreateWithoutPscTransactionsInput = {
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
@@ -1425,12 +1898,17 @@ export type StreamerCreateWithoutPscTransactionsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   history?: Prisma.RaffleHistoryCreateNestedManyWithoutStreamerInput
   prizeLists?: Prisma.PrizeListCreateNestedManyWithoutStreamerInput
   botCommands?: Prisma.BotCommandCreateNestedManyWithoutStreamerInput
+  rankEvents?: Prisma.RankEventCreateNestedManyWithoutStreamerInput
 }
 
 export type StreamerUncheckedCreateWithoutPscTransactionsInput = {
@@ -1443,6 +1921,10 @@ export type StreamerUncheckedCreateWithoutPscTransactionsInput = {
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
@@ -1468,12 +1950,17 @@ export type StreamerUncheckedCreateWithoutPscTransactionsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   history?: Prisma.RaffleHistoryUncheckedCreateNestedManyWithoutStreamerInput
   prizeLists?: Prisma.PrizeListUncheckedCreateNestedManyWithoutStreamerInput
   botCommands?: Prisma.BotCommandUncheckedCreateNestedManyWithoutStreamerInput
+  rankEvents?: Prisma.RankEventUncheckedCreateNestedManyWithoutStreamerInput
 }
 
 export type StreamerCreateOrConnectWithoutPscTransactionsInput = {
@@ -1502,6 +1989,10 @@ export type StreamerUpdateWithoutPscTransactionsInput = {
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1527,12 +2018,17 @@ export type StreamerUpdateWithoutPscTransactionsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   history?: Prisma.RaffleHistoryUpdateManyWithoutStreamerNestedInput
   prizeLists?: Prisma.PrizeListUpdateManyWithoutStreamerNestedInput
   botCommands?: Prisma.BotCommandUpdateManyWithoutStreamerNestedInput
+  rankEvents?: Prisma.RankEventUpdateManyWithoutStreamerNestedInput
 }
 
 export type StreamerUncheckedUpdateWithoutPscTransactionsInput = {
@@ -1545,6 +2041,10 @@ export type StreamerUncheckedUpdateWithoutPscTransactionsInput = {
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1570,12 +2070,17 @@ export type StreamerUncheckedUpdateWithoutPscTransactionsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   history?: Prisma.RaffleHistoryUncheckedUpdateManyWithoutStreamerNestedInput
   prizeLists?: Prisma.PrizeListUncheckedUpdateManyWithoutStreamerNestedInput
   botCommands?: Prisma.BotCommandUncheckedUpdateManyWithoutStreamerNestedInput
+  rankEvents?: Prisma.RankEventUncheckedUpdateManyWithoutStreamerNestedInput
 }
 
 export type StreamerCreateWithoutHistoryInput = {
@@ -1588,6 +2093,10 @@ export type StreamerCreateWithoutHistoryInput = {
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
@@ -1613,12 +2122,17 @@ export type StreamerCreateWithoutHistoryInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   pscTransactions?: Prisma.PscTransactionCreateNestedManyWithoutStreamerInput
   prizeLists?: Prisma.PrizeListCreateNestedManyWithoutStreamerInput
   botCommands?: Prisma.BotCommandCreateNestedManyWithoutStreamerInput
+  rankEvents?: Prisma.RankEventCreateNestedManyWithoutStreamerInput
 }
 
 export type StreamerUncheckedCreateWithoutHistoryInput = {
@@ -1631,6 +2145,10 @@ export type StreamerUncheckedCreateWithoutHistoryInput = {
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
@@ -1656,12 +2174,17 @@ export type StreamerUncheckedCreateWithoutHistoryInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   pscTransactions?: Prisma.PscTransactionUncheckedCreateNestedManyWithoutStreamerInput
   prizeLists?: Prisma.PrizeListUncheckedCreateNestedManyWithoutStreamerInput
   botCommands?: Prisma.BotCommandUncheckedCreateNestedManyWithoutStreamerInput
+  rankEvents?: Prisma.RankEventUncheckedCreateNestedManyWithoutStreamerInput
 }
 
 export type StreamerCreateOrConnectWithoutHistoryInput = {
@@ -1690,6 +2213,10 @@ export type StreamerUpdateWithoutHistoryInput = {
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1715,12 +2242,17 @@ export type StreamerUpdateWithoutHistoryInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   pscTransactions?: Prisma.PscTransactionUpdateManyWithoutStreamerNestedInput
   prizeLists?: Prisma.PrizeListUpdateManyWithoutStreamerNestedInput
   botCommands?: Prisma.BotCommandUpdateManyWithoutStreamerNestedInput
+  rankEvents?: Prisma.RankEventUpdateManyWithoutStreamerNestedInput
 }
 
 export type StreamerUncheckedUpdateWithoutHistoryInput = {
@@ -1733,6 +2265,10 @@ export type StreamerUncheckedUpdateWithoutHistoryInput = {
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1758,12 +2294,17 @@ export type StreamerUncheckedUpdateWithoutHistoryInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   pscTransactions?: Prisma.PscTransactionUncheckedUpdateManyWithoutStreamerNestedInput
   prizeLists?: Prisma.PrizeListUncheckedUpdateManyWithoutStreamerNestedInput
   botCommands?: Prisma.BotCommandUncheckedUpdateManyWithoutStreamerNestedInput
+  rankEvents?: Prisma.RankEventUncheckedUpdateManyWithoutStreamerNestedInput
 }
 
 export type StreamerCreateWithoutBotCommandsInput = {
@@ -1776,6 +2317,10 @@ export type StreamerCreateWithoutBotCommandsInput = {
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
@@ -1801,12 +2346,17 @@ export type StreamerCreateWithoutBotCommandsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   history?: Prisma.RaffleHistoryCreateNestedManyWithoutStreamerInput
   pscTransactions?: Prisma.PscTransactionCreateNestedManyWithoutStreamerInput
   prizeLists?: Prisma.PrizeListCreateNestedManyWithoutStreamerInput
+  rankEvents?: Prisma.RankEventCreateNestedManyWithoutStreamerInput
 }
 
 export type StreamerUncheckedCreateWithoutBotCommandsInput = {
@@ -1819,6 +2369,10 @@ export type StreamerUncheckedCreateWithoutBotCommandsInput = {
   isAdmin?: boolean
   twitchChannel?: string | null
   kickChannel?: string | null
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: string | null
+  twitchUserAccessToken?: string | null
+  twitchUserRefreshToken?: string | null
   kickChatroomId?: number | null
   youtubeChannel?: string | null
   youtubeDisplayName?: string | null
@@ -1844,12 +2398,17 @@ export type StreamerUncheckedCreateWithoutBotCommandsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  rankPoints?: number
+  rankStreakCount?: number
+  rankLastActiveDate?: Date | string | null
+  rankLastRaffleAt?: Date | string | null
   forcePasswordChange?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   history?: Prisma.RaffleHistoryUncheckedCreateNestedManyWithoutStreamerInput
   pscTransactions?: Prisma.PscTransactionUncheckedCreateNestedManyWithoutStreamerInput
   prizeLists?: Prisma.PrizeListUncheckedCreateNestedManyWithoutStreamerInput
+  rankEvents?: Prisma.RankEventUncheckedCreateNestedManyWithoutStreamerInput
 }
 
 export type StreamerCreateOrConnectWithoutBotCommandsInput = {
@@ -1878,6 +2437,10 @@ export type StreamerUpdateWithoutBotCommandsInput = {
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1903,12 +2466,17 @@ export type StreamerUpdateWithoutBotCommandsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   history?: Prisma.RaffleHistoryUpdateManyWithoutStreamerNestedInput
   pscTransactions?: Prisma.PscTransactionUpdateManyWithoutStreamerNestedInput
   prizeLists?: Prisma.PrizeListUpdateManyWithoutStreamerNestedInput
+  rankEvents?: Prisma.RankEventUpdateManyWithoutStreamerNestedInput
 }
 
 export type StreamerUncheckedUpdateWithoutBotCommandsInput = {
@@ -1921,6 +2489,10 @@ export type StreamerUncheckedUpdateWithoutBotCommandsInput = {
   isAdmin?: Prisma.BoolFieldUpdateOperationsInput | boolean
   twitchChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchAffiliateEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  twitchUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserAccessToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitchUserRefreshToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kickChatroomId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   youtubeChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   youtubeDisplayName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1946,12 +2518,17 @@ export type StreamerUncheckedUpdateWithoutBotCommandsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
+  rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
+  rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rankLastRaffleAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   forcePasswordChange?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   history?: Prisma.RaffleHistoryUncheckedUpdateManyWithoutStreamerNestedInput
   pscTransactions?: Prisma.PscTransactionUncheckedUpdateManyWithoutStreamerNestedInput
   prizeLists?: Prisma.PrizeListUncheckedUpdateManyWithoutStreamerNestedInput
+  rankEvents?: Prisma.RankEventUncheckedUpdateManyWithoutStreamerNestedInput
 }
 
 
@@ -1964,6 +2541,7 @@ export type StreamerCountOutputType = {
   pscTransactions: number
   prizeLists: number
   botCommands: number
+  rankEvents: number
 }
 
 export type StreamerCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1971,6 +2549,7 @@ export type StreamerCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensio
   pscTransactions?: boolean | StreamerCountOutputTypeCountPscTransactionsArgs
   prizeLists?: boolean | StreamerCountOutputTypeCountPrizeListsArgs
   botCommands?: boolean | StreamerCountOutputTypeCountBotCommandsArgs
+  rankEvents?: boolean | StreamerCountOutputTypeCountRankEventsArgs
 }
 
 /**
@@ -2011,6 +2590,13 @@ export type StreamerCountOutputTypeCountBotCommandsArgs<ExtArgs extends runtime.
   where?: Prisma.BotCommandWhereInput
 }
 
+/**
+ * StreamerCountOutputType without action
+ */
+export type StreamerCountOutputTypeCountRankEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RankEventWhereInput
+}
+
 
 export type StreamerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -2022,6 +2608,10 @@ export type StreamerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   isAdmin?: boolean
   twitchChannel?: boolean
   kickChannel?: boolean
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: boolean
+  twitchUserAccessToken?: boolean
+  twitchUserRefreshToken?: boolean
   kickChatroomId?: boolean
   youtubeChannel?: boolean
   youtubeDisplayName?: boolean
@@ -2047,6 +2637,10 @@ export type StreamerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   chatTriggerCommand?: boolean
   raffleAnimationStyle?: boolean
   chatWarsSprite?: boolean
+  rankPoints?: boolean
+  rankStreakCount?: boolean
+  rankLastActiveDate?: boolean
+  rankLastRaffleAt?: boolean
   forcePasswordChange?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -2054,6 +2648,7 @@ export type StreamerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   pscTransactions?: boolean | Prisma.Streamer$pscTransactionsArgs<ExtArgs>
   prizeLists?: boolean | Prisma.Streamer$prizeListsArgs<ExtArgs>
   botCommands?: boolean | Prisma.Streamer$botCommandsArgs<ExtArgs>
+  rankEvents?: boolean | Prisma.Streamer$rankEventsArgs<ExtArgs>
   _count?: boolean | Prisma.StreamerCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["streamer"]>
 
@@ -2067,6 +2662,10 @@ export type StreamerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   isAdmin?: boolean
   twitchChannel?: boolean
   kickChannel?: boolean
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: boolean
+  twitchUserAccessToken?: boolean
+  twitchUserRefreshToken?: boolean
   kickChatroomId?: boolean
   youtubeChannel?: boolean
   youtubeDisplayName?: boolean
@@ -2092,6 +2691,10 @@ export type StreamerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   chatTriggerCommand?: boolean
   raffleAnimationStyle?: boolean
   chatWarsSprite?: boolean
+  rankPoints?: boolean
+  rankStreakCount?: boolean
+  rankLastActiveDate?: boolean
+  rankLastRaffleAt?: boolean
   forcePasswordChange?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -2107,6 +2710,10 @@ export type StreamerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   isAdmin?: boolean
   twitchChannel?: boolean
   kickChannel?: boolean
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: boolean
+  twitchUserAccessToken?: boolean
+  twitchUserRefreshToken?: boolean
   kickChatroomId?: boolean
   youtubeChannel?: boolean
   youtubeDisplayName?: boolean
@@ -2132,6 +2739,10 @@ export type StreamerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   chatTriggerCommand?: boolean
   raffleAnimationStyle?: boolean
   chatWarsSprite?: boolean
+  rankPoints?: boolean
+  rankStreakCount?: boolean
+  rankLastActiveDate?: boolean
+  rankLastRaffleAt?: boolean
   forcePasswordChange?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -2147,6 +2758,10 @@ export type StreamerSelectScalar = {
   isAdmin?: boolean
   twitchChannel?: boolean
   kickChannel?: boolean
+  twitchAffiliateEnabled?: boolean
+  twitchUserId?: boolean
+  twitchUserAccessToken?: boolean
+  twitchUserRefreshToken?: boolean
   kickChatroomId?: boolean
   youtubeChannel?: boolean
   youtubeDisplayName?: boolean
@@ -2172,17 +2787,22 @@ export type StreamerSelectScalar = {
   chatTriggerCommand?: boolean
   raffleAnimationStyle?: boolean
   chatWarsSprite?: boolean
+  rankPoints?: boolean
+  rankStreakCount?: boolean
+  rankLastActiveDate?: boolean
+  rankLastRaffleAt?: boolean
   forcePasswordChange?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type StreamerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "passwordHash" | "mascot" | "displayName" | "nome" | "isAdmin" | "twitchChannel" | "kickChannel" | "kickChatroomId" | "youtubeChannel" | "youtubeDisplayName" | "youtubeLiveChatId" | "youtubeNextPageToken" | "youtubeLiveChatCheckedAt" | "registrationCommand" | "claimCommand" | "validationTimeout" | "isAffiliate" | "pscBalance" | "audioEnabled" | "excelImportEnabled" | "excelPrizesImportEnabled" | "eventMusic" | "eventEffect" | "spinEffect" | "themeColor" | "socoChuteModeEnabled" | "raffleTriggerMode" | "autoRoundDelay" | "chatTriggerCount" | "chatTriggerCommand" | "raffleAnimationStyle" | "chatWarsSprite" | "forcePasswordChange" | "createdAt" | "updatedAt", ExtArgs["result"]["streamer"]>
+export type StreamerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "passwordHash" | "mascot" | "displayName" | "nome" | "isAdmin" | "twitchChannel" | "kickChannel" | "twitchAffiliateEnabled" | "twitchUserId" | "twitchUserAccessToken" | "twitchUserRefreshToken" | "kickChatroomId" | "youtubeChannel" | "youtubeDisplayName" | "youtubeLiveChatId" | "youtubeNextPageToken" | "youtubeLiveChatCheckedAt" | "registrationCommand" | "claimCommand" | "validationTimeout" | "isAffiliate" | "pscBalance" | "audioEnabled" | "excelImportEnabled" | "excelPrizesImportEnabled" | "eventMusic" | "eventEffect" | "spinEffect" | "themeColor" | "socoChuteModeEnabled" | "raffleTriggerMode" | "autoRoundDelay" | "chatTriggerCount" | "chatTriggerCommand" | "raffleAnimationStyle" | "chatWarsSprite" | "rankPoints" | "rankStreakCount" | "rankLastActiveDate" | "rankLastRaffleAt" | "forcePasswordChange" | "createdAt" | "updatedAt", ExtArgs["result"]["streamer"]>
 export type StreamerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   history?: boolean | Prisma.Streamer$historyArgs<ExtArgs>
   pscTransactions?: boolean | Prisma.Streamer$pscTransactionsArgs<ExtArgs>
   prizeLists?: boolean | Prisma.Streamer$prizeListsArgs<ExtArgs>
   botCommands?: boolean | Prisma.Streamer$botCommandsArgs<ExtArgs>
+  rankEvents?: boolean | Prisma.Streamer$rankEventsArgs<ExtArgs>
   _count?: boolean | Prisma.StreamerCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type StreamerIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -2195,6 +2815,7 @@ export type $StreamerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     pscTransactions: Prisma.$PscTransactionPayload<ExtArgs>[]
     prizeLists: Prisma.$PrizeListPayload<ExtArgs>[]
     botCommands: Prisma.$BotCommandPayload<ExtArgs>[]
+    rankEvents: Prisma.$RankEventPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2206,6 +2827,10 @@ export type $StreamerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     isAdmin: boolean
     twitchChannel: string | null
     kickChannel: string | null
+    twitchAffiliateEnabled: boolean
+    twitchUserId: string | null
+    twitchUserAccessToken: string | null
+    twitchUserRefreshToken: string | null
     kickChatroomId: number | null
     youtubeChannel: string | null
     youtubeDisplayName: string | null
@@ -2231,6 +2856,10 @@ export type $StreamerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     chatTriggerCommand: string
     raffleAnimationStyle: string
     chatWarsSprite: string | null
+    rankPoints: number
+    rankStreakCount: number
+    rankLastActiveDate: Date | null
+    rankLastRaffleAt: Date | null
     forcePasswordChange: boolean
     createdAt: Date
     updatedAt: Date
@@ -2632,6 +3261,7 @@ export interface Prisma__StreamerClient<T, Null = never, ExtArgs extends runtime
   pscTransactions<T extends Prisma.Streamer$pscTransactionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Streamer$pscTransactionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PscTransactionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   prizeLists<T extends Prisma.Streamer$prizeListsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Streamer$prizeListsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PrizeListPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   botCommands<T extends Prisma.Streamer$botCommandsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Streamer$botCommandsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BotCommandPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  rankEvents<T extends Prisma.Streamer$rankEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Streamer$rankEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RankEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2670,6 +3300,10 @@ export interface StreamerFieldRefs {
   readonly isAdmin: Prisma.FieldRef<"Streamer", 'Boolean'>
   readonly twitchChannel: Prisma.FieldRef<"Streamer", 'String'>
   readonly kickChannel: Prisma.FieldRef<"Streamer", 'String'>
+  readonly twitchAffiliateEnabled: Prisma.FieldRef<"Streamer", 'Boolean'>
+  readonly twitchUserId: Prisma.FieldRef<"Streamer", 'String'>
+  readonly twitchUserAccessToken: Prisma.FieldRef<"Streamer", 'String'>
+  readonly twitchUserRefreshToken: Prisma.FieldRef<"Streamer", 'String'>
   readonly kickChatroomId: Prisma.FieldRef<"Streamer", 'Int'>
   readonly youtubeChannel: Prisma.FieldRef<"Streamer", 'String'>
   readonly youtubeDisplayName: Prisma.FieldRef<"Streamer", 'String'>
@@ -2695,6 +3329,10 @@ export interface StreamerFieldRefs {
   readonly chatTriggerCommand: Prisma.FieldRef<"Streamer", 'String'>
   readonly raffleAnimationStyle: Prisma.FieldRef<"Streamer", 'String'>
   readonly chatWarsSprite: Prisma.FieldRef<"Streamer", 'String'>
+  readonly rankPoints: Prisma.FieldRef<"Streamer", 'Int'>
+  readonly rankStreakCount: Prisma.FieldRef<"Streamer", 'Int'>
+  readonly rankLastActiveDate: Prisma.FieldRef<"Streamer", 'DateTime'>
+  readonly rankLastRaffleAt: Prisma.FieldRef<"Streamer", 'DateTime'>
   readonly forcePasswordChange: Prisma.FieldRef<"Streamer", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"Streamer", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Streamer", 'DateTime'>
@@ -3184,6 +3822,30 @@ export type Streamer$botCommandsArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   distinct?: Prisma.BotCommandScalarFieldEnum | Prisma.BotCommandScalarFieldEnum[]
+}
+
+/**
+ * Streamer.rankEvents
+ */
+export type Streamer$rankEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RankEvent
+   */
+  select?: Prisma.RankEventSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the RankEvent
+   */
+  omit?: Prisma.RankEventOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RankEventInclude<ExtArgs> | null
+  where?: Prisma.RankEventWhereInput
+  orderBy?: Prisma.RankEventOrderByWithRelationInput | Prisma.RankEventOrderByWithRelationInput[]
+  cursor?: Prisma.RankEventWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RankEventScalarFieldEnum | Prisma.RankEventScalarFieldEnum[]
 }
 
 /**

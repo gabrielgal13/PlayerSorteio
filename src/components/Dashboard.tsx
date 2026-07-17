@@ -150,30 +150,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Dev stage shortcuts */}
-          <div className="flex items-center gap-1 flex-shrink-0 ml-2 pl-2" style={{ borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
-            {([2, 3] as const).map(stage => (
-              <button
-                key={stage}
-                onClick={() => { setRaffleStage(stage); setActiveTab('raffle'); }}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-orbitron text-xs font-bold tracking-widest transition-all"
-                style={{
-                  background: raffleStage === stage && activeTab === 'raffle'
-                    ? 'rgba(255,209,102,0.18)'
-                    : 'rgba(255,209,102,0.06)',
-                  border: raffleStage === stage && activeTab === 'raffle'
-                    ? '1px solid rgba(255,209,102,0.5)'
-                    : '1px solid rgba(255,209,102,0.18)',
-                  color: raffleStage === stage && activeTab === 'raffle'
-                    ? '#FFD166'
-                    : 'rgba(255,209,102,0.4)',
-                }}
-              >
-                S{stage}
-              </button>
-            ))}
-          </div>
-
           {/* PSC Balance — only for affiliates */}
           {isAffiliate && (
             <motion.div

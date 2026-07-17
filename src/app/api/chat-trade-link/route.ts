@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkStock, buyItem } from '@/lib/waxpeer';
-import { findPendingDelivery, saveDeliveryAddress, STEAM_LINK_REGEX, MIN_ADDRESS_LENGTH } from '@/lib/deliveryCapture';
+import {
+  findPendingDelivery,
+  saveDeliveryAddress,
+  STEAM_LINK_REGEX,
+  findMissingAddressFields,
+  buildMissingFieldsMessage,
+  buildAddressConfirmationMessage,
+} from '@/lib/deliveryCapture';
 
 export async function POST(req: NextRequest) {
   const { winnerName, text, source } = await req.json() as {
@@ -20,12 +27,29 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Prêmio físico (Camisa) — coleta endereço (e camisa escolhida) em vez de trade link ──
+  // O nick já veio conferido pelo findPendingDelivery acima (só acha entrega
+  // pendente pro nick exato do ganhador) — mensagens de outra pessoa caem no
+  // "Nenhuma entrega pendente" logo no início desta função.
   if (pending.mode !== 'trade_link') {
-    if (text.trim().length < MIN_ADDRESS_LENGTH) {
-      return NextResponse.json({ ok: false, error: 'Texto muito curto para ser o endereço.' });
+    const missing = findMissingAddressFields(text.trim(), pending.mode);
+    if (missing.length > 0) {
+      return NextResponse.json({
+        ok: true,
+        complete: false,
+        source,
+        mode: pending.mode,
+        missing,
+        message: buildMissingFieldsMessage(missing, pending.mode),
+      });
     }
     await saveDeliveryAddress(pending.id, text.trim());
-    return NextResponse.json({ ok: true, source, mode: pending.mode });
+    return NextResponse.json({
+      ok: true,
+      complete: true,
+      source,
+      mode: pending.mode,
+      message: buildAddressConfirmationMessage(pending.mode),
+    });
   }
 
   if (!STEAM_LINK_REGEX.test(text)) {

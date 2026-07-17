@@ -13,8 +13,16 @@ interface StreamerRow { username: string; displayName: string | null; pscBalance
 interface AdminProduct { id: string; name: string; description: string | null; imageUrl: string | null; quantity: number; pscValue: number | null; skipPsc: boolean; pinned: boolean; }
 interface FixedProductTemplate { id: string; name: string; description: string | null; imageUrl: string | null; pscValue: number | null; skipPsc: boolean; locked: boolean; }
 interface MarketingImageOption { id: number; imageData: string; label: string | null; }
-interface EditProfile { displayName: string; nome?: string; newPassword: string; twitchChannel: string; kickChannel: string; youtubeChannel: string; themeColor: string; chatWarsSprite: string; forceFirstAccess: boolean; currentForcePasswordChange: boolean; }
-type Section = 'psc' | 'criar-streamer' | 'entregas' | 'editar-streamer' | 'marketing' | 'bots' | 'afiliados' | 'vendas' | 'playerskins';
+interface EditProfile { displayName: string; nome?: string; newPassword: string; twitchChannel: string; kickChannel: string; youtubeChannel: string; themeColor: string; chatWarsSprite: string; forceFirstAccess: boolean; currentForcePasswordChange: boolean; twitchAffiliateEnabled: boolean; }
+type Section = 'psc' | 'criar-streamer' | 'entregas' | 'editar-streamer' | 'marketing' | 'bots' | 'jogos' | 'afiliados' | 'vendas' | 'playerskins';
+
+const GAME_TOGGLE_LIST: { id: string; label: string; description: string }[] = [
+  { id: 'hangman', label: 'JOGO DA FORCA', description: 'Adivinhe a palavra antes que o bonequinho engorque.' },
+  { id: 'worldguessr', label: 'WORLDGUESSR', description: 'Adivinhe onde você está no mundo pelo Street View.' },
+  { id: 'skribll', label: 'SKRIBLL', description: 'Desenhe e adivinhe palavras com os amigos.' },
+  { id: 'chatwars', label: 'CHAT WARS', description: 'Cada viewer vira uma bolinha viva — quem fala mais, cresce.' },
+  { id: 'poolwars', label: 'POOL WARS', description: 'Bonecos se equilibram numa piscina — derrube o outro time na água.' },
+];
 
 const COLOR_PRESETS = ['#BF5AF2', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#00E5FF', '#00FFA3'];
 
@@ -561,7 +569,7 @@ export default function AdminPanel() {
   const [pscFeedback, setPscFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   // Criar streamer state
-  const [form, setForm] = useState({ username: '', displayName: '', nome: '', password: '', mascot: 'dreads', themeColor: '#BF5AF2', pscBalance: 0, stageTheme: 'cyber-purple', twitchChannel: '', kickChannel: '', youtubeChannel: '' });
+  const [form, setForm] = useState({ username: '', displayName: '', nome: '', password: '', mascot: 'dreads', themeColor: '#BF5AF2', pscBalance: 0, stageTheme: 'cyber-purple', twitchChannel: '', kickChannel: '', youtubeChannel: '', twitchAffiliateEnabled: false });
   const [mascotImg, setMascotImg] = useState<string | null>(null);
   const [animFrames, setAnimFrames] = useState<(string | null)[]>(Array(MAX_FRAMES).fill(null));
   const [animTimings, setAnimTimings] = useState<number[]>([...DEFAULT_TIMINGS]);
@@ -591,12 +599,47 @@ export default function AdminPanel() {
   const [marketingImages, setMarketingImages] = useState<MarketingImageOption[]>([]);
   const [showFixedImagePicker, setShowFixedImagePicker] = useState(false);
 
+  // Jogos (habilitar/desabilitar) state
+  const [disabledGames, setDisabledGames] = useState<string[]>([]);
+  const [gamesConfigLoading, setGamesConfigLoading] = useState(true);
+  const [savingGameId, setSavingGameId] = useState<string | null>(null);
+
+  const loadGamesConfig = useCallback(() => {
+    setGamesConfigLoading(true);
+    fetch('/api/admin/games-config')
+      .then(r => r.json())
+      .then((data: { disabled: string[] }) => setDisabledGames(data.disabled ?? []))
+      .catch(() => {})
+      .finally(() => setGamesConfigLoading(false));
+  }, []);
+
+  useEffect(() => { loadGamesConfig(); }, [loadGamesConfig]);
+
+  const handleToggleGame = async (gameId: string) => {
+    const enabled = disabledGames.includes(gameId); // vai ficar habilitado se estava desabilitado
+    setSavingGameId(gameId);
+    setDisabledGames(prev => enabled ? prev.filter(id => id !== gameId) : [...prev, gameId]);
+    try {
+      const res = await fetch('/api/admin/games-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, enabled }),
+      });
+      const data = await res.json();
+      if (Array.isArray(data.disabled)) setDisabledGames(data.disabled);
+    } catch {
+      loadGamesConfig();
+    } finally {
+      setSavingGameId(null);
+    }
+  };
+
   const [botCommands, setBotCommands] = useState<{ id: string; command: string; response: string }[]>([]);
   const [botCmdLoading, setBotCmdLoading] = useState(false);
   const [newBotCmd, setNewBotCmd] = useState({ command: '', response: '' });
   const [addingBotCmd, setAddingBotCmd] = useState(false);
 
-  const [editProfile, setEditProfile] = useState<EditProfile>({ displayName: '', newPassword: '', twitchChannel: '', kickChannel: '', youtubeChannel: '', themeColor: '#00E5FF', chatWarsSprite: '', forceFirstAccess: false, currentForcePasswordChange: false });
+  const [editProfile, setEditProfile] = useState<EditProfile>({ displayName: '', newPassword: '', twitchChannel: '', kickChannel: '', youtubeChannel: '', themeColor: '#00E5FF', chatWarsSprite: '', forceFirstAccess: false, currentForcePasswordChange: false, twitchAffiliateEnabled: false });
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [editProfileLoading, setEditProfileLoading] = useState(false);
 
@@ -723,7 +766,7 @@ export default function AdminPanel() {
     setFixedQtyInputs({});
     setPinnedItemQtyInputs({});
     setBotCommands([]);
-    setEditProfile({ displayName: '', newPassword: '', twitchChannel: '', kickChannel: '', youtubeChannel: '', themeColor: '#00E5FF', chatWarsSprite: '', forceFirstAccess: false, currentForcePasswordChange: false });
+    setEditProfile({ displayName: '', newPassword: '', twitchChannel: '', kickChannel: '', youtubeChannel: '', themeColor: '#00E5FF', chatWarsSprite: '', forceFirstAccess: false, currentForcePasswordChange: false, twitchAffiliateEnabled: false });
     if (username) {
       loadAdminProducts(username);
       loadBotCommands(username);
@@ -742,6 +785,7 @@ export default function AdminPanel() {
             chatWarsSprite: fullData.chatWarsSprite ?? '',
             forceFirstAccess: false,
             currentForcePasswordChange: fullData.forcePasswordChange ?? false,
+            twitchAffiliateEnabled: fullData.twitchAffiliateEnabled ?? false,
           });
         }
       } catch {}
@@ -780,6 +824,7 @@ export default function AdminPanel() {
         displayName: editProfile.displayName.trim() || null,
         nome: (editProfile as any).nome?.trim() || null,
         chatWarsSprite: editProfile.chatWarsSprite || null,
+        twitchAffiliateEnabled: editProfile.twitchAffiliateEnabled,
       };
       if (editProfile.forceFirstAccess) {
         body.forcePasswordChange = true;
@@ -1048,7 +1093,7 @@ export default function AdminPanel() {
         setCreateFeedback({ type: 'error', msg: data.error || 'Erro ao criar streamer.' });
       } else {
         setCreateFeedback({ type: 'success', msg: `Streamer "${data.username}" criado com sucesso!` });
-        setForm({ username: '', displayName: '', nome: '', password: '', mascot: 'dreads', themeColor: '#BF5AF2', pscBalance: 0, stageTheme: 'cyber-purple', twitchChannel: '', kickChannel: '', youtubeChannel: '' });
+        setForm({ username: '', displayName: '', nome: '', password: '', mascot: 'dreads', themeColor: '#BF5AF2', pscBalance: 0, stageTheme: 'cyber-purple', twitchChannel: '', kickChannel: '', youtubeChannel: '', twitchAffiliateEnabled: false });
         setMascotImg(null);
         setRaffleMascotImg(null);
         setStageBgImg(null);
@@ -1113,6 +1158,15 @@ export default function AdminPanel() {
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
           <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-3 10H7v-2h10v2zm0-3H7V7h10v2z"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'jogos' as Section,
+      label: 'JOGOS',
+      icon: (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5S14.67 12 15.5 12s1.5.67 1.5 1.5S16.33 15 15.5 15zm3-3c-.83 0-1.5-.67-1.5-1.5S17.67 9 18.5 9s1.5.67 1.5 1.5S19.33 12 18.5 12z"/>
         </svg>
       ),
     },
@@ -1739,6 +1793,17 @@ export default function AdminPanel() {
                         className="w-full rounded-lg font-rajdhani text-sm outline-none px-3 py-2 text-center"
                         style={{ background: 'rgba(145,70,255,0.1)', border: '1px solid rgba(145,70,255,0.25)', color: 'rgba(255,255,255,0.8)' }}
                       />
+                      <label className="w-full flex items-center gap-2 cursor-pointer" title="Habilita autenticação Twitch real + importar inscritos. Só funciona se o canal for Afiliado/Parceiro na Twitch.">
+                        <input
+                          type="checkbox"
+                          checked={form.twitchAffiliateEnabled}
+                          onChange={e => setForm(f => ({ ...f, twitchAffiliateEnabled: e.target.checked }))}
+                          className="flex-shrink-0"
+                        />
+                        <span className="font-rajdhani" style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', lineHeight: 1.3 }}>
+                          É Afiliado/Parceiro Twitch
+                        </span>
+                      </label>
                     </div>
                     {/* Kick */}
                     <div
@@ -2335,9 +2400,26 @@ export default function AdminPanel() {
                                   value={editProfile.twitchChannel}
                                   onChange={e => setEditProfile(p => ({ ...p, twitchChannel: e.target.value }))}
                                   placeholder="canal"
-                                  className="w-full rounded-lg font-rajdhani text-sm outline-none px-3 py-2 text-center"
+                                  disabled={editProfile.twitchAffiliateEnabled}
+                                  className="w-full rounded-lg font-rajdhani text-sm outline-none px-3 py-2 text-center disabled:opacity-40"
                                   style={{ background: 'rgba(145,70,255,0.1)', border: '1px solid rgba(145,70,255,0.25)', color: 'rgba(255,255,255,0.8)' }}
                                 />
+                                <label className="w-full flex items-center gap-2 cursor-pointer" title="Habilita autenticação Twitch real + importar inscritos. Só funciona se o canal for Afiliado/Parceiro na Twitch.">
+                                  <input
+                                    type="checkbox"
+                                    checked={editProfile.twitchAffiliateEnabled}
+                                    onChange={e => setEditProfile(p => ({ ...p, twitchAffiliateEnabled: e.target.checked }))}
+                                    className="flex-shrink-0"
+                                  />
+                                  <span className="font-rajdhani" style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', lineHeight: 1.3 }}>
+                                    É Afiliado/Parceiro Twitch
+                                  </span>
+                                </label>
+                                {editProfile.twitchAffiliateEnabled && (
+                                  <p className="font-rajdhani" style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', lineHeight: 1.3 }}>
+                                    Canal e conexão agora vêm da autenticação Twitch feita pelo próprio streamer.
+                                  </p>
+                                )}
                               </div>
                               <div className="flex-1 flex flex-col items-center gap-2 px-4 py-4 rounded-xl"
                                 style={{ background: 'rgba(83,252,20,0.04)', border: '1px solid rgba(83,252,20,0.2)' }}>
@@ -3161,6 +3243,81 @@ export default function AdminPanel() {
                   {/* Kick */}
                   <KickTokenCard />
                 </div>
+              </motion.div>
+            )}
+
+            {/* ── JOGOS ── */}
+            {activeSection === 'jogos' && (
+              <motion.div
+                key="jogos"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -12 }}
+                transition={{ duration: 0.22 }}
+                className="max-w-2xl"
+              >
+                <h2 className="font-orbitron text-xl font-bold tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                  JOGOS
+                </h2>
+                <p className="font-rajdhani text-sm mb-8" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  Habilite ou desabilite os jogos que aparecem na aba &quot;Jogos&quot; dos streamers.
+                </p>
+
+                {gamesConfigLoading ? (
+                  <p className="font-rajdhani text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Carregando...</p>
+                ) : (
+                  <div className="space-y-3">
+                    {GAME_TOGGLE_LIST.map(game => {
+                      const enabled = !disabledGames.includes(game.id);
+                      const saving = savingGameId === game.id;
+                      return (
+                        <div
+                          key={game.id}
+                          className="rounded-2xl flex items-center justify-between gap-4 px-5 py-4"
+                          style={{
+                            background: enabled ? 'rgba(0,229,255,0.05)' : 'rgba(255,255,255,0.02)',
+                            border: enabled ? '1px solid rgba(0,229,255,0.18)' : '1px solid rgba(255,255,255,0.08)',
+                          }}
+                        >
+                          <div>
+                            <p className="font-orbitron font-bold text-sm tracking-widest" style={{ color: enabled ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)' }}>
+                              {game.label}
+                            </p>
+                            <p className="font-rajdhani text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                              {game.description}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleToggleGame(game.id)}
+                            disabled={saving}
+                            style={{
+                              flexShrink: 0,
+                              width: 52, height: 28,
+                              borderRadius: 14,
+                              background: enabled ? '#00E5FF' : 'rgba(255,255,255,0.12)',
+                              border: enabled ? '1px solid rgba(0,229,255,0.6)' : '1px solid rgba(255,255,255,0.15)',
+                              position: 'relative',
+                              cursor: saving ? 'wait' : 'pointer',
+                              transition: 'background 0.2s, border 0.2s',
+                              opacity: saving ? 0.6 : 1,
+                            }}
+                          >
+                            <span
+                              style={{
+                                position: 'absolute',
+                                top: 3, left: enabled ? 26 : 3,
+                                width: 20, height: 20,
+                                borderRadius: '50%',
+                                background: enabled ? '#050816' : 'rgba(255,255,255,0.5)',
+                                transition: 'left 0.2s',
+                              }}
+                            />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </motion.div>
             )}
 

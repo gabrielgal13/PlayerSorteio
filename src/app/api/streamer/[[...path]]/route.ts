@@ -2,8 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { ensureDeliveryAddressColumn } from '@/lib/deliveryCapture';
+import { recordRaffleCompleted, recordGameCompleted, getRankStatus } from '@/lib/rankEngine';
 
 const ADMIN_LIST_NAME = '__admin_products__';
+
+// Resolve a origin real mesmo atrás de proxy/Vercel
+function getOrigin(req: NextRequest): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+  const proto = req.headers.get('x-forwarded-proto') ?? 'https';
+  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? 'localhost:3000';
+  return `${proto}://${host}`;
+}
+
+// Página que fecha o popup de OAuth e avisa a janela que abriu (postMessage).
+function popupResponse(payload: { ok: boolean; channel?: string }) {
+  const json = JSON.stringify({ type: 'twitch-streamer-oauth', ...payload }).replace(/</g, '\\u003c');
+  return new NextResponse(
+    `<!DOCTYPE html><html><body style="font-family:monospace;background:#0a0a0a;color:${payload.ok ? '#00E5FF' : '#FF4444'};padding:2rem">
+    <p>${payload.ok ? 'Conectado! Fechando...' : 'Falha na conexão. Fechando...'}</p>
+    <script>
+      if (window.opener) window.opener.postMessage(${json}, window.location.origin);
+      setTimeout(function () { window.close(); }, ${payload.ok ? 400 : 1800});
+    </script>
+    </body></html>`,
+    { headers: { 'Content-Type': 'text/html' } },
+  );
+}
 
 // GET /api/streamer/config?username=xxx
 // GET /api/streamer/history?username=xxx
@@ -11,6 +35,9 @@ const ADMIN_LIST_NAME = '__admin_products__';
 // GET /api/streamer/prize-lists?username=xxx
 // GET /api/streamer/admin-products  (header: x-session-username)
 // GET /api/streamer/bot-commands?username=xxx
+// GET /api/streamer/twitch-streamer-auth      → OAuth do streamer (channel:read:subscriptions)
+// GET /api/streamer/twitch-streamer-callback  → OAuth finish (popup)
+// GET /api/streamer/twitch-subscribers        → lista inscritos do canal
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ path?: string[] }> },
@@ -145,12 +172,173 @@ export async function GET(
     return NextResponse.json(commands);
   }
 
+  // ── OAuth do streamer (não o bot) — pra ler a lista de inscritos do canal ──
+  if (route === 'twitch-streamer-auth') {
+    const username = req.headers.get('x-session-username');
+    if (!username) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { twitchAffiliateEnabled: true } });
+    if (!streamer?.twitchAffiliateEnabled) {
+      return NextResponse.json({ error: 'Recurso disponível apenas para canais marcados como Afiliado/Parceiro Twitch.' }, { status: 403 });
+    }
+
+    const origin = getOrigin(req);
+    const authUrl = new URL('https://id.twitch.tv/oauth2/authorize');
+    authUrl.searchParams.set('client_id', process.env.TWITCH_CLIENT_ID!);
+    authUrl.searchParams.set('redirect_uri', `${origin}/api/streamer/twitch-streamer-callback`);
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('scope', 'channel:read:subscriptions');
+    authUrl.searchParams.set('force_verify', 'true');
+    authUrl.searchParams.set('state', username);
+    return NextResponse.redirect(authUrl.toString());
+  }
+
+  if (route === 'twitch-streamer-callback') {
+    const code = req.nextUrl.searchParams.get('code');
+    const state = req.nextUrl.searchParams.get('state');
+    const username = req.headers.get('x-session-username');
+
+    if (!username || username !== state || !code) return popupResponse({ ok: false });
+
+    try {
+      const streamer = await prisma.streamer.findUnique({ where: { username }, select: { twitchAffiliateEnabled: true } });
+      if (!streamer?.twitchAffiliateEnabled) return popupResponse({ ok: false });
+
+      const origin = getOrigin(req);
+      const tokenRes = await fetch('https://id.twitch.tv/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: process.env.TWITCH_CLIENT_ID!,
+          client_secret: process.env.TWITCH_CLIENT_SECRET!,
+          code,
+          grant_type: 'authorization_code',
+          redirect_uri: `${origin}/api/streamer/twitch-streamer-callback`,
+        }),
+      });
+      if (!tokenRes.ok) return popupResponse({ ok: false });
+      const tokenData = await tokenRes.json() as { access_token: string; refresh_token?: string };
+
+      const userRes = await fetch('https://api.twitch.tv/helix/users', {
+        headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${tokenData.access_token}` },
+      });
+      if (!userRes.ok) return popupResponse({ ok: false });
+      const userData = await userRes.json() as { data?: { id: string; login: string }[] };
+      const twitchUser = userData.data?.[0];
+      if (!twitchUser) return popupResponse({ ok: false });
+
+      await prisma.streamer.update({
+        where: { username },
+        data: {
+          twitchChannel: twitchUser.login,
+          twitchUserId: twitchUser.id,
+          twitchUserAccessToken: tokenData.access_token,
+          twitchUserRefreshToken: tokenData.refresh_token ?? null,
+        },
+      });
+
+      return popupResponse({ ok: true, channel: twitchUser.login });
+    } catch {
+      return popupResponse({ ok: false });
+    }
+  }
+
+  if (route === 'twitch-subscribers') {
+    const username = req.headers.get('x-session-username');
+    if (!username) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+
+    const streamer = await prisma.streamer.findUnique({ where: { username } });
+    if (!streamer?.twitchAffiliateEnabled) {
+      return NextResponse.json({ error: 'Recurso disponível apenas para canais marcados como Afiliado/Parceiro Twitch.' }, { status: 403 });
+    }
+    if (!streamer.twitchUserId || !streamer.twitchUserAccessToken) {
+      return NextResponse.json({ error: 'Conecte sua conta Twitch em Configurações → Plataformas primeiro.' }, { status: 400 });
+    }
+
+    const fetchSubs = async (token: string) => {
+      const subs: { userId: string; userName: string }[] = [];
+      let cursor: string | undefined;
+      do {
+        const url = new URL('https://api.twitch.tv/helix/subscriptions');
+        url.searchParams.set('broadcaster_id', streamer.twitchUserId!);
+        url.searchParams.set('first', '100');
+        if (cursor) url.searchParams.set('after', cursor);
+        const res = await fetch(url, {
+          headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${token}` },
+        });
+        if (res.status === 401) return { expired: true as const, subs: [] };
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({} as { message?: string }));
+          throw new Error(body.message || `Twitch respondeu ${res.status}`);
+        }
+        const data = await res.json() as { data: { user_id: string; user_name: string }[]; pagination?: { cursor?: string } };
+        subs.push(...data.data.map(d => ({ userId: d.user_id, userName: d.user_name })));
+        cursor = data.pagination?.cursor;
+      } while (cursor);
+      return { expired: false as const, subs };
+    };
+
+    try {
+      let result = await fetchSubs(streamer.twitchUserAccessToken);
+      if (result.expired) {
+        if (!streamer.twitchUserRefreshToken) {
+          return NextResponse.json({ error: 'Sessão Twitch expirada. Reconecte em Configurações → Plataformas.' }, { status: 401 });
+        }
+        const refreshRes = await fetch('https://id.twitch.tv/oauth2/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: process.env.TWITCH_CLIENT_ID!,
+            client_secret: process.env.TWITCH_CLIENT_SECRET!,
+            refresh_token: streamer.twitchUserRefreshToken,
+            grant_type: 'refresh_token',
+          }),
+        });
+        if (!refreshRes.ok) {
+          return NextResponse.json({ error: 'Sessão Twitch expirada. Reconecte em Configurações → Plataformas.' }, { status: 401 });
+        }
+        const refreshData = await refreshRes.json() as { access_token: string; refresh_token?: string };
+        await prisma.streamer.update({
+          where: { id: streamer.id },
+          data: {
+            twitchUserAccessToken: refreshData.access_token,
+            twitchUserRefreshToken: refreshData.refresh_token ?? streamer.twitchUserRefreshToken,
+          },
+        });
+        result = await fetchSubs(refreshData.access_token);
+        if (result.expired) {
+          return NextResponse.json({ error: 'Sessão Twitch expirada. Reconecte em Configurações → Plataformas.' }, { status: 401 });
+        }
+      }
+      return NextResponse.json({ subscribers: result.subs });
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro ao consultar inscritos da Twitch.' }, { status: 502 });
+    }
+  }
+
+  if (route === 'rank-status') {
+    const username = req.nextUrl.searchParams.get('username');
+    if (!username) return NextResponse.json({ error: 'username required' }, { status: 400 });
+    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true } });
+    if (!streamer) return NextResponse.json({ error: 'streamer not found' }, { status: 404 });
+    const status = await getRankStatus(streamer.id);
+    return NextResponse.json(status);
+  }
+
+  if (route === 'games-config') {
+    const row = await prisma.appConfig.findUnique({ where: { key: 'games_disabled' } });
+    let disabled: string[] = [];
+    try { disabled = row ? JSON.parse(row.value) : []; } catch { disabled = []; }
+    return NextResponse.json({ disabled });
+  }
+
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
 // POST /api/streamer/history
 // POST /api/streamer/prize-lists
 // POST /api/streamer/change-password
+// POST /api/streamer/twitch-streamer-disconnect  (header: x-session-username)
+// POST /api/streamer/rank-game-completed          (header: x-session-username)
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ path?: string[] }> },
@@ -196,6 +384,7 @@ export async function POST(
         });
       }
     }
+    await recordRaffleCompleted(streamer.id).catch(() => {});
     return NextResponse.json({ ok: true });
   }
 
@@ -240,6 +429,25 @@ export async function POST(
       include: { items: { orderBy: { order: 'asc' } } },
     });
     return NextResponse.json(list);
+  }
+
+  if (route === 'twitch-streamer-disconnect') {
+    const username = req.headers.get('x-session-username');
+    if (!username) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    await prisma.streamer.update({
+      where: { username },
+      data: { twitchUserId: null, twitchUserAccessToken: null, twitchUserRefreshToken: null },
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (route === 'rank-game-completed') {
+    const username = req.headers.get('x-session-username');
+    if (!username) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true } });
+    if (!streamer) return NextResponse.json({ error: 'streamer not found' }, { status: 404 });
+    const result = await recordGameCompleted(streamer.id);
+    return NextResponse.json(result);
   }
 
   return NextResponse.json({ error: 'Not found' }, { status: 404 });

@@ -157,8 +157,9 @@ export async function GET(
       where: { streamerId: streamer.id, name: ADMIN_LIST_NAME },
       include: { items: { orderBy: { order: 'asc' } } },
     });
-    // Produtos com quantidade esgotada não aparecem mais para o streamer sortear.
-    return NextResponse.json((list?.items ?? []).filter(item => item.quantity > 0));
+    // Produtos com quantidade esgotada não aparecem mais para o streamer sortear
+    // (quantidade infinita = INFINITE_QUANTITY nunca é filtrada).
+    return NextResponse.json((list?.items ?? []).filter(item => item.quantity > 0 || item.quantity === INFINITE_QUANTITY));
   }
 
   if (route === 'bot-commands') {

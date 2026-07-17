@@ -1306,6 +1306,7 @@ export const StreamerScalarFieldEnum = {
   chatTriggerCommand: 'chatTriggerCommand',
   raffleAnimationStyle: 'raffleAnimationStyle',
   chatWarsSprite: 'chatWarsSprite',
+  chatWarsBossSprite: 'chatWarsBossSprite',
   rankPoints: 'rankPoints',
   rankStreakCount: 'rankStreakCount',
   rankLastActiveDate: 'rankLastActiveDate',

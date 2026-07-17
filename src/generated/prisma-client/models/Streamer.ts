@@ -85,6 +85,7 @@ export type StreamerMinAggregateOutputType = {
   chatTriggerCommand: string | null
   raffleAnimationStyle: string | null
   chatWarsSprite: string | null
+  chatWarsBossSprite: string | null
   rankPoints: number | null
   rankStreakCount: number | null
   rankLastActiveDate: Date | null
@@ -133,6 +134,7 @@ export type StreamerMaxAggregateOutputType = {
   chatTriggerCommand: string | null
   raffleAnimationStyle: string | null
   chatWarsSprite: string | null
+  chatWarsBossSprite: string | null
   rankPoints: number | null
   rankStreakCount: number | null
   rankLastActiveDate: Date | null
@@ -181,6 +183,7 @@ export type StreamerCountAggregateOutputType = {
   chatTriggerCommand: number
   raffleAnimationStyle: number
   chatWarsSprite: number
+  chatWarsBossSprite: number
   rankPoints: number
   rankStreakCount: number
   rankLastActiveDate: number
@@ -251,6 +254,7 @@ export type StreamerMinAggregateInputType = {
   chatTriggerCommand?: true
   raffleAnimationStyle?: true
   chatWarsSprite?: true
+  chatWarsBossSprite?: true
   rankPoints?: true
   rankStreakCount?: true
   rankLastActiveDate?: true
@@ -299,6 +303,7 @@ export type StreamerMaxAggregateInputType = {
   chatTriggerCommand?: true
   raffleAnimationStyle?: true
   chatWarsSprite?: true
+  chatWarsBossSprite?: true
   rankPoints?: true
   rankStreakCount?: true
   rankLastActiveDate?: true
@@ -347,6 +352,7 @@ export type StreamerCountAggregateInputType = {
   chatTriggerCommand?: true
   raffleAnimationStyle?: true
   chatWarsSprite?: true
+  chatWarsBossSprite?: true
   rankPoints?: true
   rankStreakCount?: true
   rankLastActiveDate?: true
@@ -482,6 +488,7 @@ export type StreamerGroupByOutputType = {
   chatTriggerCommand: string
   raffleAnimationStyle: string
   chatWarsSprite: string | null
+  chatWarsBossSprite: string | null
   rankPoints: number
   rankStreakCount: number
   rankLastActiveDate: Date | null
@@ -553,6 +560,7 @@ export type StreamerWhereInput = {
   chatTriggerCommand?: Prisma.StringFilter<"Streamer"> | string
   raffleAnimationStyle?: Prisma.StringFilter<"Streamer"> | string
   chatWarsSprite?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  chatWarsBossSprite?: Prisma.StringNullableFilter<"Streamer"> | string | null
   rankPoints?: Prisma.IntFilter<"Streamer"> | number
   rankStreakCount?: Prisma.IntFilter<"Streamer"> | number
   rankLastActiveDate?: Prisma.DateTimeNullableFilter<"Streamer"> | Date | string | null
@@ -606,6 +614,7 @@ export type StreamerOrderByWithRelationInput = {
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
   chatWarsSprite?: Prisma.SortOrderInput | Prisma.SortOrder
+  chatWarsBossSprite?: Prisma.SortOrderInput | Prisma.SortOrder
   rankPoints?: Prisma.SortOrder
   rankStreakCount?: Prisma.SortOrder
   rankLastActiveDate?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -662,6 +671,7 @@ export type StreamerWhereUniqueInput = Prisma.AtLeast<{
   chatTriggerCommand?: Prisma.StringFilter<"Streamer"> | string
   raffleAnimationStyle?: Prisma.StringFilter<"Streamer"> | string
   chatWarsSprite?: Prisma.StringNullableFilter<"Streamer"> | string | null
+  chatWarsBossSprite?: Prisma.StringNullableFilter<"Streamer"> | string | null
   rankPoints?: Prisma.IntFilter<"Streamer"> | number
   rankStreakCount?: Prisma.IntFilter<"Streamer"> | number
   rankLastActiveDate?: Prisma.DateTimeNullableFilter<"Streamer"> | Date | string | null
@@ -715,6 +725,7 @@ export type StreamerOrderByWithAggregationInput = {
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
   chatWarsSprite?: Prisma.SortOrderInput | Prisma.SortOrder
+  chatWarsBossSprite?: Prisma.SortOrderInput | Prisma.SortOrder
   rankPoints?: Prisma.SortOrder
   rankStreakCount?: Prisma.SortOrder
   rankLastActiveDate?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -771,6 +782,7 @@ export type StreamerScalarWhereWithAggregatesInput = {
   chatTriggerCommand?: Prisma.StringWithAggregatesFilter<"Streamer"> | string
   raffleAnimationStyle?: Prisma.StringWithAggregatesFilter<"Streamer"> | string
   chatWarsSprite?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
+  chatWarsBossSprite?: Prisma.StringNullableWithAggregatesFilter<"Streamer"> | string | null
   rankPoints?: Prisma.IntWithAggregatesFilter<"Streamer"> | number
   rankStreakCount?: Prisma.IntWithAggregatesFilter<"Streamer"> | number
   rankLastActiveDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Streamer"> | Date | string | null
@@ -819,6 +831,7 @@ export type StreamerCreateInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -872,6 +885,7 @@ export type StreamerUncheckedCreateInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -925,6 +939,7 @@ export type StreamerUpdateInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -978,6 +993,7 @@ export type StreamerUncheckedUpdateInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1031,6 +1047,7 @@ export type StreamerCreateManyInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -1079,6 +1096,7 @@ export type StreamerUpdateManyMutationInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1127,6 +1145,7 @@ export type StreamerUncheckedUpdateManyInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1175,6 +1194,7 @@ export type StreamerCountOrderByAggregateInput = {
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
   chatWarsSprite?: Prisma.SortOrder
+  chatWarsBossSprite?: Prisma.SortOrder
   rankPoints?: Prisma.SortOrder
   rankStreakCount?: Prisma.SortOrder
   rankLastActiveDate?: Prisma.SortOrder
@@ -1233,6 +1253,7 @@ export type StreamerMaxOrderByAggregateInput = {
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
   chatWarsSprite?: Prisma.SortOrder
+  chatWarsBossSprite?: Prisma.SortOrder
   rankPoints?: Prisma.SortOrder
   rankStreakCount?: Prisma.SortOrder
   rankLastActiveDate?: Prisma.SortOrder
@@ -1281,6 +1302,7 @@ export type StreamerMinOrderByAggregateInput = {
   chatTriggerCommand?: Prisma.SortOrder
   raffleAnimationStyle?: Prisma.SortOrder
   chatWarsSprite?: Prisma.SortOrder
+  chatWarsBossSprite?: Prisma.SortOrder
   rankPoints?: Prisma.SortOrder
   rankStreakCount?: Prisma.SortOrder
   rankLastActiveDate?: Prisma.SortOrder
@@ -1450,6 +1472,7 @@ export type StreamerCreateWithoutRankEventsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -1502,6 +1525,7 @@ export type StreamerUncheckedCreateWithoutRankEventsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -1570,6 +1594,7 @@ export type StreamerUpdateWithoutRankEventsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1622,6 +1647,7 @@ export type StreamerUncheckedUpdateWithoutRankEventsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1674,6 +1700,7 @@ export type StreamerCreateWithoutPrizeListsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -1726,6 +1753,7 @@ export type StreamerUncheckedCreateWithoutPrizeListsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -1794,6 +1822,7 @@ export type StreamerUpdateWithoutPrizeListsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1846,6 +1875,7 @@ export type StreamerUncheckedUpdateWithoutPrizeListsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1898,6 +1928,7 @@ export type StreamerCreateWithoutPscTransactionsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -1950,6 +1981,7 @@ export type StreamerUncheckedCreateWithoutPscTransactionsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -2018,6 +2050,7 @@ export type StreamerUpdateWithoutPscTransactionsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2070,6 +2103,7 @@ export type StreamerUncheckedUpdateWithoutPscTransactionsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2122,6 +2156,7 @@ export type StreamerCreateWithoutHistoryInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -2174,6 +2209,7 @@ export type StreamerUncheckedCreateWithoutHistoryInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -2242,6 +2278,7 @@ export type StreamerUpdateWithoutHistoryInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2294,6 +2331,7 @@ export type StreamerUncheckedUpdateWithoutHistoryInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2346,6 +2384,7 @@ export type StreamerCreateWithoutBotCommandsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -2398,6 +2437,7 @@ export type StreamerUncheckedCreateWithoutBotCommandsInput = {
   chatTriggerCommand?: string
   raffleAnimationStyle?: string
   chatWarsSprite?: string | null
+  chatWarsBossSprite?: string | null
   rankPoints?: number
   rankStreakCount?: number
   rankLastActiveDate?: Date | string | null
@@ -2466,6 +2506,7 @@ export type StreamerUpdateWithoutBotCommandsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2518,6 +2559,7 @@ export type StreamerUncheckedUpdateWithoutBotCommandsInput = {
   chatTriggerCommand?: Prisma.StringFieldUpdateOperationsInput | string
   raffleAnimationStyle?: Prisma.StringFieldUpdateOperationsInput | string
   chatWarsSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chatWarsBossSprite?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rankPoints?: Prisma.IntFieldUpdateOperationsInput | number
   rankStreakCount?: Prisma.IntFieldUpdateOperationsInput | number
   rankLastActiveDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2637,6 +2679,7 @@ export type StreamerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   chatTriggerCommand?: boolean
   raffleAnimationStyle?: boolean
   chatWarsSprite?: boolean
+  chatWarsBossSprite?: boolean
   rankPoints?: boolean
   rankStreakCount?: boolean
   rankLastActiveDate?: boolean
@@ -2691,6 +2734,7 @@ export type StreamerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   chatTriggerCommand?: boolean
   raffleAnimationStyle?: boolean
   chatWarsSprite?: boolean
+  chatWarsBossSprite?: boolean
   rankPoints?: boolean
   rankStreakCount?: boolean
   rankLastActiveDate?: boolean
@@ -2739,6 +2783,7 @@ export type StreamerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   chatTriggerCommand?: boolean
   raffleAnimationStyle?: boolean
   chatWarsSprite?: boolean
+  chatWarsBossSprite?: boolean
   rankPoints?: boolean
   rankStreakCount?: boolean
   rankLastActiveDate?: boolean
@@ -2787,6 +2832,7 @@ export type StreamerSelectScalar = {
   chatTriggerCommand?: boolean
   raffleAnimationStyle?: boolean
   chatWarsSprite?: boolean
+  chatWarsBossSprite?: boolean
   rankPoints?: boolean
   rankStreakCount?: boolean
   rankLastActiveDate?: boolean
@@ -2796,7 +2842,7 @@ export type StreamerSelectScalar = {
   updatedAt?: boolean
 }
 
-export type StreamerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "passwordHash" | "mascot" | "displayName" | "nome" | "isAdmin" | "twitchChannel" | "kickChannel" | "twitchAffiliateEnabled" | "twitchUserId" | "twitchUserAccessToken" | "twitchUserRefreshToken" | "kickChatroomId" | "youtubeChannel" | "youtubeDisplayName" | "youtubeLiveChatId" | "youtubeNextPageToken" | "youtubeLiveChatCheckedAt" | "registrationCommand" | "claimCommand" | "validationTimeout" | "isAffiliate" | "pscBalance" | "audioEnabled" | "excelImportEnabled" | "excelPrizesImportEnabled" | "eventMusic" | "eventEffect" | "spinEffect" | "themeColor" | "socoChuteModeEnabled" | "raffleTriggerMode" | "autoRoundDelay" | "chatTriggerCount" | "chatTriggerCommand" | "raffleAnimationStyle" | "chatWarsSprite" | "rankPoints" | "rankStreakCount" | "rankLastActiveDate" | "rankLastRaffleAt" | "forcePasswordChange" | "createdAt" | "updatedAt", ExtArgs["result"]["streamer"]>
+export type StreamerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "passwordHash" | "mascot" | "displayName" | "nome" | "isAdmin" | "twitchChannel" | "kickChannel" | "twitchAffiliateEnabled" | "twitchUserId" | "twitchUserAccessToken" | "twitchUserRefreshToken" | "kickChatroomId" | "youtubeChannel" | "youtubeDisplayName" | "youtubeLiveChatId" | "youtubeNextPageToken" | "youtubeLiveChatCheckedAt" | "registrationCommand" | "claimCommand" | "validationTimeout" | "isAffiliate" | "pscBalance" | "audioEnabled" | "excelImportEnabled" | "excelPrizesImportEnabled" | "eventMusic" | "eventEffect" | "spinEffect" | "themeColor" | "socoChuteModeEnabled" | "raffleTriggerMode" | "autoRoundDelay" | "chatTriggerCount" | "chatTriggerCommand" | "raffleAnimationStyle" | "chatWarsSprite" | "chatWarsBossSprite" | "rankPoints" | "rankStreakCount" | "rankLastActiveDate" | "rankLastRaffleAt" | "forcePasswordChange" | "createdAt" | "updatedAt", ExtArgs["result"]["streamer"]>
 export type StreamerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   history?: boolean | Prisma.Streamer$historyArgs<ExtArgs>
   pscTransactions?: boolean | Prisma.Streamer$pscTransactionsArgs<ExtArgs>
@@ -2856,6 +2902,7 @@ export type $StreamerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     chatTriggerCommand: string
     raffleAnimationStyle: string
     chatWarsSprite: string | null
+    chatWarsBossSprite: string | null
     rankPoints: number
     rankStreakCount: number
     rankLastActiveDate: Date | null
@@ -3329,6 +3376,7 @@ export interface StreamerFieldRefs {
   readonly chatTriggerCommand: Prisma.FieldRef<"Streamer", 'String'>
   readonly raffleAnimationStyle: Prisma.FieldRef<"Streamer", 'String'>
   readonly chatWarsSprite: Prisma.FieldRef<"Streamer", 'String'>
+  readonly chatWarsBossSprite: Prisma.FieldRef<"Streamer", 'String'>
   readonly rankPoints: Prisma.FieldRef<"Streamer", 'Int'>
   readonly rankStreakCount: Prisma.FieldRef<"Streamer", 'Int'>
   readonly rankLastActiveDate: Prisma.FieldRef<"Streamer", 'DateTime'>

@@ -61,6 +61,8 @@ model Streamer {
 
   // Chat Wars — sprite neutro (data URL base64) usado como base das bolinhas
   chatWarsSprite String?
+  // Chat Wars — sprite do LIVE BOSS (data URL base64). Sem isso, cai no sprite neutro.
+  chatWarsBossSprite String?
 
   // Rank da Comunidade — cache calculado a partir de RankEvent (fonte da verdade)
   rankPoints         Int       @default(0)

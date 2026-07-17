@@ -47,6 +47,8 @@ export default function ChatWarsGame({ onBack }: Props) {
   } = useStore();
   // sprite custom do streamer, ou o padrão da pasta public
   const spriteUrl = currentUser?.chatWarsSprite || '/spritepadrao.png';
+  // sprite do LIVE BOSS — cai no sprite neutro se o streamer não configurou um específico
+  const bossSpriteUrl = currentUser?.chatWarsBossSprite || spriteUrl;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -76,6 +78,7 @@ export default function ChatWarsGame({ onBack }: Props) {
   const [showHelp, setShowHelp] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const spriteRef = useRef<ProcessedSprite | null>(null);
+  const bossSpriteRef = useRef<ProcessedSprite | null>(null);
   // mirror of the processed sprite for render-time consumers (results screen)
   const [sprite, setSprite] = useState<ProcessedSprite | null>(null);
 
@@ -98,6 +101,19 @@ export default function ChatWarsGame({ onBack }: Props) {
     img.src = spriteUrl;
     return () => { spriteRef.current = null; };
   }, [spriteUrl]);
+
+  /* ── load + process the LIVE BOSS sprite (runs once per URL change) ──────── */
+  useEffect(() => {
+    bossSpriteRef.current = null;
+    const img = new Image();
+    img.onload = () => {
+      try { bossSpriteRef.current = processSprite(img); }
+      catch { bossSpriteRef.current = null; }
+    };
+    img.onerror = () => { bossSpriteRef.current = null; };
+    img.src = bossSpriteUrl;
+    return () => { bossSpriteRef.current = null; };
+  }, [bossSpriteUrl]);
 
   /* ── canvas sizing ───────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -131,7 +147,7 @@ export default function ChatWarsGame({ onBack }: Props) {
         updateCamera(cam, chatWarsSession.world, w, h, dt);
         ctx.save();
         ctx.scale(dpr, dpr);
-        render(ctx, chatWarsSession.world, cam, w, h, spriteRef.current);
+        render(ctx, chatWarsSession.world, cam, w, h, spriteRef.current, bossSpriteRef.current);
         ctx.restore();
       }
       rafRef.current = requestAnimationFrame(loop);

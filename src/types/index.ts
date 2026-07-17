@@ -22,6 +22,8 @@ export interface StreamerProfile {
   isAdmin?: boolean;
   /** Chat Wars: sprite neutro (data URL) usado como base das bolinhas. */
   chatWarsSprite?: string | null;
+  /** Chat Wars: sprite do LIVE BOSS (data URL). Sem isso, cai no sprite neutro. */
+  chatWarsBossSprite?: string | null;
 }
 
 export interface Participant {

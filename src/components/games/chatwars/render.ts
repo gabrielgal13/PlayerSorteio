@@ -96,7 +96,7 @@ export function updateCamera(cam: Camera, w: World, viewW: number, viewH: number
   cam.shake = Math.max(0, cam.shake - dt * 1.6);
 }
 
-export function render(ctx: CanvasRenderingContext2D, w: World, cam: Camera, viewW: number, viewH: number, sprite: ProcessedSprite | null = null) {
+export function render(ctx: CanvasRenderingContext2D, w: World, cam: Camera, viewW: number, viewH: number, sprite: ProcessedSprite | null = null, bossSprite: ProcessedSprite | null = null) {
   ctx.save();
 
   drawSpaceBackdrop(ctx, viewW, viewH);
@@ -148,7 +148,7 @@ export function render(ctx: CanvasRenderingContext2D, w: World, cam: Camera, vie
 
   // balls — small→large so big ones sit on top
   const balls = [...w.balls.values()].sort((a, b) => a.mass - b.mass);
-  for (const b of balls) drawBall(ctx, w, b, sprite);
+  for (const b of balls) drawBall(ctx, w, b, sprite, bossSprite);
 
   // floating texts
   ctx.textAlign = 'center';
@@ -222,7 +222,8 @@ function moodFor(b: Ball, isLeader: boolean): Mood {
   return MOODS[Math.abs(h) % MOODS.length];
 }
 
-function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: ProcessedSprite | null) {
+function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: ProcessedSprite | null, bossSprite: ProcessedSprite | null = null) {
+  const activeSprite = b.isBoss && bossSprite ? bossSprite : sprite;
   const r = b.radius;
   const isLeader = w.huntedId === b.id;
   // gelatin wobble
@@ -254,16 +255,16 @@ function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: Proc
   ctx.shadowColor = b.isBoss ? '#ff2030' : b.isStreamer ? '#00E5FF' : `hsl(${b.hue},95%,55%)`;
   ctx.shadowBlur = b.isBoss ? 55 : b.isStreamer || isLeader ? 38 : 20;
 
-  if (sprite) {
+  if (activeSprite) {
     // The sprite IS the ball — draw it round, keeping its native aspect ratio
     // (no gelatin wobble, which would stretch the bitmap into an ellipse).
     // Tinting + silhouette masking is pre-baked per hue offscreen, so there's
     // no square colour leak into the transparent areas.
-    const aspect = sprite.width / sprite.height;
+    const aspect = activeSprite.width / activeSprite.height;
     let sw = r * 2, sh = r * 2;
     if (aspect >= 1) sh = sw / aspect; else sw = sh * aspect;
     const sx = -sw / 2, sy = -sh / 2;
-    const tinted = getTintedSprite(sprite, b.hue);
+    const tinted = getTintedSprite(activeSprite, b.hue);
     ctx.drawImage(tinted, sx, sy, sw, sh);
     ctx.shadowBlur = 0;
 

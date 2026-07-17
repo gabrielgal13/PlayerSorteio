@@ -288,6 +288,7 @@ export const useStore = create<AppState & AppActions>()(
           youtubeDisplayName: data.youtubeDisplayName,
           isAdmin: data.isAdmin,
           chatWarsSprite: data.chatWarsSprite,
+          chatWarsBossSprite: data.chatWarsBossSprite,
         };
 
         set({

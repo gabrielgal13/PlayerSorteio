@@ -207,7 +207,7 @@ export async function GET(
       select: {
         username: true, displayName: true, pscBalance: true, isAffiliate: true,
         themeColor: true, twitchChannel: true, kickChannel: true, youtubeChannel: true,
-        forcePasswordChange: true, chatWarsSprite: true, twitchAffiliateEnabled: true,
+        forcePasswordChange: true, chatWarsSprite: true, chatWarsBossSprite: true, twitchAffiliateEnabled: true,
       },
     });
     if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
@@ -849,7 +849,7 @@ export async function PATCH(
         isAffiliate?: boolean; pscBalance?: number; displayName?: string | null; nome?: string | null;
         passwordHash?: string; forcePasswordChange?: boolean; themeColor?: string;
         twitchChannel?: string | null; kickChannel?: string | null; youtubeChannel?: string | null;
-        chatWarsSprite?: string | null; twitchAffiliateEnabled?: boolean;
+        chatWarsSprite?: string | null; chatWarsBossSprite?: string | null; twitchAffiliateEnabled?: boolean;
         twitchUserId?: string | null; twitchUserAccessToken?: string | null; twitchUserRefreshToken?: string | null;
       } = {};
       if (typeof body.isAffiliate === 'boolean') updateData.isAffiliate = body.isAffiliate;
@@ -881,6 +881,7 @@ export async function PATCH(
       if (body.kickChannel !== undefined) updateData.kickChannel = body.kickChannel || null;
       if (body.youtubeChannel !== undefined) updateData.youtubeChannel = body.youtubeChannel || null;
       if (body.chatWarsSprite !== undefined) updateData.chatWarsSprite = body.chatWarsSprite || null;
+      if (body.chatWarsBossSprite !== undefined) updateData.chatWarsBossSprite = body.chatWarsBossSprite || null;
       if (typeof body.twitchAffiliateEnabled === 'boolean') {
         updateData.twitchAffiliateEnabled = body.twitchAffiliateEnabled;
         // Revogar afiliação limpa o OAuth do streamer — volta pro fluxo manual antigo.

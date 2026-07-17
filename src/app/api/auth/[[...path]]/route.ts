@@ -52,6 +52,7 @@ export async function POST(
       chatTriggerCommand: streamer.chatTriggerCommand,
       raffleAnimationStyle: streamer.raffleAnimationStyle,
       chatWarsSprite: streamer.chatWarsSprite,
+      chatWarsBossSprite: streamer.chatWarsBossSprite,
       twitchConfig: {
         channel: streamer.twitchChannel ?? '',
         registrationCommand: streamer.registrationCommand,

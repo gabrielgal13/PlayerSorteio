@@ -56,6 +56,11 @@ export async function GET(
       registrationCommand: streamer.registrationCommand,
       claimCommand: streamer.claimCommand,
       validationTimeout: streamer.validationTimeout,
+      // pscBalance/isAffiliate não ficam salvos no localStorage do client (só
+      // currentUser/preferências ficam) — o Dashboard rechama isso ao montar
+      // pra resincronizar com o saldo real depois de um refresh de página.
+      pscBalance: streamer.pscBalance,
+      isAffiliate: streamer.isAffiliate,
     });
   }
 
@@ -512,11 +517,18 @@ export async function PATCH(
   const route = path?.[0];
 
   if (route === 'balance') {
-    const { username, pscBalance } = await req.json();
-    if (!username || pscBalance === undefined)
+    // Deduz a partir do saldo real no banco — nunca aceita um valor absoluto
+    // vindo do client, que pode estar desatualizado (ex: aba aberta há tempo,
+    // ou pscBalance ainda não recarregado após um refresh) e sobrescrever um
+    // saldo válido com lixo.
+    const { username, amount } = await req.json();
+    if (!username || typeof amount !== 'number' || amount < 0)
       return NextResponse.json({ error: 'invalid body' }, { status: 400 });
-    const streamer = await prisma.streamer.update({ where: { username }, data: { pscBalance } });
-    return NextResponse.json({ pscBalance: streamer.pscBalance });
+    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { pscBalance: true } });
+    if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
+    const newBalance = Math.max(0, streamer.pscBalance - amount);
+    const updated = await prisma.streamer.update({ where: { username }, data: { pscBalance: newBalance } });
+    return NextResponse.json({ pscBalance: updated.pscBalance });
   }
 
   if (route === 'config') {

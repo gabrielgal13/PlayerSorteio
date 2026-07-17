@@ -587,14 +587,19 @@ export const useStore = create<AppState & AppActions>()(
 
       deductPSC: (amount) => {
         const { pscBalance, currentUser } = get();
-        const newBalance = Math.max(0, pscBalance - amount);
-        set({ pscBalance: newBalance });
+        // Otimista pra UI responder na hora, mas o valor que vale é o que o
+        // servidor devolve — ele calcula em cima do saldo real no banco, nunca
+        // confia num valor absoluto vindo daqui (client pode estar desatualizado).
+        set({ pscBalance: Math.max(0, pscBalance - amount) });
         if (currentUser && !currentUser.isAdmin) {
           fetch('/api/streamer/balance', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser.username, pscBalance: newBalance }),
-          }).catch(() => {});
+            body: JSON.stringify({ username: currentUser.username, amount }),
+          })
+            .then(r => r.json())
+            .then(data => { if (typeof data.pscBalance === 'number') set({ pscBalance: data.pscBalance }); })
+            .catch(() => {});
         }
       },
 

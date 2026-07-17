@@ -68,6 +68,22 @@ export default function Dashboard() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // pscBalance/isAffiliate não sobrevivem a um refresh de página (não ficam no
+  // localStorage) — resincroniza com o saldo real do banco assim que monta,
+  // pra nunca mostrar um saldo desatualizado (ex: 0 depois de um F5).
+  useEffect(() => {
+    if (!currentUser?.username) return;
+    fetch(`/api/streamer/config?username=${encodeURIComponent(currentUser.username)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && typeof data.pscBalance === 'number') {
+          useStore.setState({ pscBalance: data.pscBalance, isAffiliate: data.isAffiliate ?? true });
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.username]);
+
   useEffect(() => {
     if (activeTab !== 'games') setActiveGame(null);
   }, [activeTab]);

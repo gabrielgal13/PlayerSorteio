@@ -681,6 +681,11 @@ export default function AdminPanel() {
     }).catch(() => {});
   }, []);
 
+  const handleEntregasDelete = useCallback((id: string) => {
+    setEntregasHistory(prev => prev.filter(r => r.id !== id));
+    fetch(`/api/streamer/history?id=${id}`, { method: 'DELETE' }).catch(() => {});
+  }, []);
+
   const loadStreamers = useCallback(() => {
     fetch('/api/admin/streamers')
       .then(r => r.json())
@@ -3403,6 +3408,7 @@ export default function AdminPanel() {
                         historyOverride={entregasHistory}
                         onHistoryRefresh={() => loadEntregasHistory(entregasStreamer)}
                         onUpdateDelivery={handleEntregasUpdateDelivery}
+                        onDeleteItem={handleEntregasDelete}
                       />
                     )}
                   </div>

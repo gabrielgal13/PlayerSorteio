@@ -665,9 +665,11 @@ interface EntregasPageProps {
   historyOverride?: RaffleResult[];
   onHistoryRefresh?: () => Promise<void>;
   onUpdateDelivery?: (id: string, tradeLink?: string, deliveryStatus?: DeliveryStatus, deliveryAddress?: string) => void;
+  /** Só passado no painel admin — mostra o botão de excluir item na tabela. */
+  onDeleteItem?: (id: string) => void;
 }
 
-export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpdateDelivery }: EntregasPageProps = {}) {
+export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpdateDelivery, onDeleteItem }: EntregasPageProps = {}) {
   const { history, currentUser, updateDelivery } = useStore();
 
   const handleUpdateDelivery = onUpdateDelivery ?? updateDelivery;
@@ -1011,8 +1013,8 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
             <table className="w-full" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['ITEM', 'GANHADOR', 'ENTREGA', 'STATUS', 'DATA SORTEIO'].map(h => (
-                    <th key={h} className="font-orbitron text-white/30 tracking-widest text-left px-4 py-3"
+                  {[...['ITEM', 'GANHADOR', 'ENTREGA', 'STATUS', 'DATA SORTEIO'], ...(onDeleteItem ? [''] : [])].map((h, hi) => (
+                    <th key={h || `col-${hi}`} className="font-orbitron text-white/30 tracking-widest text-left px-4 py-3"
                       style={{ fontSize: 9, fontWeight: 700, background: 'rgba(255,255,255,0.02)' }}>
                       {h}
                     </th>
@@ -1025,7 +1027,11 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
                     const status = (r.deliveryStatus ?? 'novo') as DeliveryStatus;
                     const cfg = STATUS[status] ?? STATUS.novo;
                     const hasPsc = (r.prize.pscValue ?? 0) > 0;
-                    const isAddressMode = getDeliveryMode(r.prize.name) !== 'trade_link';
+                    const deliveryMode = getDeliveryMode(r.prize.name);
+                    const isAddressMode = deliveryMode !== 'trade_link';
+                    // Camisa PlayerSkins é enviada pela própria PlayerSkins, não pelo
+                    // streamer — mesmo sem custar PSC (mode 'address_and_shirt').
+                    const deliveredByPlayerSkins = hasPsc || deliveryMode === 'address_and_shirt';
                     const dt = new Date(r.timestamp);
 
                     const rowBg = cfg.isError
@@ -1077,6 +1083,10 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
                                     (Entrega por PlayerSkins)
                                   </span>
                                 </div>
+                              ) : deliveredByPlayerSkins ? (
+                                <span className="font-rajdhani" style={{ fontSize: 10, color: 'rgba(0,255,163,0.55)' }}>
+                                  (Entrega por PlayerSkins)
+                                </span>
                               ) : (
                                 <span className="font-rajdhani" style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
                                   (Entrega pelo streamer)
@@ -1175,6 +1185,23 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
                             </span>
                           </div>
                         </td>
+
+                        {onDeleteItem && (
+                          <td className="px-4 py-3" style={{ minWidth: 44 }}>
+                            <button
+                              onClick={() => onDeleteItem(r.id)}
+                              title="Excluir item"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+                              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: 'rgba(239,68,68,0.6)' }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.2)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(239,68,68,0.9)'; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.08)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(239,68,68,0.6)'; }}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                              </svg>
+                            </button>
+                          </td>
+                        )}
                       </motion.tr>
                     );
                   })}

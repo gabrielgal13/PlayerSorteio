@@ -592,7 +592,8 @@ export async function PATCH(
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
-// DELETE /api/streamer/history?username=xxx
+// DELETE /api/streamer/history?username=xxx        → apaga TODO o historico do streamer
+// DELETE /api/streamer/history?id=xxx               → apaga só um item (admin/streamer)
 // DELETE /api/streamer/prize-lists?id=xxx&username=xxx
 export async function DELETE(
   req: NextRequest,
@@ -602,6 +603,11 @@ export async function DELETE(
   const route = path?.[0];
 
   if (route === 'history') {
+    const id = req.nextUrl.searchParams.get('id');
+    if (id) {
+      await prisma.raffleHistory.deleteMany({ where: { id } });
+      return NextResponse.json({ ok: true });
+    }
     const username = req.nextUrl.searchParams.get('username');
     if (!username) return NextResponse.json({ error: 'username required' }, { status: 400 });
     const streamer = await prisma.streamer.findUnique({ where: { username } });

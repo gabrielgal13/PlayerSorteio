@@ -70,6 +70,10 @@ export default function CommunityBar() {
   const currentUser = useStore(s => s.currentUser);
   const rankStatus = useRankStatus(currentUser?.username);
   const [showInfo, setShowInfo] = useState(false);
+  // Marca qual slug falhou ao carregar. Como comparamos com o slug atual, ao
+  // trocar de rank o "falhou" se reseta sozinho — sem mexer no DOM na mão
+  // (o que antes deixava a imagem escondida pra sempre depois do 1º 404).
+  const [failedSlug, setFailedSlug] = useState<string | null>(null);
 
   const rankName = rankStatus?.rank.name ?? '—';
   const slug = rankImageSlug(rankName);
@@ -306,21 +310,25 @@ export default function CommunityBar() {
               boxShadow: `0 0 14px ${colors.main}44, inset 0 0 10px ${colors.main}22`,
             }}
           >
-            <img
-              src={`/ranks/${slug}.png`}
-              alt={rankName}
-              className="w-full h-full object-contain p-1.5"
-              onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }}
-            />
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="hidden flex-shrink-0">
-              <path
-                d="M2 18l2.5-8L9 14l3-8 3 8 4.5-4L22 18H2z"
-                fill={colors.main}
-                stroke={colors.glow}
-                strokeWidth="0.5"
+            {failedSlug === slug ? (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="flex-shrink-0">
+                <path
+                  d="M2 18l2.5-8L9 14l3-8 3 8 4.5-4L22 18H2z"
+                  fill={colors.main}
+                  stroke={colors.glow}
+                  strokeWidth="0.5"
+                />
+                <rect x="2" y="18" width="20" height="2" rx="1" fill={colors.main} />
+              </svg>
+            ) : (
+              <img
+                key={slug}
+                src={`/ranks/${slug}.png`}
+                alt={rankName}
+                className="w-full h-full object-contain p-1.5"
+                onError={() => setFailedSlug(slug)}
               />
-              <rect x="2" y="18" width="20" height="2" rx="1" fill={colors.main} />
-            </svg>
+            )}
           </div>
         </div>
       </div>

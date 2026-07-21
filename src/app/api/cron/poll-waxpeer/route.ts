@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
-  checkStock,
-  buyItem,
   checkTradesByProjectId,
   checkTradesById,
   classifyTradeStatus,
@@ -11,8 +9,6 @@ import {
 
 /* ── Configuração ────────────────────────────────────────────────────── */
 
-// Quantas re-compras automáticas antes de desistir e marcar erro_entrega.
-const MAX_RETRIES = 3;
 // Máximo de entregas pendentes processadas por tick (evita estouro de timeout).
 const BATCH_SIZE = 50;
 // Idade máxima de uma compra ainda em `item_comprado` antes de considerar perdida.
@@ -76,7 +72,6 @@ export async function GET(req: NextRequest) {
   }
 
   let delivered = 0;
-  let retried = 0;
   let failed = 0;
   const now = new Date();
 
@@ -87,13 +82,11 @@ export async function GET(req: NextRequest) {
 
     // Nenhum registro na Waxpeer ainda — fica pendente (próximo tick tenta de novo).
     if (!trade) {
-      // Se já passou muito tempo, considera perdida e tenta re-comprar / falha.
       const age = Date.now() - entry.timestamp.getTime();
       if (age > MAX_PENDING_AGE_MS) {
-        console.log(`[poll-waxpeer] ${entry.id} sem registro na Waxpeer após ${Math.round(age / 60000)}min — tentando retry`);
-        const ok = await retryPurchase(entry);
-        if (ok) retried++;
-        else failed++;
+        console.log(`[poll-waxpeer] ${entry.id} sem registro na Waxpeer após ${Math.round(age / 60000)}min`);
+        await markDeliveryError(entry.id, 'sem registro na Waxpeer');
+        failed++;
       } else {
         await prisma.raffleHistory.update({
           where: { id: entry.id },
@@ -116,10 +109,9 @@ export async function GET(req: NextRequest) {
     }
 
     if (outcome.kind === 'failed') {
-      console.log(`[poll-waxpeer] ${entry.id} falhou: ${outcome.reason} — retries=${entry.marketplaceRetries}`);
-      const ok = await retryPurchase(entry);
-      if (ok) retried++;
-      else failed++;
+      console.log(`[poll-waxpeer] ${entry.id} falhou: ${outcome.reason}`);
+      await markDeliveryError(entry.id, outcome.reason);
+      failed++;
       continue;
     }
 
@@ -134,75 +126,23 @@ export async function GET(req: NextRequest) {
     ok: true,
     checked: pending.length,
     delivered,
-    retried,
     failed,
   });
 }
 
 /**
- * Tenta re-comprar o item (mesmo prizeName/tradeLink, novo listing).
- * Sem reembolso de PSC: o usuário já pagou e queremos entregar.
- * Após `MAX_RETRIES` tentativas falhadas seguidas, marca `erro_entrega`.
+ * Marca a entrega como `erro_entrega` pra revisão manual.
+ *
+ * Antes daqui saía uma re-compra automática na Waxpeer (dinheiro real, até 3x
+ * por item). Como a classificação de status da Waxpeer não é confiável o
+ * bastante — chegou a tratar entrega concluída como falha — nenhuma compra é
+ * disparada sozinha: quem decide re-comprar é uma pessoa, olhando o registro.
  */
-async function retryPurchase(entry: {
-  id: string;
-  prizeName: string;
-  tradeLink: string | null;
-  marketplaceRetries: number;
-  winnerName: string;
-}): Promise<boolean> {
-  if (!entry.tradeLink) {
-    await prisma.raffleHistory.update({
-      where: { id: entry.id },
-      data: { deliveryStatus: 'erro_entrega', marketplaceCheckedAt: new Date() },
-    });
-    return false;
-  }
-
-  if (entry.marketplaceRetries >= MAX_RETRIES) {
-    console.log(`[poll-waxpeer] ${entry.id} esgotou retries (${entry.marketplaceRetries}) — erro_entrega`);
-    await prisma.raffleHistory.update({
-      where: { id: entry.id },
-      data: { deliveryStatus: 'erro_entrega', marketplaceCheckedAt: new Date() },
-    });
-    return false;
-  }
-
-  try {
-    const listings = await checkStock(entry.prizeName);
-    if (!listings.length) {
-      console.log(`[poll-waxpeer] ${entry.id} sem stock no Waxpeer pra retry`);
-      await prisma.raffleHistory.update({
-        where: { id: entry.id },
-        data: {
-          marketplaceRetries: { increment: 1 },
-          marketplaceCheckedAt: new Date(),
-        },
-      });
-      return false;
-    }
-
-    const result = await buyItem(listings[0], entry.tradeLink, entry.id);
-    await prisma.raffleHistory.update({
-      where: { id: entry.id },
-      data: {
-        marketplaceItemId: String(result.id),
-        marketplaceRetries: { increment: 1 },
-        marketplaceCheckedAt: new Date(),
-        // deliveryStatus permanece em `item_comprado` (próximo tick verifica de novo)
-      },
-    });
-    console.log(`[poll-waxpeer] ${entry.id} re-comprado (retry #${entry.marketplaceRetries + 1}) → ${result.id}`);
-    return true;
-  } catch (err) {
-    console.log(`[poll-waxpeer] ${entry.id} retry falhou:`, String(err));
-    await prisma.raffleHistory.update({
-      where: { id: entry.id },
-      data: {
-        marketplaceRetries: { increment: 1 },
-        marketplaceCheckedAt: new Date(),
-      },
-    });
-    return false;
-  }
+async function markDeliveryError(id: string, reason?: string) {
+  await prisma.raffleHistory.update({
+    where: { id },
+    data: { deliveryStatus: 'erro_entrega', marketplaceCheckedAt: new Date() },
+  });
+  console.log(`[poll-waxpeer] ${id} → erro_entrega (${reason ?? 'sem motivo'}) — revisar na mão`);
 }
+

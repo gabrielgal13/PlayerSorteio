@@ -226,32 +226,36 @@ export type TradeOutcome =
 /**
  * Mapeia o `status` numérico da Waxpeer + flags para um dos 3 estados acima.
  *
- * Códigos observados (Waxpeer P2P):
- *   0 = Sending     — vendedor preparando a oferta
- *   1 = Active      — oferta enviada, aguardando comprador aceitar na Steam
- *   2 = Cancelled   — algo cancelou (timeout, recusa, vendedor sumiu)
- *   3 = Accepted    — comprador aceitou, item entregue
- *   4 = Declined    — comprador recusou
- *   5 = Refunded    — Waxpeer reembolsou (vendedor não enviou)
- *   6 = Sent        — oferta criada, sendo enviada à Steam
+ * ATENÇÃO: a doc da Waxpeer não publica esse enum, então NÃO adivinhe códigos.
+ * A versão anterior assumia `2/4/5 = falha` e estava errada — uma compra
+ * realmente entregue (Five-SeveN | Fraise Crane, 17/07/2026) voltou assim:
  *
- * Como a doc da Waxpeer é instável, a função é defensiva: se `done === true`
- * tratamos como entregue; se `cancel_reason`/`reason` indicar falha, tratamos
- * como falha; resto é "pending" e o cron tenta de novo no próximo tick.
+ *   { status: 4, done: false, trade_id: "9240506989",
+ *     release_date: "2026-07-25", is_released: false }
+ *
+ * O comprador tinha recebido a skin normalmente. A leitura que bate com os
+ * dados: `status 4` + `trade_id` = item entregue, e `done`/`is_released` só
+ * viram true quando a Waxpeer libera o pagamento ao vendedor, depois do
+ * `release_date` (janela de trade lock da Steam).
+ *
+ * Por isso a função agora só declara falha com sinal textual explícito de
+ * cancelamento/reembolso. Qualquer coisa desconhecida fica "pending": o cron
+ * checa de novo e, se passar de MAX_PENDING_AGE_MS, marca erro_entrega pra
+ * revisão manual — nunca uma re-compra automática.
  */
 export function classifyTradeStatus(t: WaxpeerTradeStatus): TradeOutcome {
-  // Sinais explícitos de sucesso
-  if (t.done === true) return { kind: 'delivered', tradeId: t.trade_id ? String(t.trade_id) : undefined };
-  if (t.status === 3) return { kind: 'delivered', tradeId: t.trade_id ? String(t.trade_id) : undefined };
+  const tradeId = t.trade_id ? String(t.trade_id) : undefined;
 
-  // Sinais explícitos de falha
-  const failedStatuses = new Set([2, 4, 5]);
-  if (typeof t.status === 'number' && failedStatuses.has(t.status)) {
-    return { kind: 'failed', reason: t.cancel_reason ?? t.reason ?? `status=${t.status}` };
-  }
-  if (t.cancel_reason || (t.reason && /cancel|refund|declin|expir/i.test(t.reason))) {
-    return { kind: 'failed', reason: t.cancel_reason ?? t.reason ?? 'cancelled' };
-  }
+  // Falha só com sinal explícito — status numérico sozinho não é confiável.
+  const cancelText =
+    t.cancel_reason ??
+    (t.reason && /cancel|refund|declin|expir/i.test(t.reason) ? t.reason : null);
+  if (cancelText) return { kind: 'failed', reason: cancelText };
+
+  // Sinais de sucesso
+  if (t.done === true) return { kind: 'delivered', tradeId };
+  if (t.status === 3) return { kind: 'delivered', tradeId };
+  if (t.status === 4 && tradeId) return { kind: 'delivered', tradeId };
 
   return { kind: 'pending', reason: t.reason };
 }

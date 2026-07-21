@@ -660,6 +660,87 @@ function AddressModal({ item, onConfirm, onClose }: {
   );
 }
 
+/* ── Confirmação de exclusão ────────────────────────────────────────── */
+function DeleteConfirmModal({ item, onConfirm, onClose }: {
+  item: RaffleResult;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.75)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        className="rounded-2xl p-6 mx-4 w-full"
+        style={{ maxWidth: 460, background: '#0d1117', border: '1px solid rgba(239,68,68,0.3)', boxShadow: '0 24px 80px rgba(0,0,0,0.7)' }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#EF4444">
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+            </svg>
+          </div>
+          <h2 className="font-orbitron font-bold tracking-widest text-white" style={{ fontSize: 13 }}>
+            EXCLUIR REGISTRO
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-3 mb-4 p-3 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          {item.prize.imageUrl && (
+            <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <img src={item.prize.imageUrl} alt="" className="w-full h-full object-contain" />
+            </div>
+          )}
+          <div>
+            <p className="font-rajdhani font-bold text-white" style={{ fontSize: 13 }}>{item.prize.name}</p>
+            <p className="font-rajdhani" style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+              Ganhador: <span style={{ color: 'rgba(255,255,255,0.7)' }}>{item.winner.name}</span>
+            </p>
+          </div>
+        </div>
+
+        <p className="font-rajdhani mb-1" style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>
+          Este registro será apagado <strong>para você e também para o streamer</strong> — ele some da tela de Entregas dos dois.
+        </p>
+        <p className="font-rajdhani" style={{ fontSize: 11, color: 'rgba(239,68,68,0.75)' }}>
+          Esta ação não pode ser desfeita.
+        </p>
+
+        <div className="flex gap-2 justify-end mt-5">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-125"
+            style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+          >
+            CANCELAR
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-110"
+            style={{ fontSize: 10, color: '#fff', background: '#EF4444', border: 'none' }}
+          >
+            EXCLUIR
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 /* ── Main component ─────────────────────────────────────────────────── */
 interface EntregasPageProps {
   historyOverride?: RaffleResult[];
@@ -680,6 +761,7 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
   const [refreshing, setRefreshing]     = useState(false);
   const [tradeLinkModalId, setTradeLinkModalId] = useState<string | null>(null);
   const [addressModalId, setAddressModalId] = useState<string | null>(null);
+  const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
 
   const myHistory = (historyOverride ?? history.filter(r => r.streamer === currentUser?.username))
     .sort((a, b) => b.timestamp - a.timestamp);
@@ -809,6 +891,14 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
     setAddressModalId(null);
   };
 
+  const deleteModalItem = deleteModalId ? dayHistory.find(r => r.id === deleteModalId) : null;
+
+  const handleDeleteConfirm = () => {
+    if (!deleteModalId) return;
+    onDeleteItem?.(deleteModalId);
+    setDeleteModalId(null);
+  };
+
   const displayDate = selectedDate
     ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : null;
@@ -834,6 +924,13 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
             item={addressModalItem}
             onConfirm={handleAddressConfirm}
             onClose={() => setAddressModalId(null)}
+          />
+        )}
+        {deleteModalItem && (
+          <DeleteConfirmModal
+            item={deleteModalItem}
+            onConfirm={handleDeleteConfirm}
+            onClose={() => setDeleteModalId(null)}
           />
         )}
       </AnimatePresence>
@@ -1189,7 +1286,7 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
                         {onDeleteItem && (
                           <td className="px-4 py-3" style={{ minWidth: 44 }}>
                             <button
-                              onClick={() => onDeleteItem(r.id)}
+                              onClick={() => setDeleteModalId(r.id)}
                               title="Excluir item"
                               className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
                               style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: 'rgba(239,68,68,0.6)' }}

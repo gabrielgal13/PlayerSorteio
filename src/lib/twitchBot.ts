@@ -111,8 +111,17 @@ export async function sendTwitchWhisper(toUserId: string, message: string): Prom
       if (!newToken) return false;
       res = await doSend(newToken);
     }
-    return res.ok;
-  } catch {
+    if (!res.ok) {
+      // 401 aqui normalmente = token do bot sem o escopo user:manage:whispers
+      // (precisa reautenticar em /api/twitch/eventsub/auth); 403 = conta do bot
+      // sem telefone verificado.
+      const body = await res.text().catch(() => '');
+      console.error(`[whisper] falhou (${res.status}) para ${toUserId}: ${body}`);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('[whisper] erro de rede:', e);
     return false;
   }
 }

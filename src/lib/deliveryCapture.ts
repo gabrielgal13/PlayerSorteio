@@ -92,10 +92,16 @@ export async function notifyWinnerDelivered(historyId: string): Promise<void> {
     if (entry.winnerSource && entry.winnerSource !== 'twitch') return;
 
     const winnerUserId = await getTwitchUserIdByLogin(entry.winnerName);
-    if (!winnerUserId) return;
+    if (!winnerUserId) {
+      console.error(`[entregue] usuario Twitch "${entry.winnerName}" nao encontrado (${historyId})`);
+      return;
+    }
 
-    await sendTwitchWhisper(winnerUserId, buildDeliveredMessage(entry.prizeName));
-  } catch { /* ignore */ }
+    const sent = await sendTwitchWhisper(winnerUserId, buildDeliveredMessage(entry.prizeName));
+    if (!sent) console.error(`[entregue] whisper nao enviado para ${entry.winnerName} (${historyId})`);
+  } catch (e) {
+    console.error('[entregue] erro ao avisar ganhador:', e);
+  }
 }
 
 // "PrizeListItem".pinned e "RaffleHistory".deliveryAddress são colunas bolt-on

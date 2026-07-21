@@ -130,7 +130,9 @@ export async function GET(
     authUrl.searchParams.set('client_id', process.env.TWITCH_CLIENT_ID!);
     authUrl.searchParams.set('redirect_uri', `${origin}/api/twitch/eventsub/callback`);
     authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', 'user:read:whispers user:write:chat user:read:chat');
+    // user:manage:whispers é obrigatório pra ENVIAR whisper — user:read:whispers
+    // só permite receber. Sem ele o POST /helix/whispers falha com 401.
+    authUrl.searchParams.set('scope', 'user:read:whispers user:manage:whispers user:write:chat user:read:chat');
     authUrl.searchParams.set('force_verify', 'true');
     return NextResponse.redirect(authUrl.toString());
   }

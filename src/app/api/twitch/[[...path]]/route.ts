@@ -12,6 +12,14 @@ import {
   buildMissingFieldsMessage,
   buildAddressConfirmationMessage,
 } from '@/lib/deliveryCapture';
+import {
+  getAppToken,
+  getBotConfig,
+  getBotWithRefresh,
+  sendBotChatMessage,
+  getTwitchUserIdByLogin,
+  sendTwitchWhisper,
+} from '@/lib/twitchBot';
 
 // Resolve a origin real mesmo atrás de proxy/Vercel
 function getOrigin(req: NextRequest): string {
@@ -19,123 +27,6 @@ function getOrigin(req: NextRequest): string {
   const proto = req.headers.get('x-forwarded-proto') ?? 'https';
   const host  = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? 'localhost:3000';
   return `${proto}://${host}`;
-}
-
-// ─── Twitch App Token (cached) ───────────────────────────────────────────────
-let cachedAppToken: { value: string; expiresAt: number } | null = null;
-
-async function getAppToken(): Promise<string> {
-  if (cachedAppToken && Date.now() < cachedAppToken.expiresAt) return cachedAppToken.value;
-  const res = await fetch(
-    `https://id.twitch.tv/oauth2/token?client_id=${process.env.TWITCH_CLIENT_ID}&client_secret=${process.env.TWITCH_CLIENT_SECRET}&grant_type=client_credentials`,
-    { method: 'POST' },
-  );
-  if (!res.ok) throw new Error('Falha ao obter app token Twitch');
-  const data = await res.json() as { access_token: string; expires_in: number };
-  cachedAppToken = { value: data.access_token, expiresAt: Date.now() + (data.expires_in - 300) * 1000 };
-  return cachedAppToken.value;
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-async function getBotConfig() {
-  const rows = await prisma.appConfig.findMany({
-    where: { key: { in: ['twitch_bot_user_token', 'twitch_bot_user_id', 'twitch_bot_username'] } },
-  });
-  const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
-  return {
-    token: map['twitch_bot_user_token'] ?? '',
-    userId: map['twitch_bot_user_id'] ?? '',
-    username: map['twitch_bot_username'] ?? '',
-  };
-}
-
-async function refreshTwitchBotToken(): Promise<string | null> {
-  const row = await prisma.appConfig.findUnique({ where: { key: 'twitch_bot_refresh_token' } });
-  if (!row?.value) return null;
-  const res = await fetch('https://id.twitch.tv/oauth2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: process.env.TWITCH_CLIENT_ID!,
-      client_secret: process.env.TWITCH_CLIENT_SECRET!,
-      refresh_token: row.value,
-      grant_type: 'refresh_token',
-    }),
-  });
-  if (!res.ok) return null;
-  const data = await res.json() as { access_token: string; refresh_token?: string };
-  await prisma.appConfig.upsert({ where: { key: 'twitch_bot_user_token' }, create: { key: 'twitch_bot_user_token', value: data.access_token }, update: { value: data.access_token } });
-  if (data.refresh_token) {
-    await prisma.appConfig.upsert({ where: { key: 'twitch_bot_refresh_token' }, create: { key: 'twitch_bot_refresh_token', value: data.refresh_token }, update: { value: data.refresh_token } });
-  }
-  return data.access_token;
-}
-
-async function getBotWithRefresh(): Promise<{ token: string; userId: string } | null> {
-  const bot = await getBotConfig();
-  if (bot.token && bot.userId) return { token: bot.token, userId: bot.userId };
-  const newToken = await refreshTwitchBotToken();
-  if (!newToken) return null;
-  const updated = await getBotConfig();
-  if (!updated.token || !updated.userId) return null;
-  return { token: updated.token, userId: updated.userId };
-}
-
-async function sendBotChatMessage(broadcasterId: string, message: string): Promise<{ ok: boolean; sent?: boolean | null; dropped?: boolean; reason?: unknown; twitchResponse?: unknown }> {
-  const bot = await getBotWithRefresh();
-  if (!bot) return { ok: false };
-
-  const doSend = (token: string) =>
-    fetch('https://api.twitch.tv/helix/chat/messages', {
-      method: 'POST',
-      headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ broadcaster_id: broadcasterId, sender_id: bot.userId, message }),
-    });
-
-  let res = await doSend(bot.token);
-  if (res.status === 401) {
-    const newToken = await refreshTwitchBotToken();
-    if (!newToken) return { ok: false };
-    res = await doSend(newToken);
-  }
-
-  const msgData = await res.json() as { data?: { is_sent?: boolean; drop_reason?: unknown }[] };
-  const sent = msgData.data?.[0];
-  if (res.ok && sent && sent.is_sent === false) {
-    return { ok: false, dropped: true, reason: sent.drop_reason, twitchResponse: msgData };
-  }
-  return { ok: res.ok, sent: sent?.is_sent ?? null, twitchResponse: msgData };
-}
-
-async function getTwitchUserIdByLogin(login: string): Promise<string | null> {
-  const appToken = await getAppToken();
-  const res = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(login)}`, {
-    headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${appToken}` },
-  });
-  if (!res.ok) return null;
-  const data = await res.json() as { data?: { id: string }[] };
-  return data.data?.[0]?.id ?? null;
-}
-
-async function sendTwitchWhisper(toUserId: string, message: string): Promise<void> {
-  const bot = await getBotWithRefresh();
-  if (!bot) return;
-  try {
-    const res = await fetch(`https://api.twitch.tv/helix/whispers?from_user_id=${bot.userId}&to_user_id=${toUserId}`, {
-      method: 'POST',
-      headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${bot.token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
-    });
-    if (res.status === 401) {
-      const newToken = await refreshTwitchBotToken();
-      if (!newToken) return;
-      await fetch(`https://api.twitch.tv/helix/whispers?from_user_id=${bot.userId}&to_user_id=${toUserId}`, {
-        method: 'POST',
-        headers: { 'Client-Id': process.env.TWITCH_CLIENT_ID!, Authorization: `Bearer ${newToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
-      });
-    }
-  } catch { /* ignore */ }
 }
 
 function verifyEventSubSignature(secret: string, msgId: string, ts: string, body: string, sig: string): boolean {
@@ -239,7 +130,7 @@ export async function GET(
     authUrl.searchParams.set('client_id', process.env.TWITCH_CLIENT_ID!);
     authUrl.searchParams.set('redirect_uri', `${origin}/api/twitch/eventsub/callback`);
     authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', 'user:read:whispers user:write:chat');
+    authUrl.searchParams.set('scope', 'user:read:whispers user:write:chat user:read:chat');
     authUrl.searchParams.set('force_verify', 'true');
     return NextResponse.redirect(authUrl.toString());
   }
@@ -445,10 +336,18 @@ export async function POST(
 
     const payload = JSON.parse(body) as {
       challenge?: string;
+      subscription?: { type: string };
       event?: {
-        from_user_id: string;
-        from_user_login: string;
-        whisper: { text: string };
+        // user.whisper.message
+        from_user_id?: string;
+        from_user_login?: string;
+        whisper?: { text: string };
+        // channel.chat.message
+        broadcaster_user_id?: string;
+        broadcaster_user_login?: string;
+        chatter_user_id?: string;
+        chatter_user_login?: string;
+        message?: { text: string };
       };
     };
 
@@ -460,11 +359,30 @@ export async function POST(
       });
     }
 
+    // Notificação de mensagem de chat — dispara os "Comandos do bot" configurados por streamer
+    if (msgType === 'notification' && payload.subscription?.type === 'channel.chat.message' && payload.event) {
+      const { broadcaster_user_id, broadcaster_user_login, chatter_user_id, message } = payload.event;
+      const bot = await getBotConfig();
+      const text = message?.text?.trim() ?? '';
+      // Ignora mensagens do próprio bot (evita loop) e mensagens sem comando
+      if (text.startsWith('!') && chatter_user_id !== bot.userId && broadcaster_user_login && broadcaster_user_id) {
+        const commandWord = text.split(/\s+/)[0];
+        const streamer = await prisma.streamer.findFirst({ where: { twitchChannel: broadcaster_user_login.toLowerCase() }, select: { id: true } });
+        if (streamer) {
+          const cmd = await prisma.botCommand.findFirst({
+            where: { streamerId: streamer.id, command: { equals: commandWord, mode: 'insensitive' } },
+          });
+          if (cmd) await sendBotChatMessage(broadcaster_user_id, cmd.response);
+        }
+      }
+      return new NextResponse('ok', { status: 200 });
+    }
+
     // Notificação de whisper
-    if (msgType === 'notification' && payload.event) {
-      const senderLogin = payload.event.from_user_login.toLowerCase();
+    if (msgType === 'notification' && payload.subscription?.type === 'user.whisper.message' && payload.event?.whisper) {
+      const senderLogin = (payload.event.from_user_login ?? '').toLowerCase();
       const text = payload.event.whisper.text.trim();
-      const fromUserId = payload.event.from_user_id;
+      const fromUserId = payload.event.from_user_id!;
 
       // Busca entrega pendente — inclui afiliados (aguardando_tradelink) e não-afiliados (novo/sem status)
       // winnerSource null = inscrito manualmente (aceito de qualquer plataforma)

@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import { getDeliveryMode, type DeliveryMode } from './prizeDelivery';
+import { getTwitchUserIdByLogin, sendTwitchWhisper } from './twitchBot';
 
 export const WINNER_CUTOFF_MS = 6 * 60 * 60 * 1000; // 6h
 export const STEAM_LINK_REGEX = /https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/;
@@ -63,6 +64,38 @@ export function buildMissingFieldsMessage(missing: string[], mode: DeliveryMode)
 export function buildAddressConfirmationMessage(mode: DeliveryMode): string {
   const what = mode === 'address_and_shirt' ? 'Endereço e camiseta confirmados' : 'Endereço confirmado';
   return `${what}! ✅ Sua camisa será enviada o mais rápido possível. 🎁`;
+}
+
+// ── Aviso de "ENTREGUE" por whisper ─────────────────────────────────────────
+// Mensagem enviada ao ganhador assim que o streamer/admin marca o item como
+// entregue: confirma o envio e explica como pedir troca por defeito.
+export function buildDeliveredMessage(prizeName: string): string {
+  const clean = prizeName.replace(/\s*\(.*?\)/g, '').trim();
+  const what = clean ? `Seu pedido (${clean})` : 'Seu pedido';
+  return `🎁 ${what} já foi feito e está a caminho! Se chegar com algum defeito e você quiser trocar, cadastre-se em www.playerskins.com.br e solicite a troca por lá. 🚀`;
+}
+
+// Dispara o whisper de entrega concluída. Só vale pra ganhador da Twitch — nas
+// outras plataformas não temos canal de DM pelo bot. Nunca lança: a atualização
+// de status não pode falhar por causa da mensagem.
+export async function notifyWinnerDelivered(historyId: string): Promise<void> {
+  try {
+    const muteRow = await prisma.appConfig.findUnique({ where: { key: 'bot_messages_muted' } });
+    if (muteRow?.value === 'true') return;
+
+    const entry = await prisma.raffleHistory.findUnique({
+      where: { id: historyId },
+      select: { winnerName: true, winnerSource: true, prizeName: true },
+    });
+    // winnerSource null = sorteios antigos, quando só existia Twitch.
+    if (!entry?.winnerName) return;
+    if (entry.winnerSource && entry.winnerSource !== 'twitch') return;
+
+    const winnerUserId = await getTwitchUserIdByLogin(entry.winnerName);
+    if (!winnerUserId) return;
+
+    await sendTwitchWhisper(winnerUserId, buildDeliveredMessage(entry.prizeName));
+  } catch { /* ignore */ }
 }
 
 // "PrizeListItem".pinned e "RaffleHistory".deliveryAddress são colunas bolt-on

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
-import { ensureDeliveryAddressColumn } from '@/lib/deliveryCapture';
+import { ensureDeliveryAddressColumn, notifyWinnerDelivered } from '@/lib/deliveryCapture';
 
 const ADMIN_LIST_NAME = '__admin_products__';
 
@@ -816,12 +816,15 @@ export async function PATCH(
     const { tradeLink, deliveryStatus, deliveryAddress } = await req.json();
     const data: Record<string, unknown> = {};
     if (tradeLink !== undefined) data.tradeLink = tradeLink || null;
+    let justDelivered = false;
     if (deliveryStatus !== undefined) {
+      const current = await prisma.raffleHistory.findUnique({
+        where: { id: seg1 },
+        select: { tradeLockAt: true, deliveryStatus: true },
+      });
       data.deliveryStatus = deliveryStatus;
-      if (deliveryStatus === 'tradelocked') {
-        const current = await prisma.raffleHistory.findUnique({ where: { id: seg1 }, select: { tradeLockAt: true } });
-        if (!current?.tradeLockAt) data.tradeLockAt = new Date();
-      }
+      if (deliveryStatus === 'tradelocked' && !current?.tradeLockAt) data.tradeLockAt = new Date();
+      justDelivered = deliveryStatus === 'entregue' && current?.deliveryStatus !== 'entregue';
     }
     if (Object.keys(data).length === 0 && deliveryAddress === undefined)
       return NextResponse.json({ error: 'Nada para atualizar' }, { status: 400 });
@@ -832,6 +835,7 @@ export async function PATCH(
       await ensureDeliveryAddressColumn();
       await prisma.$executeRaw`UPDATE "RaffleHistory" SET "deliveryAddress" = ${deliveryAddress || null} WHERE id = ${seg1}`;
     }
+    if (justDelivered) await notifyWinnerDelivered(seg1);
     return NextResponse.json({ ok: true, tradeLockAt: updated?.tradeLockAt?.getTime() ?? null });
   }
 

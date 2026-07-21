@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
-import { ensureDeliveryAddressColumn } from '@/lib/deliveryCapture';
+import { ensureDeliveryAddressColumn, notifyWinnerDelivered } from '@/lib/deliveryCapture';
 import { recordRaffleCompleted, recordGameCompleted, getRankStatus } from '@/lib/rankEngine';
+import { ensureChatCommandSubscription } from '@/lib/twitchBot';
 import { INFINITE_QUANTITY } from '@/types';
 
 const ADMIN_LIST_NAME = '__admin_products__';
@@ -193,7 +194,7 @@ export async function GET(
     authUrl.searchParams.set('client_id', process.env.TWITCH_CLIENT_ID!);
     authUrl.searchParams.set('redirect_uri', `${origin}/api/streamer/twitch-streamer-callback`);
     authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', 'channel:read:subscriptions');
+    authUrl.searchParams.set('scope', 'channel:read:subscriptions channel:bot');
     authUrl.searchParams.set('force_verify', 'true');
     authUrl.searchParams.set('state', username);
     return NextResponse.redirect(authUrl.toString());
@@ -242,6 +243,11 @@ export async function GET(
           twitchUserRefreshToken: tokenData.refresh_token ?? null,
         },
       });
+
+      // Escopo channel:bot concedido acima autoriza o bot (PlayerSkinsBOT) a ler/escrever
+      // no chat deste canal — registra a assinatura que dispara os "Comandos do bot".
+      const chatSub = await ensureChatCommandSubscription(twitchUser.id, `${origin}/api/twitch/eventsub`);
+      if (!chatSub.ok) console.warn('[twitch-streamer-callback] falha ao registrar chat sub:', chatSub.error);
 
       return popupResponse({ ok: true, channel: twitchUser.login });
     } catch {
@@ -574,18 +580,22 @@ export async function PATCH(
     if (!historyId) return NextResponse.json({ error: 'historyId required' }, { status: 400 });
     const data: Record<string, unknown> = {};
     if (tradeLink !== undefined) data.tradeLink = tradeLink || null;
+    let justDelivered = false;
     if (deliveryStatus !== undefined) {
+      const current = await prisma.raffleHistory.findUnique({
+        where: { id: historyId },
+        select: { tradeLockAt: true, deliveryStatus: true },
+      });
       data.deliveryStatus = deliveryStatus;
-      if (deliveryStatus === 'tradelocked') {
-        const current = await prisma.raffleHistory.findUnique({ where: { id: historyId }, select: { tradeLockAt: true } });
-        if (!current?.tradeLockAt) data.tradeLockAt = new Date();
-      }
+      if (deliveryStatus === 'tradelocked' && !current?.tradeLockAt) data.tradeLockAt = new Date();
+      justDelivered = deliveryStatus === 'entregue' && current?.deliveryStatus !== 'entregue';
     }
     const updated = await prisma.raffleHistory.update({ where: { id: historyId }, data });
     if (deliveryAddress !== undefined) {
       await ensureDeliveryAddressColumn();
       await prisma.$executeRaw`UPDATE "RaffleHistory" SET "deliveryAddress" = ${deliveryAddress || null} WHERE id = ${historyId}`;
     }
+    if (justDelivered) await notifyWinnerDelivered(historyId);
     return NextResponse.json({ ok: true, tradeLockAt: updated.tradeLockAt?.getTime() ?? null });
   }
 

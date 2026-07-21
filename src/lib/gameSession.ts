@@ -1,3 +1,5 @@
+import { Redis } from '@upstash/redis';
+
 export interface GameParticipant {
   name: string;
   source: 'twitch' | 'kick' | 'youtube';
@@ -14,98 +16,98 @@ export interface GameGuess {
   timestamp: number;
 }
 
-export type GameEvent =
-  | { type: 'participant_add'; participant: GameParticipant }
-  | { type: 'guess_add'; guess: GameGuess }
-  | { type: 'guesses_clear' }
-  | { type: 'round_start' }
-  | { type: 'round_end' };
+// ── Shared store (Upstash Redis, REST) ─────────────────────────────────────────
+// Vercel Serverless Functions don't share process memory across instances, so
+// state here MUST live in an external store, not a module-level variable.
+const redis = new Redis({
+  url: (process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL)!,
+  token: (process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN)!,
+});
 
-// ── In-memory store (single Node.js process) ──────────────────────────────────
-const participants: GameParticipant[] = [];
-const guesses = new Map<string, GameGuess>();
-let acceptingGuesses = false;
-const listeners = new Set<(e: GameEvent) => void>();
-
-function emit(e: GameEvent) {
-  listeners.forEach(fn => fn(e));
-}
-
-export function subscribe(fn: (e: GameEvent) => void): () => void {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
-}
+const PARTICIPANTS_KEY = 'game:participants';
+const PARTICIPANTS_ORDER_KEY = 'game:participants:order';
+const GUESSES_KEY = 'game:guesses';
+const ACCEPTING_KEY = 'game:accepting';
 
 // ── Participants ──────────────────────────────────────────────────────────────
-export function addParticipant(
+export async function addParticipant(
   name: string,
   source: 'twitch' | 'kick' | 'youtube',
-): GameParticipant | null {
-  if (participants.some(p => p.name.toLowerCase() === name.toLowerCase())) return null;
+): Promise<GameParticipant | null> {
+  const key = name.toLowerCase();
   const p: GameParticipant = { name, source, timestamp: Date.now() };
-  participants.push(p);
-  emit({ type: 'participant_add', participant: p });
+  const wasNew = await redis.hsetnx(PARTICIPANTS_KEY, key, p);
+  if (!wasNew) return null;
+  await redis.zadd(PARTICIPANTS_ORDER_KEY, { score: p.timestamp, member: key });
   return p;
 }
 
-export function getParticipants(): GameParticipant[] {
-  return [...participants];
+export async function getParticipants(): Promise<GameParticipant[]> {
+  const order = await redis.zrange<string[]>(PARTICIPANTS_ORDER_KEY, 0, -1);
+  if (order.length === 0) return [];
+  const entries = await redis.hmget<Record<string, GameParticipant>>(PARTICIPANTS_KEY, ...order);
+  return order.map(key => entries?.[key]).filter((p): p is GameParticipant => Boolean(p));
 }
 
-export function clearParticipants() {
-  participants.length = 0;
+export async function clearParticipants(): Promise<void> {
+  await redis.del(PARTICIPANTS_KEY, PARTICIPANTS_ORDER_KEY);
 }
 
-export function isParticipant(name: string): boolean {
-  return participants.some(p => p.name.toLowerCase() === name.toLowerCase());
+export async function isParticipant(name: string): Promise<boolean> {
+  return (await redis.hexists(PARTICIPANTS_KEY, name.toLowerCase())) === 1;
 }
 
 // ── Guesses ───────────────────────────────────────────────────────────────────
-export function addGuess(
+export async function addGuess(
   name: string,
   source: 'twitch' | 'kick' | 'youtube',
   text: string,
   lat: number | null,
   lng: number | null,
-): GameGuess | null {
-  if (!acceptingGuesses) return null;
+): Promise<GameGuess | null> {
+  if (!(await isAcceptingGuesses())) return null;
   const key = name.toLowerCase();
-  if (guesses.has(key)) return null; // one guess per round
   const g: GameGuess = { name, source, text, lat, lng, geocoded: lat != null, timestamp: Date.now() };
-  guesses.set(key, g);
-  emit({ type: 'guess_add', guess: g });
+  const wasNew = await redis.hsetnx(GUESSES_KEY, key, g);
+  if (!wasNew) return null; // one guess per round
   return g;
 }
 
-export function getGuesses(): GameGuess[] {
-  return Array.from(guesses.values());
+export async function getGuesses(): Promise<GameGuess[]> {
+  const all = await redis.hgetall<Record<string, GameGuess>>(GUESSES_KEY);
+  return all ? Object.values(all) : [];
 }
 
-export function clearGuesses() {
-  guesses.clear();
-  emit({ type: 'guesses_clear' });
+export async function updateGuessLocation(name: string, lat: number, lng: number): Promise<void> {
+  const key = name.toLowerCase();
+  const existing = await redis.hget<GameGuess>(GUESSES_KEY, key);
+  if (!existing) return;
+  await redis.hset(GUESSES_KEY, { [key]: { ...existing, lat, lng, geocoded: true } });
+}
+
+export async function clearGuesses(): Promise<void> {
+  await redis.del(GUESSES_KEY);
 }
 
 // ── Round control ─────────────────────────────────────────────────────────────
-export function startRound() {
-  guesses.clear();
-  acceptingGuesses = true;
-  emit({ type: 'round_start' });
+export async function startRound(): Promise<void> {
+  await redis.del(GUESSES_KEY);
+  await redis.set(ACCEPTING_KEY, '1');
 }
 
-export function endRound() {
-  acceptingGuesses = false;
-  emit({ type: 'round_end' });
+export async function endRound(): Promise<void> {
+  await redis.del(ACCEPTING_KEY);
 }
 
-export function isAcceptingGuesses(): boolean {
-  return acceptingGuesses;
+export async function isAcceptingGuesses(): Promise<boolean> {
+  return (await redis.get(ACCEPTING_KEY)) === '1';
 }
 
-export function getFullState() {
-  return {
-    participants: getParticipants(),
-    guesses: getGuesses(),
-    acceptingGuesses,
-  };
+export async function getFullState() {
+  const [participants, guesses, acceptingGuesses] = await Promise.all([
+    getParticipants(),
+    getGuesses(),
+    isAcceptingGuesses(),
+  ]);
+  return { participants, guesses, acceptingGuesses };
 }

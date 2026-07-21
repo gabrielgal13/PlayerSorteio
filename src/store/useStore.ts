@@ -5,7 +5,7 @@ import type {
   AppState, StreamerProfile, Participant, Prize,
   RaffleResult, RaffleStatus, AppTab, TwitchConfig, ChatMessage,
   EventMusicTrack, EventEffectType, RaffleSpinEffect, RaffleTriggerMode, DeliveryStatus,
-  RaffleAnimationStyle, PendingMarketplaceDelivery,
+  RaffleAnimationStyle, PendingMarketplaceDelivery, DeliveryUpdateResult,
 } from '@/types';
 
 interface AppActions {
@@ -52,7 +52,7 @@ interface AppActions {
   setEventEffect: (effect: EventEffectType) => void;
   setSpinEffect: (effect: RaffleSpinEffect) => void;
   saveConfigToDB: () => Promise<void>;
-  updateDelivery: (id: string, tradeLink?: string, deliveryStatus?: DeliveryStatus, deliveryAddress?: string) => void;
+  updateDelivery: (id: string, tradeLink?: string, deliveryStatus?: DeliveryStatus, deliveryAddress?: string) => Promise<DeliveryUpdateResult | null>;
   triggerMascotSoco: () => void;
   triggerMascotChute: () => void;
   initMascotHp: (viewerCount: number) => void;
@@ -138,11 +138,13 @@ export const useStore = create<AppState & AppActions>()(
             ...(deliveryStatus === 'tradelocked' && !r.tradeLockAt && { tradeLockAt: now }),
           } : r),
         });
-        fetch('/api/streamer/delivery', {
+        return fetch('/api/streamer/delivery', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ historyId: id, tradeLink, deliveryStatus, deliveryAddress }),
-        }).catch(() => {});
+        })
+          .then(r => r.json() as Promise<DeliveryUpdateResult>)
+          .catch(() => null);
       },
 
       triggerMascotSoco: () => {

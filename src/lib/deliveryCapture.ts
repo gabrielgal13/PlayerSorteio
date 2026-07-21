@@ -75,32 +75,42 @@ export function buildDeliveredMessage(prizeName: string): string {
   return `🎁 ${what} já foi feito e está a caminho! Se chegar com algum defeito e você quiser trocar, cadastre-se em www.playerskins.com.br e solicite a troca por lá. 🚀`;
 }
 
+// Resultado do aviso, devolvido pela API pro painel mostrar a confirmação.
+export type DeliveredNotice =
+  | { notified: true; winnerName: string }
+  | { notified: false; reason: 'mutado' | 'nao_twitch' | 'usuario_nao_encontrado' | 'falha_whisper' | 'erro' };
+
 // Dispara o whisper de entrega concluída. Só vale pra ganhador da Twitch — nas
 // outras plataformas não temos canal de DM pelo bot. Nunca lança: a atualização
 // de status não pode falhar por causa da mensagem.
-export async function notifyWinnerDelivered(historyId: string): Promise<void> {
+export async function notifyWinnerDelivered(historyId: string): Promise<DeliveredNotice> {
   try {
     const muteRow = await prisma.appConfig.findUnique({ where: { key: 'bot_messages_muted' } });
-    if (muteRow?.value === 'true') return;
+    if (muteRow?.value === 'true') return { notified: false, reason: 'mutado' };
 
     const entry = await prisma.raffleHistory.findUnique({
       where: { id: historyId },
       select: { winnerName: true, winnerSource: true, prizeName: true },
     });
     // winnerSource null = sorteios antigos, quando só existia Twitch.
-    if (!entry?.winnerName) return;
-    if (entry.winnerSource && entry.winnerSource !== 'twitch') return;
+    if (!entry?.winnerName) return { notified: false, reason: 'erro' };
+    if (entry.winnerSource && entry.winnerSource !== 'twitch') return { notified: false, reason: 'nao_twitch' };
 
     const winnerUserId = await getTwitchUserIdByLogin(entry.winnerName);
     if (!winnerUserId) {
       console.error(`[entregue] usuario Twitch "${entry.winnerName}" nao encontrado (${historyId})`);
-      return;
+      return { notified: false, reason: 'usuario_nao_encontrado' };
     }
 
     const sent = await sendTwitchWhisper(winnerUserId, buildDeliveredMessage(entry.prizeName));
-    if (!sent) console.error(`[entregue] whisper nao enviado para ${entry.winnerName} (${historyId})`);
+    if (!sent) {
+      console.error(`[entregue] whisper nao enviado para ${entry.winnerName} (${historyId})`);
+      return { notified: false, reason: 'falha_whisper' };
+    }
+    return { notified: true, winnerName: entry.winnerName };
   } catch (e) {
     console.error('[entregue] erro ao avisar ganhador:', e);
+    return { notified: false, reason: 'erro' };
   }
 }
 

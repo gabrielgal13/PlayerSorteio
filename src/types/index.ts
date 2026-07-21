@@ -93,6 +93,17 @@ export type DeliveryStatus =
   | 'erro_entrega'
   | 'erro_compra';
 
+// Resposta do PATCH de entrega. `delivered` só vem preenchido quando o status
+// acabou de virar "entregue" — é o resultado do whisper de aviso ao ganhador.
+export interface DeliveryUpdateResult {
+  ok: boolean;
+  tradeLockAt?: number | null;
+  delivered?:
+    | { notified: true; winnerName: string }
+    | { notified: false; reason: 'mutado' | 'nao_twitch' | 'usuario_nao_encontrado' | 'falha_whisper' | 'erro' }
+    | null;
+}
+
 export interface RaffleResult {
   id: string;
   winner: Participant;

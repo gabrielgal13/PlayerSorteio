@@ -595,8 +595,8 @@ export async function PATCH(
       await ensureDeliveryAddressColumn();
       await prisma.$executeRaw`UPDATE "RaffleHistory" SET "deliveryAddress" = ${deliveryAddress || null} WHERE id = ${historyId}`;
     }
-    if (justDelivered) await notifyWinnerDelivered(historyId);
-    return NextResponse.json({ ok: true, tradeLockAt: updated.tradeLockAt?.getTime() ?? null });
+    const delivered = justDelivered ? await notifyWinnerDelivered(historyId) : null;
+    return NextResponse.json({ ok: true, tradeLockAt: updated.tradeLockAt?.getTime() ?? null, delivered });
   }
 
   return NextResponse.json({ error: 'Not found' }, { status: 404 });

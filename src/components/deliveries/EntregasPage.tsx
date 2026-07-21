@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import EntregasHistorico from './EntregasHistorico';
 import { getDeliveryMode } from '@/lib/prizeDelivery';
-import type { DeliveryStatus, RaffleResult } from '@/types';
+import type { DeliveryStatus, DeliveryUpdateResult, RaffleResult } from '@/types';
 
 const ERROR_STATUSES: DeliveryStatus[] = ['erro_tradelink', 'erro_entrega', 'erro_compra'];
 const STEAM_REGEX = /https:\/\/steamcommunity\.com\/tradeoffer\/new\/\?partner=\d+&token=[\w-]+/;
@@ -741,11 +741,145 @@ function DeleteConfirmModal({ item, onConfirm, onClose }: {
   );
 }
 
+/* ── Confirmação de "ENTREGUE" (dispara whisper pro ganhador) ───────── */
+function DeliveredConfirmModal({ item, busy, onConfirm, onClose }: {
+  item: RaffleResult;
+  busy: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose, busy]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.75)' }}
+      onClick={e => { if (e.target === e.currentTarget && !busy) onClose(); }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        className="rounded-2xl p-6 mx-4 w-full"
+        style={{ maxWidth: 480, background: '#0d1117', border: '1px solid rgba(0,255,163,0.3)', boxShadow: '0 24px 80px rgba(0,0,0,0.7)' }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(0,255,163,0.1)', border: '1px solid rgba(0,255,163,0.25)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#00FFA3">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+          </div>
+          <h2 className="font-orbitron font-bold tracking-widest text-white" style={{ fontSize: 13 }}>
+            MARCAR COMO ENTREGUE
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-3 mb-4 p-3 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          {item.prize.imageUrl && (
+            <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <img src={item.prize.imageUrl} alt="" className="w-full h-full object-contain" />
+            </div>
+          )}
+          <div>
+            <p className="font-rajdhani font-bold text-white" style={{ fontSize: 13 }}>{item.prize.name}</p>
+            <p className="font-rajdhani" style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+              Ganhador: <span style={{ color: 'rgba(255,255,255,0.7)' }}>{item.winner.name}</span>
+            </p>
+          </div>
+        </div>
+
+        <p className="font-rajdhani mb-1" style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
+          Ao confirmar, o bot manda um <strong>whisper na Twitch</strong> para <strong>{item.winner.name}</strong> avisando
+          que o pedido foi feito e explicando que troca por defeito é solicitada com cadastro no site.
+        </p>
+        <p className="font-rajdhani" style={{ fontSize: 11, color: 'rgba(255,209,102,0.8)' }}>
+          A mensagem não pode ser desfeita depois de enviada.
+        </p>
+
+        <div className="flex gap-2 justify-end mt-5">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="px-4 py-2 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-125 disabled:opacity-50"
+            style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+          >
+            CANCELAR
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="px-4 py-2 rounded-lg font-orbitron font-bold tracking-wider transition-all hover:brightness-110 disabled:opacity-60"
+            style={{ fontSize: 10, color: '#000', background: '#00FFA3', border: 'none' }}
+          >
+            {busy ? 'ENVIANDO...' : 'CONFIRMAR E AVISAR'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ── Toast de retorno do aviso ──────────────────────────────────────── */
+const NOTICE_REASONS: Record<string, string> = {
+  mutado: 'as mensagens do bot estão silenciadas no admin',
+  nao_twitch: 'o ganhador não veio da Twitch',
+  usuario_nao_encontrado: 'o usuário não foi encontrado na Twitch',
+  falha_whisper: 'a Twitch recusou o envio do whisper',
+  erro: 'erro inesperado ao enviar',
+};
+
+function DeliveredToast({ toast, onClose }: {
+  toast: { ok: boolean; text: string };
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 8_000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  const c = toast.ok ? '#00FFA3' : '#FFD166';
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 16 }}
+      className="fixed z-50 flex items-start gap-3 px-4 py-3 rounded-xl"
+      style={{
+        bottom: 24, right: 24, maxWidth: 420,
+        background: '#0d1117',
+        border: `1px solid ${hexA(c, 0.4)}`,
+        boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 20px ${hexA(c, 0.12)}`,
+      }}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill={c} className="flex-shrink-0 mt-0.5">
+        {toast.ok
+          ? <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+          : <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>}
+      </svg>
+      <p className="font-rajdhani" style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', lineHeight: 1.45 }}>
+        {toast.text}
+      </p>
+      <button onClick={onClose} className="flex-shrink-0 p-0.5 rounded transition-all hover:bg-white/10" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>
+      </button>
+    </motion.div>
+  );
+}
+
 /* ── Main component ─────────────────────────────────────────────────── */
 interface EntregasPageProps {
   historyOverride?: RaffleResult[];
   onHistoryRefresh?: () => Promise<void>;
-  onUpdateDelivery?: (id: string, tradeLink?: string, deliveryStatus?: DeliveryStatus, deliveryAddress?: string) => void;
+  onUpdateDelivery?: (id: string, tradeLink?: string, deliveryStatus?: DeliveryStatus, deliveryAddress?: string) => void | Promise<DeliveryUpdateResult | null>;
   /** Só passado no painel admin — mostra o botão de excluir item na tabela. */
   onDeleteItem?: (id: string) => void;
 }
@@ -762,6 +896,9 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
   const [tradeLinkModalId, setTradeLinkModalId] = useState<string | null>(null);
   const [addressModalId, setAddressModalId] = useState<string | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
+  const [deliveredModalId, setDeliveredModalId] = useState<string | null>(null);
+  const [notifying, setNotifying] = useState(false);
+  const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
 
   const myHistory = (historyOverride ?? history.filter(r => r.streamer === currentUser?.username))
     .sort((a, b) => b.timestamp - a.timestamp);
@@ -891,6 +1028,26 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
     setAddressModalId(null);
   };
 
+  const deliveredModalItem = deliveredModalId ? dayHistory.find(r => r.id === deliveredModalId) : null;
+
+  const handleDeliveredConfirm = async () => {
+    if (!deliveredModalId || !deliveredModalItem) return;
+    const winnerName = deliveredModalItem.winner.name;
+    setNotifying(true);
+    const res = await Promise.resolve(handleUpdateDelivery(deliveredModalId, undefined, 'entregue'));
+    setNotifying(false);
+    setDeliveredModalId(null);
+
+    const notice = res && typeof res === 'object' ? res.delivered : undefined;
+    if (notice?.notified) {
+      setToast({ ok: true, text: `Status salvo. ${winnerName} foi avisado por whisper na Twitch.` });
+    } else if (notice) {
+      setToast({ ok: false, text: `Status salvo, mas o aviso não foi enviado: ${NOTICE_REASONS[notice.reason] ?? notice.reason}.` });
+    } else {
+      setToast({ ok: false, text: 'Status salvo, mas não deu pra confirmar o envio do aviso.' });
+    }
+  };
+
   const deleteModalItem = deleteModalId ? dayHistory.find(r => r.id === deleteModalId) : null;
 
   const handleDeleteConfirm = () => {
@@ -932,6 +1089,17 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
             onConfirm={handleDeleteConfirm}
             onClose={() => setDeleteModalId(null)}
           />
+        )}
+        {deliveredModalItem && (
+          <DeliveredConfirmModal
+            item={deliveredModalItem}
+            busy={notifying}
+            onConfirm={handleDeliveredConfirm}
+            onClose={() => setDeliveredModalId(null)}
+          />
+        )}
+        {toast && (
+          <DeliveredToast toast={toast} onClose={() => setToast(null)} />
         )}
       </AnimatePresence>
 
@@ -1237,7 +1405,12 @@ export default function EntregasPage({ historyOverride, onHistoryRefresh, onUpda
                                 </span>
                                 <select
                                   value={status}
-                                  onChange={e => handleUpdateDelivery(r.id, undefined, e.target.value as DeliveryStatus)}
+                                  onChange={e => {
+                                    const next = e.target.value as DeliveryStatus;
+                                    // "entregue" dispara whisper pro ganhador — passa pela confirmação.
+                                    if (next === 'entregue') { setDeliveredModalId(r.id); return; }
+                                    handleUpdateDelivery(r.id, undefined, next);
+                                  }}
                                   className="font-orbitron font-bold w-full pl-7 pr-6 py-2 rounded-lg appearance-none outline-none"
                                   style={{
                                     fontSize: 10,

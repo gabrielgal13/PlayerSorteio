@@ -7,7 +7,7 @@ import AdminDeliveriesDashboard from '@/components/admin/AdminDeliveriesDashboar
 import MarketingSection from '@/components/admin/MarketingSection';
 import AffiliateProposals from '@/components/admin/AffiliateProposals';
 import SalesDashboard from '@/components/admin/SalesDashboard';
-import type { RaffleResult, DeliveryStatus } from '@/types';
+import type { RaffleResult, DeliveryStatus, DeliveryUpdateResult } from '@/types';
 import { INFINITE_QUANTITY } from '@/types';
 import { fileToResizedDataUrl } from '@/lib/imageResize';
 
@@ -674,11 +674,13 @@ export default function AdminPanel() {
       ...(deliveryStatus !== undefined && { deliveryStatus }),
       ...(deliveryStatus === 'tradelocked' && !r.tradeLockAt && { tradeLockAt: now }),
     } : r));
-    fetch('/api/streamer/delivery', {
+    return fetch('/api/streamer/delivery', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ historyId: id, tradeLink, deliveryStatus, deliveryAddress }),
-    }).catch(() => {});
+    })
+      .then(r => r.json() as Promise<DeliveryUpdateResult>)
+      .catch(() => null);
   }, []);
 
   const handleEntregasDelete = useCallback((id: string) => {

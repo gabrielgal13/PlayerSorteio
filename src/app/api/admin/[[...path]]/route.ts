@@ -835,8 +835,8 @@ export async function PATCH(
       await ensureDeliveryAddressColumn();
       await prisma.$executeRaw`UPDATE "RaffleHistory" SET "deliveryAddress" = ${deliveryAddress || null} WHERE id = ${seg1}`;
     }
-    if (justDelivered) await notifyWinnerDelivered(seg1);
-    return NextResponse.json({ ok: true, tradeLockAt: updated?.tradeLockAt?.getTime() ?? null });
+    const delivered = justDelivered ? await notifyWinnerDelivered(seg1) : null;
+    return NextResponse.json({ ok: true, tradeLockAt: updated?.tradeLockAt?.getTime() ?? null, delivered });
   }
 
   // PATCH /api/admin/streamers/[username]

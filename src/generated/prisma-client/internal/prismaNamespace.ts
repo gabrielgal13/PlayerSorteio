@@ -1291,6 +1291,7 @@ export const StreamerScalarFieldEnum = {
   claimCommand: 'claimCommand',
   validationTimeout: 'validationTimeout',
   isAffiliate: 'isAffiliate',
+  testProfile: 'testProfile',
   pscBalance: 'pscBalance',
   audioEnabled: 'audioEnabled',
   excelImportEnabled: 'excelImportEnabled',

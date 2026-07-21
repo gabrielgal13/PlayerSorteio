@@ -11,7 +11,7 @@ import type { RaffleResult, DeliveryStatus, DeliveryUpdateResult } from '@/types
 import { INFINITE_QUANTITY } from '@/types';
 import { fileToResizedDataUrl } from '@/lib/imageResize';
 
-interface StreamerRow { username: string; displayName: string | null; pscBalance: number; isAffiliate: boolean; }
+interface StreamerRow { username: string; displayName: string | null; pscBalance: number; isAffiliate: boolean; testProfile?: boolean; }
 interface AdminProduct { id: string; name: string; description: string | null; imageUrl: string | null; quantity: number; pscValue: number | null; skipPsc: boolean; pinned: boolean; }
 interface FixedProductTemplate { id: string; name: string; description: string | null; imageUrl: string | null; pscValue: number | null; skipPsc: boolean; locked: boolean; }
 interface MarketingImageOption { id: number; imageData: string; label: string | null; }
@@ -876,6 +876,11 @@ export default function AdminPanel() {
     setEditData(d => d ? { ...d, isAffiliate: !d.isAffiliate } : d);
   };
 
+  const handleToggleTestProfile = () => {
+    if (!editData) return;
+    setEditData(d => d ? { ...d, testProfile: !d.testProfile } : d);
+  };
+
   const handleSaveAll = async () => {
     if (!editData) return;
     const pscValue = Number(editPscInput);
@@ -888,6 +893,7 @@ export default function AdminPanel() {
     try {
       const body: Record<string, unknown> = {
         isAffiliate: editData.isAffiliate,
+        testProfile: editData.testProfile ?? false,
         pscBalance: pscValue,
         themeColor: editProfile.themeColor,
         twitchChannel: editProfile.twitchChannel || null,
@@ -923,7 +929,7 @@ export default function AdminPanel() {
         setEditData(data as any);
         setEditPscInput(String(data.pscBalance));
         setStreamers(prev => prev.map(s => s.username === editData.username
-          ? { ...s, displayName: data.displayName as string | null, pscBalance: data.pscBalance as number, isAffiliate: data.isAffiliate as boolean }
+          ? { ...s, displayName: data.displayName as string | null, pscBalance: data.pscBalance as number, isAffiliate: data.isAffiliate as boolean, testProfile: data.testProfile as boolean }
           : s
         ));
         setEditProfile(p => ({
@@ -2162,7 +2168,7 @@ export default function AdminPanel() {
                       <option value="" style={{ background: '#080d24' }}>Selecionar streamer...</option>
                       {streamers.map(s => (
                         <option key={s.username} value={s.username} style={{ background: '#080d24' }}>
-                          {s.displayName || s.username}
+                          {s.displayName || s.username}{s.testProfile ? '  [TESTE]' : ''}
                         </option>
                       ))}
                     </select>
@@ -2621,6 +2627,63 @@ export default function AdminPanel() {
                             left: editData?.isAffiliate ? 'calc(100% - 24px)' : '2px',
                             background: editData?.isAffiliate ? '#4ADE80' : 'rgba(255,255,255,0.3)',
                             boxShadow: editData?.isAffiliate ? '0 0 8px #4ADE8066' : 'none',
+                          }}
+                        />
+                      </button>
+                    </div>
+
+                    {/* ── PERFIL TESTE TOGGLE ── */}
+                    <div
+                      className="rounded-2xl p-6 flex items-center justify-between gap-6"
+                      style={{
+                        background: editData?.testProfile ? 'rgba(255,180,0,0.06)' : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${editData?.testProfile ? 'rgba(255,180,0,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                      }}
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                          PERFIL TESTE
+                        </span>
+                        <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                          O streamer usa o sistema normalmente, mas os sorteios dele somem da aba Entregas do admin e dos números oficiais
+                        </span>
+                        {editData && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{
+                                background: editData.testProfile ? '#FFB300' : 'rgba(255,255,255,0.2)',
+                                boxShadow: editData.testProfile ? '0 0 6px #FFB30099' : 'none',
+                              }}
+                            />
+                            <span className="font-orbitron text-xs font-bold tracking-widest"
+                              style={{ color: editData.testProfile ? 'rgba(255,179,0,0.9)' : 'rgba(255,255,255,0.25)' }}>
+                              {editData.testProfile ? 'PERFIL DE TESTE — FORA DOS RELATÓRIOS' : 'PERFIL NORMAL'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleToggleTestProfile}
+                        disabled={!editData}
+                        className="relative flex-shrink-0 rounded-full transition-all"
+                        style={{
+                          width: 56,
+                          height: 30,
+                          background: editData?.testProfile ? 'rgba(255,180,0,0.3)' : 'rgba(255,255,255,0.08)',
+                          border: `2px solid ${editData?.testProfile ? 'rgba(255,180,0,0.6)' : 'rgba(255,255,255,0.15)'}`,
+                          cursor: !editData ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        <div
+                          className="absolute top-1/2 rounded-full transition-all"
+                          style={{
+                            width: 20,
+                            height: 20,
+                            transform: 'translateY(-50%)',
+                            left: editData?.testProfile ? 'calc(100% - 24px)' : '2px',
+                            background: editData?.testProfile ? '#FFB300' : 'rgba(255,255,255,0.3)',
+                            boxShadow: editData?.testProfile ? '0 0 8px #FFB30066' : 'none',
                           }}
                         />
                       </button>

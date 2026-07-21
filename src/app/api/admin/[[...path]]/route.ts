@@ -150,7 +150,7 @@ export async function GET(
   if (seg0 === 'streamers' && !seg1) {
     const streamers = await prisma.streamer.findMany({
       where: { isAdmin: false },
-      select: { username: true, displayName: true, pscBalance: true, isAffiliate: true },
+      select: { username: true, displayName: true, pscBalance: true, isAffiliate: true, testProfile: true },
       orderBy: { username: 'asc' },
     });
     return NextResponse.json(streamers);
@@ -205,7 +205,7 @@ export async function GET(
     const streamer = await prisma.streamer.findUnique({
       where: { username: seg1 },
       select: {
-        username: true, displayName: true, pscBalance: true, isAffiliate: true,
+        username: true, displayName: true, pscBalance: true, isAffiliate: true, testProfile: true,
         themeColor: true, twitchChannel: true, kickChannel: true, youtubeChannel: true,
         forcePasswordChange: true, chatWarsSprite: true, chatWarsBossSprite: true, twitchAffiliateEnabled: true,
       },
@@ -221,11 +221,16 @@ export async function GET(
     const pendingStatuses = ['novo', 'aguardando_tradelink', 'item_comprado', 'aguardando_endereco', 'endereco_recebido'];
     const notDeliveredStatuses = ['novo', 'aguardando_tradelink', 'item_comprado', 'tradelocked', 'aguardando_endereco', 'endereco_recebido', 'erro_tradelink', 'erro_entrega', 'erro_compra'];
 
-    const where =
-      filter === 'pending'     ? { deliveryStatus: { in: pendingStatuses } }
-      : filter === 'error'     ? { deliveryStatus: { in: errorStatuses } }
-      : filter === 'undelivered' ? { deliveryStatus: { in: notDeliveredStatuses } }
-      : {};
+    // Perfis de teste ficam fora da visão oficial — some da lista e dos contadores.
+    const realStreamer = { streamer: { testProfile: false } };
+
+    const where = {
+      ...realStreamer,
+      ...(filter === 'pending'       ? { deliveryStatus: { in: pendingStatuses } }
+        : filter === 'error'         ? { deliveryStatus: { in: errorStatuses } }
+        : filter === 'undelivered'   ? { deliveryStatus: { in: notDeliveredStatuses } }
+        : {}),
+    };
 
     const [rows, totalPending, totalError, totalUndelivered] = await Promise.all([
       prisma.raffleHistory.findMany({
@@ -234,9 +239,9 @@ export async function GET(
         orderBy: { timestamp: 'desc' },
         take: 500,
       }),
-      prisma.raffleHistory.count({ where: { deliveryStatus: { in: pendingStatuses } } }),
-      prisma.raffleHistory.count({ where: { deliveryStatus: { in: errorStatuses } } }),
-      prisma.raffleHistory.count({ where: { deliveryStatus: { in: notDeliveredStatuses } } }),
+      prisma.raffleHistory.count({ where: { ...realStreamer, deliveryStatus: { in: pendingStatuses } } }),
+      prisma.raffleHistory.count({ where: { ...realStreamer, deliveryStatus: { in: errorStatuses } } }),
+      prisma.raffleHistory.count({ where: { ...realStreamer, deliveryStatus: { in: notDeliveredStatuses } } }),
     ]);
 
     await ensureDeliveryAddressColumn();
@@ -850,13 +855,14 @@ export async function PATCH(
       });
       if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
       const updateData: {
-        isAffiliate?: boolean; pscBalance?: number; displayName?: string | null; nome?: string | null;
+        isAffiliate?: boolean; testProfile?: boolean; pscBalance?: number; displayName?: string | null; nome?: string | null;
         passwordHash?: string; forcePasswordChange?: boolean; themeColor?: string;
         twitchChannel?: string | null; kickChannel?: string | null; youtubeChannel?: string | null;
         chatWarsSprite?: string | null; chatWarsBossSprite?: string | null; twitchAffiliateEnabled?: boolean;
         twitchUserId?: string | null; twitchUserAccessToken?: string | null; twitchUserRefreshToken?: string | null;
       } = {};
       if (typeof body.isAffiliate === 'boolean') updateData.isAffiliate = body.isAffiliate;
+      if (typeof body.testProfile === 'boolean') updateData.testProfile = body.testProfile;
       if (typeof body.pscBalance === 'number' && body.pscBalance >= 0) {
         updateData.pscBalance = body.pscBalance;
         const delta = body.pscBalance - streamer.pscBalance;
@@ -900,7 +906,7 @@ export async function PATCH(
       const updated = await prisma.streamer.update({
         where: { username },
         data: updateData,
-        select: { username: true, displayName: true, nome: true, pscBalance: true, isAffiliate: true, themeColor: true, twitchChannel: true, kickChannel: true, youtubeChannel: true, forcePasswordChange: true, twitchAffiliateEnabled: true },
+        select: { username: true, displayName: true, nome: true, pscBalance: true, isAffiliate: true, testProfile: true, themeColor: true, twitchChannel: true, kickChannel: true, youtubeChannel: true, forcePasswordChange: true, twitchAffiliateEnabled: true },
       });
       return NextResponse.json(updated);
     } catch (e) {

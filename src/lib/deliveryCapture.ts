@@ -75,6 +75,12 @@ export function buildDeliveredMessage(prizeName: string): string {
   return `🎁 ${what} já foi feito e está a caminho! Se chegar com algum defeito e você quiser trocar, cadastre-se em www.playerskins.com.br e solicite a troca por lá. 🚀`;
 }
 
+// Aviso das skins compradas na Waxpeer — aqui o nome vai inteiro, sem limpar
+// parênteses: o desgaste ("(Minimal Wear)") faz parte do nome da skin.
+export function buildSkinDeliveredMessage(prizeName: string): string {
+  return `🔫 Sua skin ${prizeName.trim()} chegou! Já foi enviada pra sua conta Steam — confere o inventário. GG! 🎉`;
+}
+
 // Resultado do aviso, devolvido pela API pro painel mostrar a confirmação.
 export type DeliveredNotice =
   | { notified: true; winnerName: string }
@@ -90,7 +96,7 @@ export async function notifyWinnerDelivered(historyId: string): Promise<Delivere
 
     const entry = await prisma.raffleHistory.findUnique({
       where: { id: historyId },
-      select: { winnerName: true, winnerSource: true, prizeName: true },
+      select: { winnerName: true, winnerSource: true, prizeName: true, marketplaceItemId: true },
     });
     // winnerSource null = sorteios antigos, quando só existia Twitch.
     if (!entry?.winnerName) return { notified: false, reason: 'erro' };
@@ -102,7 +108,12 @@ export async function notifyWinnerDelivered(historyId: string): Promise<Delivere
       return { notified: false, reason: 'usuario_nao_encontrado' };
     }
 
-    const sent = await sendTwitchWhisper(winnerUserId, buildDeliveredMessage(entry.prizeName));
+    // marketplaceItemId só existe em compra da Waxpeer — aí o prêmio é skin, e
+    // o texto de troca por defeito (que é de produto físico) não faz sentido.
+    const message = entry.marketplaceItemId
+      ? buildSkinDeliveredMessage(entry.prizeName)
+      : buildDeliveredMessage(entry.prizeName);
+    const sent = await sendTwitchWhisper(winnerUserId, message);
     if (!sent) {
       console.error(`[entregue] whisper nao enviado para ${entry.winnerName} (${historyId})`);
       return { notified: false, reason: 'falha_whisper' };

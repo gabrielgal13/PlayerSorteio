@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { notifyWinnerDelivered } from '@/lib/deliveryCapture';
 import {
   checkTradesByProjectId,
   checkTradesById,
@@ -104,6 +105,11 @@ export async function GET(req: NextRequest) {
         data: { deliveryStatus: 'entregue', marketplaceCheckedAt: now },
       });
       console.log(`[poll-waxpeer] ${entry.id} (${entry.winnerName} | ${entry.prizeName}) → entregue`);
+      // Avisa o ganhador por whisper que a skin caiu no inventário dele.
+      const notice = await notifyWinnerDelivered(entry.id);
+      if (!notice.notified) {
+        console.log(`[poll-waxpeer] ${entry.id} aviso nao enviado: ${notice.reason}`);
+      }
       delivered++;
       continue;
     }

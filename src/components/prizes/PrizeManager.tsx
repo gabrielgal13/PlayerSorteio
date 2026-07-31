@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useCallback, forwardRef, useImperativeHandle, useEffect } from 'react';
+import { useState, useRef, useCallback, useMemo, forwardRef, useImperativeHandle, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
@@ -128,6 +128,8 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
 
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const suggestionItemsRef = useRef<HTMLDivElement>(null);
+  // true só no tick em que a seleção mudou por seta do teclado (ver efeito abaixo).
+  const keyboardNavRef = useRef(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const inputWrapperRef = useRef<HTMLDivElement>(null);
   const filterRowRef = useRef<HTMLDivElement>(null);
@@ -539,21 +541,30 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     } catch {}
   }, []);
 
+  // Mesma ordem que a lista renderiza — o índice de `activeSuggestion` aponta
+  // pra cá, então teclado e mouse selecionam sempre o mesmo item.
+  const sortedSuggestions = useMemo(
+    () => [...suggestions].sort((a, b) => sortBy === 'price' ? a.price - b.price : a.name.localeCompare(b.name)),
+    [suggestions, sortBy],
+  );
+
   const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (suggestions.length === 0) {
+    if (sortedSuggestions.length === 0) {
       if (e.key === 'Enter') handleSave();
       return;
     }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveSuggestion(i => Math.min(i + 1, suggestions.length - 1));
+      keyboardNavRef.current = true;
+      setActiveSuggestion(i => Math.min(i + 1, sortedSuggestions.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
+      keyboardNavRef.current = true;
       setActiveSuggestion(i => Math.max(i - 1, -1));
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (activeSuggestion >= 0) {
-        applySuggestion(suggestions[activeSuggestion]);
+        applySuggestion(sortedSuggestions[activeSuggestion]);
       } else {
         handleSave();
       }
@@ -563,11 +574,18 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
     }
   };
 
+  // Só acompanha a seleção quando ela veio das setas. Com o mouse, rolar a roda
+  // move as linhas sob o cursor e dispara onMouseEnter — se isso chamasse
+  // scrollIntoView, a lista brigaria com o scroll do usuário e pularia sozinha.
   useEffect(() => {
-    if (activeSuggestion >= 0 && suggestionItemsRef.current) {
-      const el = suggestionItemsRef.current.children[activeSuggestion] as HTMLElement;
-      el?.scrollIntoView({ block: 'nearest' });
-    }
+    if (!keyboardNavRef.current) return;
+    keyboardNavRef.current = false;
+    if (activeSuggestion < 0 || !suggestionItemsRef.current) return;
+    // Busca pelo índice próprio: o container também tem os produtos exclusivos
+    // e o indicador de carregando antes das sugestões, então `children[i]` erra.
+    suggestionItemsRef.current
+      .querySelector<HTMLElement>(`[data-suggestion-index="${activeSuggestion}"]`)
+      ?.scrollIntoView({ block: 'nearest' });
   }, [activeSuggestion]);
 
 
@@ -1552,13 +1570,13 @@ const PrizeManager = forwardRef<PrizeManagerHandle, object>(function PrizeManage
                               <span className="font-rajdhani text-white/30 text-sm tracking-widest">Buscando no Waxpeer...</span>
                             </div>
                           )}
-                          {[...suggestions]
-                            .sort((a, b) => sortBy === 'price' ? a.price - b.price : a.name.localeCompare(b.name))
+                          {sortedSuggestions
                             .map((item, idx) => {
                               const { weapon, skin, wearAbbr } = parseItemName(item.name);
                               return (
                                 <div
                                   key={item.name}
+                                  data-suggestion-index={idx}
                                   onMouseEnter={e => {
                                     setActiveSuggestion(idx);
                                     e.currentTarget.style.background = 'rgba(0,229,255,0.05)';

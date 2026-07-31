@@ -43,7 +43,7 @@ const CHAOS_DEFS: ChaosDef[] = [
 
 export default function PoolWarsGame({ onBack }: Props) {
   const {
-    chatMessages, chatRegistrationActive, setChatRegistrationRequested,
+    chatMessages, setChatRegistrationRequested, setChatRegistrationStopRequested,
     setParticipants, setRaffleStage, setActiveTab, currentUser,
   } = useStore();
   const spriteUrl = currentUser?.chatWarsSprite || '/spritepadrao.png';
@@ -78,7 +78,11 @@ export default function PoolWarsGame({ onBack }: Props) {
 
   useEffect(() => {
     poolWarsSession.init();
-    if (!chatRegistrationActive) setChatRegistrationRequested(true);
+    // Liga a escuta do chat pro jogo. Se fomos nós que abrimos, fechamos ao sair —
+    // assim voltar pro sorteio não deixa "BUSCANDO NO CHAT" ligado sozinho.
+    const wasActive = useStore.getState().chatRegistrationActive;
+    if (!wasActive) setChatRegistrationRequested(true);
+    return () => { if (!wasActive) setChatRegistrationStopRequested(true); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -186,8 +190,10 @@ export default function PoolWarsGame({ onBack }: Props) {
       id: `pw_${r.id}_${i}`, number: i + 1, name: r.name, source: r.source,
       tickets: Math.max(1, r.knockouts + 1),
     }));
-    setParticipants(parts); setRaffleStage(1); setActiveTab('raffle');
-  }, [setParticipants, setRaffleStage, setActiveTab]);
+    setParticipants(parts);
+    setChatRegistrationStopRequested(true); // fecha a lista: só quem jogou entra
+    setRaffleStage(1); setActiveTab('raffle');
+  }, [setParticipants, setChatRegistrationStopRequested, setRaffleStage, setActiveTab]);
 
   const handleReset = useCallback(() => {
     poolWarsSession.reset();

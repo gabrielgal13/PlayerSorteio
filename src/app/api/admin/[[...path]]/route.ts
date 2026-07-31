@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
 import { ensureDeliveryAddressColumn, notifyWinnerDelivered } from '@/lib/deliveryCapture';
+import { signToken, sessionCookieOptions } from '@/lib/auth';
+import { buildSessionProfile } from '@/lib/sessionProfile';
 
 const ADMIN_LIST_NAME = '__admin_products__';
 
@@ -381,12 +383,44 @@ export async function GET(
 // POST /api/admin/streamers
 // POST /api/admin/streamers/[username]/products
 // POST /api/admin/marketing
+// POST /api/admin/test-mode
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ path?: string[] }> },
 ) {
   const { path } = await params;
   const [seg0, seg1, seg2] = path ?? [];
+
+  // POST /api/admin/test-mode  { username }
+  // Troca a sessão do admin por uma sessão do streamer marcada como testMode.
+  // A partir daí o middleware recusa toda escrita — o admin vê a conta exatamente
+  // como o streamer configurou, mas nada do que fizer chega no banco.
+  if (seg0 === 'test-mode' && !seg1) {
+    const adminUsername = req.headers.get('x-session-username');
+    if (!adminUsername) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+
+    const { username } = await req.json() as { username?: string };
+    if (!username?.trim())
+      return NextResponse.json({ error: 'Informe o streamer.' }, { status: 400 });
+
+    const streamer = await prisma.streamer.findFirst({
+      where: { username: { equals: username.trim(), mode: 'insensitive' } },
+    });
+    if (!streamer)
+      return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
+    if (streamer.isAdmin)
+      return NextResponse.json({ error: 'Não dá pra testar uma conta de admin.' }, { status: 400 });
+
+    const token = await signToken({
+      username: streamer.username,
+      isAdmin: false,
+      testMode: true,
+      adminUsername,
+    });
+    const res = NextResponse.json({ ...buildSessionProfile(streamer), testMode: true });
+    res.cookies.set(sessionCookieOptions(token));
+    return res;
+  }
 
   // POST /api/admin/affiliate-proposals
   if (seg0 === 'affiliate-proposals') {

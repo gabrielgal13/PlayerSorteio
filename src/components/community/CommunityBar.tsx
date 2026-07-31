@@ -325,7 +325,7 @@ export default function CommunityBar() {
                 key={slug}
                 src={`/ranks/${slug}.png`}
                 alt={rankName}
-                className="w-full h-full object-contain p-1.5"
+                className="block w-full h-full object-cover"
                 onError={() => setFailedSlug(slug)}
               />
             )}

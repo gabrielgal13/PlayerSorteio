@@ -27,7 +27,7 @@ interface EventDef {
 }
 const EVENT_DEFS: EventDef[] = [
   { key: 'xpRain', label: 'CHUVA DE XP', icon: '🌧️', color: '#FFD24A', fn: triggerXpRain,
-    desc: 'Por 30s todo mundo no mapa ganha 5x pontos. Perfeito pra quem chegou agora crescer rápido.' },
+    desc: 'Por 30s quem mandar mensagem no chat ganha 5x pontos. Perfeito pra quem chegou agora crescer rápido.' },
   { key: 'giantHunt', label: 'CAÇA AO GIGANTE', icon: '🎯', color: '#FF3030', fn: triggerGiantHunt,
     desc: 'Marca o maior jogador com uma coroa. Todos correm pra encostar e roubar a massa dele.' },
   { key: 'smallRevolt', label: 'REVOLTA DOS PEQUENOS', icon: '⚡', color: '#53FC1C', fn: triggerSmallRevolt,
@@ -42,7 +42,7 @@ const EVENT_DEFS: EventDef[] = [
 
 export default function ChatWarsGame({ onBack }: Props) {
   const {
-    chatMessages, chatRegistrationActive, setChatRegistrationRequested,
+    chatMessages, setChatRegistrationRequested, setChatRegistrationStopRequested,
     setParticipants, setRaffleStage, setActiveTab, currentUser,
   } = useStore();
   // sprite custom do streamer, ou o padrão da pasta public
@@ -85,7 +85,11 @@ export default function ChatWarsGame({ onBack }: Props) {
   /* ── boot the persistent session + keep the chat connection alive ────────── */
   useEffect(() => {
     chatWarsSession.init();
-    if (!chatRegistrationActive) setChatRegistrationRequested(true);
+    // Liga a escuta do chat pro jogo. Se fomos nós que abrimos, fechamos ao sair —
+    // assim voltar pro sorteio não deixa "BUSCANDO NO CHAT" ligado sozinho.
+    const wasActive = useStore.getState().chatRegistrationActive;
+    if (!wasActive) setChatRegistrationRequested(true);
+    return () => { if (!wasActive) setChatRegistrationStopRequested(true); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -239,21 +243,24 @@ export default function ChatWarsGame({ onBack }: Props) {
 
   const handleContinue = useCallback(() => { chatWarsSession.continueGame(); setFinished(false); setRunning(true); }, []);
 
-  /* ── Sorteio: jogadores viram participantes com tickets (1 a cada 10 pts) ──── */
+  /* ── Sorteio: quem jogou vira participante ────────────────────────────────── */
+  /*    weighted=true  → tickets proporcionais aos pontos (1 a cada 10 pts)     */
+  /*    weighted=false → 1 ticket pra todo mundo, pontos não contam             */
   /*    Não para o jogo — a sessão continua rodando em segundo plano. */
-  const handleSorteio = useCallback(() => {
+  const handleSorteio = useCallback((weighted: boolean) => {
     const rows = leaderboard(chatWarsSession.world, 9999);
     const parts = rows.map((r, i) => ({
       id: `cw_${r.id}_${i}`,
       number: i + 1,
       name: r.name,
       source: r.source,
-      tickets: Math.max(1, Math.floor(r.mass / 10)),
+      ...(weighted && { tickets: Math.max(1, Math.floor(r.mass / 10)) }),
     }));
     setParticipants(parts);
+    setChatRegistrationStopRequested(true); // fecha a lista: só quem jogou entra
     setRaffleStage(1);
     setActiveTab('raffle');
-  }, [setParticipants, setRaffleStage, setActiveTab]);
+  }, [setParticipants, setChatRegistrationStopRequested, setRaffleStage, setActiveTab]);
 
   const handleReset = useCallback(() => {
     chatWarsSession.reset();
@@ -419,20 +426,6 @@ export default function ChatWarsGame({ onBack }: Props) {
         {/* ── CENTER: ARENA ── */}
         <div ref={wrapRef} className="relative flex-1 min-w-0 min-h-0 overflow-hidden">
           <canvas ref={canvasRef} className="block" />
-
-          {/* online badge */}
-          <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full pointer-events-none"
-            style={{
-              background: 'linear-gradient(90deg, rgba(124,58,237,0.55), rgba(56,90,230,0.45))',
-              border: '1px solid rgba(180,150,255,0.45)',
-              boxShadow: '0 0 18px rgba(124,58,237,0.35)',
-            }}>
-            <motion.span className="w-2 h-2 rounded-full" style={{ background: '#7CFFB2', boxShadow: '0 0 8px #7CFFB2' }}
-              animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.1, repeat: Infinity }} />
-            <span className="font-orbitron font-bold text-[11px] tracking-widest text-white">
-              {pcount} {pcount === 1 ? 'JOGADOR ONLINE' : 'JOGADORES ONLINE'}
-            </span>
-          </div>
 
           {/* arena title */}
           <div className="absolute top-3 left-1/2 -translate-x-1/2 pointer-events-none">
@@ -811,11 +804,12 @@ function HowToPlay({ open, onClose, onPlay }: { open: boolean; onClose: () => vo
   const rules: [string, string][] = [
     ['💬', 'Cada mensagem no chat dá pontos pra sua bola. Quanto mais (e melhor) você fala, maior ela fica.'],
     ['🐢', 'Bola grande é mais forte, mas mais lenta. Bola pequena é rápida e foge fácil.'],
+    ['💥', 'Quando duas bolas se esbarram, a maior morde a menor e rouba 1 de vida — uma vez por batida, aí quicam e se separam.'],
     ['🚫', 'Spam, flood e mensagens repetidas valem quase nada. Mensagens muito curtas valem menos.'],
     ['🔥', 'Combos: 5 e 20 mensagens seguidas dão bônus extra de pontos.'],
-    ['⚡', 'Roubar massa dos outros só rola nos PODERES do streamer (Caça ao Gigante, Revolta dos Pequenos, Meteoro e Live Boss).'],
+    ['⚡', 'Roubo em massa (dreno rápido) só rola nos PODERES do streamer (Caça ao Gigante, Revolta dos Pequenos, Meteoro e Live Boss).'],
     ['💀', 'Live Boss: o chat inteiro precisa derrotar o chefe junto, encostando nele.'],
-    ['👻', 'Perdeu tudo? Vira fantasma — volte mandando mensagem no chat.'],
+    ['🛡️', 'Sua bola nunca morre — ela pode encolher até o mínimo, mas continua sempre em jogo.'],
   ];
   return (
     <AnimatePresence>
@@ -1021,14 +1015,13 @@ function ResultsScreen({ rows, stats, messages, endRef, sprite, onSorteio, onCon
   rows: LeaderRow[]; stats: FinalStats; messages: ChatMessage[];
   endRef: React.RefObject<HTMLDivElement | null>;
   sprite?: ProcessedSprite | null;
-  onSorteio: () => void; onContinue: () => void; onExit: () => void;
+  onSorteio: (weighted: boolean) => void; onContinue: () => void; onExit: () => void;
 }) {
   const top = rows.slice(0, 5);
   const secs = Math.floor(stats.elapsedMs / 1000);
   const elapsed = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
   const statRows: [string, string][] = [
     ['Mensagens enviadas', stats.messages.toLocaleString('pt-BR')],
-    ['Bolhas comidas', stats.eaten.toLocaleString('pt-BR')],
     ['Maior tamanho atingido', Math.round(stats.maxMass).toLocaleString('pt-BR')],
     ['Tempo online', elapsed],
     ['Eventos ativados', String(stats.events)],
@@ -1151,18 +1144,32 @@ function ResultsScreen({ rows, stats, messages, endRef, sprite, onSorteio, onCon
 
       {/* actions */}
       <div className="flex flex-col items-center gap-3 mt-10 relative z-10">
-        <motion.button onClick={onSorteio}
-          className="flex flex-col items-center justify-center rounded-2xl text-white"
-          style={{
-            padding: '14px 48px',
-            background: 'linear-gradient(180deg, #c084fc, #7c3aed)',
-            border: '1px solid rgba(216,180,254,0.7)',
-            boxShadow: '0 8px 26px rgba(124,58,237,0.5), inset 0 2px 0 rgba(255,255,255,0.35)',
-          }}
-          whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-          <span className="font-orbitron font-black tracking-widest text-lg flex items-center gap-2">🎟️ SORTEIO</span>
-          <span className="font-rajdhani text-[11px] tracking-wide text-white/80">vira sorteio · 1 ticket a cada 10 pontos</span>
-        </motion.button>
+        <div className="flex items-center gap-3">
+          <motion.button onClick={() => onSorteio(false)}
+            className="flex flex-col items-center justify-center rounded-2xl text-white"
+            style={{
+              padding: '14px 32px',
+              background: 'linear-gradient(180deg, #c084fc, #7c3aed)',
+              border: '1px solid rgba(216,180,254,0.7)',
+              boxShadow: '0 8px 26px rgba(124,58,237,0.5), inset 0 2px 0 rgba(255,255,255,0.35)',
+            }}
+            whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+            <span className="font-orbitron font-black tracking-widest text-base flex items-center gap-2">🎟️ SORTEIO 1:1</span>
+            <span className="font-rajdhani text-[11px] tracking-wide text-white/80">1 ticket por participante</span>
+          </motion.button>
+          <motion.button onClick={() => onSorteio(true)}
+            className="flex flex-col items-center justify-center rounded-2xl text-white"
+            style={{
+              padding: '14px 32px',
+              background: 'linear-gradient(180deg, #fbbf24, #d97706)',
+              border: '1px solid rgba(253,224,153,0.7)',
+              boxShadow: '0 8px 26px rgba(217,119,6,0.45), inset 0 2px 0 rgba(255,255,255,0.35)',
+            }}
+            whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+            <span className="font-orbitron font-black tracking-widest text-base flex items-center gap-2">🏆 SORTEIO POR PONTOS</span>
+            <span className="font-rajdhani text-[11px] tracking-wide text-white/80">1 ticket a cada 10 pontos</span>
+          </motion.button>
+        </div>
         <div className="flex items-center gap-3">
           <button onClick={onContinue}
             className="font-orbitron text-[11px] tracking-widest px-5 py-2.5 rounded-xl transition-all"

@@ -61,7 +61,8 @@ export const ModelName = {
   Sale: 'Sale',
   RaffleHistory: 'RaffleHistory',
   BotCommand: 'BotCommand',
-  AppConfig: 'AppConfig'
+  AppConfig: 'AppConfig',
+  PokeArenaSave: 'PokeArenaSave'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -103,6 +104,7 @@ export const StreamerScalarFieldEnum = {
   registrationCommand: 'registrationCommand',
   claimCommand: 'claimCommand',
   validationTimeout: 'validationTimeout',
+  winnerTimeoutEnabled: 'winnerTimeoutEnabled',
   isAffiliate: 'isAffiliate',
   testProfile: 'testProfile',
   pscBalance: 'pscBalance',
@@ -283,6 +285,16 @@ export const AppConfigScalarFieldEnum = {
 } as const
 
 export type AppConfigScalarFieldEnum = (typeof AppConfigScalarFieldEnum)[keyof typeof AppConfigScalarFieldEnum]
+
+
+export const PokeArenaSaveScalarFieldEnum = {
+  id: 'id',
+  streamerId: 'streamerId',
+  data: 'data',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PokeArenaSaveScalarFieldEnum = (typeof PokeArenaSaveScalarFieldEnum)[keyof typeof PokeArenaSaveScalarFieldEnum]
 
 
 export const SortOrder = {

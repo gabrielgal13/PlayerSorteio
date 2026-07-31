@@ -11,6 +11,8 @@ import type {
 interface AppActions {
   login: (profile: StreamerProfile) => Promise<void>;
   logout: () => void;
+  enterTestMode: (username: string) => Promise<void>;
+  exitTestMode: () => Promise<void>;
   deductPSC: (amount: number) => void;
   addPscToAll: (amount: number) => void;
   setParticipants: (participants: Participant[]) => void;
@@ -59,6 +61,7 @@ interface AppActions {
   reviveMascot: () => void;
   resetMascotRound: () => void;
   setAutoRevealWinner: (v: boolean) => void;
+  setWinnerTimeoutEnabled: (v: boolean) => void;
   setSocoChuteModeEnabled: (v: boolean) => void;
   setRaffleTriggerMode: (mode: RaffleTriggerMode) => void;
   setAutoRoundDelay: (s: number) => void;
@@ -72,6 +75,110 @@ interface AppActions {
 const THEME_BY_MASCOT: Record<string, string> = {
   dreads: '#00FFA3',
   careca: '#00E5FF',
+};
+
+/** Nick mockado que o admin adiciona com um clique durante o modo teste. */
+export const TEST_MODE_MOCK_PARTICIPANT = 'ddkf1ps';
+
+/** Resposta de /api/auth/login, /api/admin/test-mode e /api/auth/exit-test-mode
+ *  (os três devolvem o mesmo shape — ver `buildSessionProfile` no servidor). */
+interface SessionProfileResponse {
+  username: string;
+  mascot: StreamerProfile['mascot'];
+  displayName?: string | null;
+  forcePasswordChange?: boolean;
+  twitchChannel?: string | null;
+  twitchAffiliateEnabled?: boolean;
+  twitchSubsConnected?: boolean;
+  kickChannel?: string | null;
+  kickChatroomId?: number | null;
+  youtubeChannel?: string | null;
+  youtubeDisplayName?: string | null;
+  isAdmin?: boolean;
+  isAffiliate?: boolean;
+  pscBalance: number;
+  audioEnabled: boolean;
+  excelImportEnabled?: boolean;
+  excelPrizesImportEnabled?: boolean;
+  eventMusic: EventMusicTrack;
+  eventEffect: EventEffectType;
+  spinEffect?: RaffleSpinEffect;
+  themeColor?: string | null;
+  socoChuteModeEnabled?: boolean;
+  raffleTriggerMode?: string;
+  autoRoundDelay?: number;
+  chatTriggerCount?: number;
+  chatTriggerCommand?: string;
+  raffleAnimationStyle?: string;
+  winnerTimeoutEnabled?: boolean;
+  chatWarsSprite?: string | null;
+  chatWarsBossSprite?: string | null;
+  twitchConfig: TwitchConfig;
+}
+
+/** Traduz o payload de sessão pro estado da store. */
+function profileToState(data: SessionProfileResponse) {
+  const streamerProfile: StreamerProfile = {
+    username: data.username,
+    password: '',
+    mascot: data.mascot,
+    displayName: data.displayName ?? undefined,
+    twitchChannel: data.twitchChannel ?? undefined,
+    twitchAffiliateEnabled: data.twitchAffiliateEnabled,
+    twitchSubsConnected: data.twitchSubsConnected,
+    kickChannel: data.kickChannel ?? undefined,
+    kickChatroomId: data.kickChatroomId ?? undefined,
+    youtubeChannel: data.youtubeChannel ?? undefined,
+    youtubeDisplayName: data.youtubeDisplayName ?? undefined,
+    isAdmin: data.isAdmin,
+    chatWarsSprite: data.chatWarsSprite,
+    chatWarsBossSprite: data.chatWarsBossSprite,
+  };
+
+  return {
+    isLoggedIn: true,
+    currentUser: streamerProfile,
+    forcePasswordChange: data.forcePasswordChange ?? false,
+    twitchConfig: data.twitchConfig,
+    eventBackground: data.mascot === 'dreads' ? '/fundo-ganja.png' : null,
+    raffleStage: 1 as const,
+    chatMessages: [],
+    pscBalance: data.pscBalance,
+    isAffiliate: data.isAffiliate ?? true,
+    audioEnabled: data.audioEnabled,
+    excelImportEnabled: data.excelImportEnabled ?? true,
+    excelPrizesImportEnabled: data.excelPrizesImportEnabled ?? true,
+    eventMusic: data.eventMusic,
+    eventEffect: data.eventEffect,
+    spinEffect: data.spinEffect ?? 'numbers',
+    themeColor: data.themeColor ?? THEME_BY_MASCOT[data.mascot] ?? '#00E5FF',
+    socoChuteModeEnabled: data.socoChuteModeEnabled ?? true,
+    raffleTriggerMode: (data.raffleTriggerMode ?? 'manual') as RaffleTriggerMode,
+    autoRoundDelay: data.autoRoundDelay ?? 30,
+    chatTriggerCount: data.chatTriggerCount ?? 50,
+    chatTriggerCommand: data.chatTriggerCommand ?? '!sortear',
+    raffleAnimationStyle: (data.raffleAnimationStyle ?? 'balada') as RaffleAnimationStyle,
+    winnerTimeoutEnabled: data.winnerTimeoutEnabled ?? true,
+  };
+}
+
+/** Zera tudo que é de sessão de evento — usado ao entrar e ao sair do modo teste. */
+const CLEARED_SESSION_STATE = {
+  participants: [],
+  prizes: [],
+  history: [],
+  raffleStatus: 'idle' as RaffleStatus,
+  currentWinner: null,
+  currentPrize: null,
+  activeTab: 'raffle' as AppTab,
+  twitchConnected: false,
+  chatRegistrationActive: false,
+  chatRegistrationRequested: false,
+  chatRegistrationStopRequested: false,
+  winnerChatMessage: null,
+  liveViewerCount: null,
+  sessionParticipantCount: 0,
+  pendingMarketplaceDelivery: null,
 };
 
 export const useStore = create<AppState & AppActions>()(
@@ -118,9 +225,12 @@ export const useStore = create<AppState & AppActions>()(
       mascotDead: false,
       mascotDeadThisRound: false,
       autoRevealWinner: true,
+      winnerTimeoutEnabled: true,
       raffleAnimationStyle: 'balada' as RaffleAnimationStyle,
       pendingMarketplaceDelivery: null,
       forcePasswordChange: false,
+      testMode: false,
+      testModeAdmin: null,
       socoChuteModeEnabled: true,
       raffleTriggerMode: 'manual' as RaffleTriggerMode,
       autoRoundDelay: 30,
@@ -191,6 +301,18 @@ export const useStore = create<AppState & AppActions>()(
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, autoRevealWinner }),
+          }).catch(() => {});
+        }
+      },
+
+      setWinnerTimeoutEnabled: (winnerTimeoutEnabled) => {
+        set({ winnerTimeoutEnabled });
+        const username = get().currentUser?.username;
+        if (username) {
+          fetch('/api/streamer/preferences', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, winnerTimeoutEnabled }),
           }).catch(() => {});
         }
       },
@@ -276,47 +398,7 @@ export const useStore = create<AppState & AppActions>()(
 
         const data = await res.json();
 
-        const streamerProfile: StreamerProfile = {
-          username: data.username,
-          password: '',
-          mascot: data.mascot,
-          displayName: data.displayName,
-          twitchChannel: data.twitchChannel,
-          twitchAffiliateEnabled: data.twitchAffiliateEnabled,
-          twitchSubsConnected: data.twitchSubsConnected,
-          kickChannel: data.kickChannel,
-          kickChatroomId: data.kickChatroomId,
-          youtubeChannel: data.youtubeChannel,
-          youtubeDisplayName: data.youtubeDisplayName,
-          isAdmin: data.isAdmin,
-          chatWarsSprite: data.chatWarsSprite,
-          chatWarsBossSprite: data.chatWarsBossSprite,
-        };
-
-        set({
-          isLoggedIn: true,
-          currentUser: streamerProfile,
-          forcePasswordChange: data.forcePasswordChange ?? false,
-          twitchConfig: data.twitchConfig,
-          eventBackground: data.mascot === 'dreads' ? '/fundo-ganja.png' : null,
-          raffleStage: 1,
-          chatMessages: [],
-          pscBalance: data.pscBalance,
-          isAffiliate: data.isAffiliate ?? true,
-          audioEnabled: data.audioEnabled,
-          excelImportEnabled: data.excelImportEnabled ?? true,
-          excelPrizesImportEnabled: data.excelPrizesImportEnabled ?? true,
-          eventMusic: data.eventMusic,
-          eventEffect: data.eventEffect,
-          spinEffect: data.spinEffect ?? 'numbers',
-          themeColor: data.themeColor ?? THEME_BY_MASCOT[data.mascot] ?? '#00E5FF',
-          socoChuteModeEnabled: data.socoChuteModeEnabled ?? true,
-          raffleTriggerMode: (data.raffleTriggerMode ?? 'manual') as RaffleTriggerMode,
-          autoRoundDelay: data.autoRoundDelay ?? 30,
-          chatTriggerCount: data.chatTriggerCount ?? 50,
-          chatTriggerCommand: data.chatTriggerCommand ?? '!sortear',
-          raffleAnimationStyle: (data.raffleAnimationStyle ?? 'balada') as RaffleAnimationStyle,
-        });
+        set({ ...profileToState(data), testMode: false, testModeAdmin: null });
 
         // Carrega histórico do DB em background
         if (!data.isAdmin) {
@@ -327,27 +409,67 @@ export const useStore = create<AppState & AppActions>()(
         }
       },
 
+      // ── MODO TESTE ─────────────────────────────────────────────────────────
+      // Troca a sessão do admin por uma sessão do streamer marcada como teste.
+      // O bloqueio de escrita mora no middleware (a flag vai no cookie), então
+      // nada aqui precisa lembrar de "não salvar" — o servidor recusa sozinho.
+      enterTestMode: async (username) => {
+        const admin = get().currentUser?.username ?? null;
+        const res = await fetch('/api/admin/test-mode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error ?? 'Não foi possível entrar no modo teste');
+
+        set({
+          ...profileToState(data),
+          ...CLEARED_SESSION_STATE,
+          // Modo teste não tem PSC: sem saldo e sem fluxo de afiliado (que é o
+          // que dispara compra no marketplace e desconto de moeda).
+          isAffiliate: false,
+          pscBalance: 0,
+          // Nunca cair na tela de trocar senha testando a conta de outro.
+          forcePasswordChange: false,
+          testMode: true,
+          testModeAdmin: admin,
+        });
+
+        // Histórico real do streamer, só pra olhar — nada do teste é gravado.
+        fetch(`/api/streamer/history?username=${encodeURIComponent(data.username)}`)
+          .then(r => r.json())
+          .then(history => { if (Array.isArray(history) && get().testMode) set({ history }); })
+          .catch(() => {});
+      },
+
+      exitTestMode: async () => {
+        const res = await fetch('/api/auth/exit-test-mode', { method: 'POST' });
+        if (!res.ok) { get().logout(); return; }
+        const data = await res.json();
+        set({
+          ...profileToState(data),
+          ...CLEARED_SESSION_STATE,
+          eventBackground: null,
+          testMode: false,
+          testModeAdmin: null,
+        });
+      },
+
       setForcePasswordChange: (forcePasswordChange) => set({ forcePasswordChange }),
 
       logout: () => {
         fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
         set({
+          ...CLEARED_SESSION_STATE,
           isLoggedIn: false,
           currentUser: null,
           forcePasswordChange: false,
-          participants: [],
-          prizes: [],
-          history: [],
-          raffleStatus: 'idle',
-          currentWinner: null,
-          currentPrize: null,
-          twitchConnected: false,
-          chatRegistrationActive: false,
+          testMode: false,
+          testModeAdmin: null,
           raffleStage: 1,
           eventBackground: null,
           chatMessages: [],
-          liveViewerCount: null,
-          sessionParticipantCount: 0,
         });
       },
 
@@ -620,6 +742,10 @@ export const useStore = create<AppState & AppActions>()(
         isLoggedIn: state.isLoggedIn,
         currentUser: state.currentUser,
         forcePasswordChange: state.forcePasswordChange,
+        // Precisa sobreviver ao F5: sem isso a UI voltaria "normal" (com PSC,
+        // sem banner) enquanto o cookie ainda está em modo teste.
+        testMode: state.testMode,
+        testModeAdmin: state.testModeAdmin,
         twitchConfig: state.twitchConfig,
         audioEnabled: state.audioEnabled,
         excelImportEnabled: state.excelImportEnabled,
@@ -628,6 +754,7 @@ export const useStore = create<AppState & AppActions>()(
         eventEffect: state.eventEffect,
         spinEffect: state.spinEffect,
         autoRevealWinner: state.autoRevealWinner,
+        winnerTimeoutEnabled: state.winnerTimeoutEnabled,
         socoChuteModeEnabled: state.socoChuteModeEnabled,
         raffleTriggerMode: state.raffleTriggerMode,
         autoRoundDelay: state.autoRoundDelay,

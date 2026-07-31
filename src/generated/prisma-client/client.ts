@@ -96,3 +96,8 @@ export type BotCommand = Prisma.BotCommandModel
  * 
  */
 export type AppConfig = Prisma.AppConfigModel
+/**
+ * Model PokeArenaSave
+ * 
+ */
+export type PokeArenaSave = Prisma.PokeArenaSaveModel

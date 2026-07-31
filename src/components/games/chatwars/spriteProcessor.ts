@@ -19,6 +19,10 @@ export interface ProcessedSprite {
 
 /** Pixels with HSV saturation below this are treated as "neutral" (gets tinted). */
 const SAT_THRESHOLD = 0.22;
+/** Alpha mínimo pra um pixel contar no recorte: ignora o halo/brilho que
+ * desvanece na borda, pra a caixa apertar no CORPO sólido do personagem —
+ * assim duas bolas encostam de verdade, não só o brilho. */
+const BOUND_ALPHA = 32;
 
 export function processSprite(img: HTMLImageElement): ProcessedSprite {
   const w = img.naturalWidth || img.width;
@@ -31,49 +35,78 @@ export function processSprite(img: HTMLImageElement): ProcessedSprite {
   srcCtx.drawImage(img, 0, 0);
   const { data } = srcCtx.getImageData(0, 0, w, h);
 
-  // two output layers
-  const neutral = document.createElement('canvas');
-  neutral.width = w; neutral.height = h;
-  const nCtx = neutral.getContext('2d')!;
+  // two full-size output layers (recortados pro conteúdo visível no fim)
+  const neutralFull = document.createElement('canvas');
+  neutralFull.width = w; neutralFull.height = h;
+  const nCtx = neutralFull.getContext('2d')!;
   const nData = nCtx.createImageData(w, h);
 
-  const colored = document.createElement('canvas');
-  colored.width = w; colored.height = h;
-  const cCtx = colored.getContext('2d')!;
+  const coloredFull = document.createElement('canvas');
+  coloredFull.width = w; coloredFull.height = h;
+  const cCtx = coloredFull.getContext('2d')!;
   const cData = cCtx.createImageData(w, h);
 
-  for (let i = 0; i < data.length; i += 4) {
-    const a = data[i + 3];
-    if (a < 4) continue; // fully / nearly transparent — skip both layers
+  // caixa apertada dos pixels visíveis — pra cortar a margem transparente que
+  // fazia as bolas "colidirem no vazio" (o círculo de colisão é o sprite todo).
+  let minX = w, minY = h, maxX = -1, maxY = -1;
 
-    const r = data[i] / 255;
-    const g = data[i + 1] / 255;
-    const b = data[i + 2] / 255;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const a = data[i + 3];
+      if (a < 4) continue; // fully / nearly transparent — skip both layers
 
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    // HSV saturation: how "colorful" vs gray the pixel is
-    const sat = max < 0.001 ? 0 : (max - min) / max;
+      // recorte só pela parte sólida (ignora o brilho que desvanece na borda)
+      if (a >= BOUND_ALPHA) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
 
-    if (sat < SAT_THRESHOLD) {
-      // neutral — goes to tintable layer
-      nData.data[i] = data[i];
-      nData.data[i + 1] = data[i + 1];
-      nData.data[i + 2] = data[i + 2];
-      nData.data[i + 3] = a;
-    } else {
-      // colored detail — stays exactly as uploaded
-      cData.data[i] = data[i];
-      cData.data[i + 1] = data[i + 1];
-      cData.data[i + 2] = data[i + 2];
-      cData.data[i + 3] = a;
+      const r = data[i] / 255;
+      const g = data[i + 1] / 255;
+      const b = data[i + 2] / 255;
+
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      // HSV saturation: how "colorful" vs gray the pixel is
+      const sat = max < 0.001 ? 0 : (max - min) / max;
+
+      if (sat < SAT_THRESHOLD) {
+        // neutral — goes to tintable layer
+        nData.data[i] = data[i];
+        nData.data[i + 1] = data[i + 1];
+        nData.data[i + 2] = data[i + 2];
+        nData.data[i + 3] = a;
+      } else {
+        // colored detail — stays exactly as uploaded
+        cData.data[i] = data[i];
+        cData.data[i + 1] = data[i + 1];
+        cData.data[i + 2] = data[i + 2];
+        cData.data[i + 3] = a;
+      }
     }
   }
 
   nCtx.putImageData(nData, 0, 0);
   cCtx.putImageData(cData, 0, 0);
 
-  return { neutral, colored, width: w, height: h, tintCache: new Map() };
+  // sem nada opaco? mantém a imagem inteira (fallback seguro)
+  if (maxX < minX || maxY < minY) { minX = 0; minY = 0; maxX = w - 1; maxY = h - 1; }
+  const bw = maxX - minX + 1, bh = maxY - minY + 1;
+
+  // recorta as duas camadas pra caixa do conteúdo — agora o personagem preenche
+  // a bola e dois sprites encostam de verdade quando as bolas colidem.
+  const neutral = document.createElement('canvas');
+  neutral.width = bw; neutral.height = bh;
+  neutral.getContext('2d')!.drawImage(neutralFull, minX, minY, bw, bh, 0, 0, bw, bh);
+
+  const colored = document.createElement('canvas');
+  colored.width = bw; colored.height = bh;
+  colored.getContext('2d')!.drawImage(coloredFull, minX, minY, bw, bh, 0, 0, bw, bh);
+
+  return { neutral, colored, width: bw, height: bh, tintCache: new Map() };
 }
 
 /**

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useStore } from '@/store/useStore';
+import { useStore, TEST_MODE_MOCK_PARTICIPANT } from '@/store/useStore';
 import type { Participant } from '@/types';
 
 interface ImportError {
@@ -34,7 +34,12 @@ export default function ParticipantImport() {
     chatRegistrationActive,
     setChatRegistrationRequested, setChatRegistrationStopRequested,
     twitchConfig, excelImportEnabled, currentUser,
+    testMode, addParticipantFromChat,
   } = useStore();
+
+  const mockAlreadyIn = participants.some(
+    p => p.name.toLowerCase() === TEST_MODE_MOCK_PARTICIPANT.toLowerCase(),
+  );
 
   const [isRequestingChat, setIsRequestingChat] = useState(false);
   const [isImportingSubs, setIsImportingSubs] = useState(false);
@@ -284,6 +289,35 @@ export default function ParticipantImport() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, minHeight: 0 }}>
+
+      {/* MODO TESTE — participante mockado, pra testar o sorteio sem chat de verdade.
+          Fica fora do AnimatePresence de propósito: continua acessível mesmo com
+          arquivo importado ou com a inscrição pelo chat rolando. */}
+      {testMode && (
+        <motion.button
+          onClick={() => addParticipantFromChat(TEST_MODE_MOCK_PARTICIPANT, 'twitch')}
+          disabled={mockAlreadyIn}
+          whileHover={!mockAlreadyIn ? { scale: 1.01 } : {}}
+          whileTap={!mockAlreadyIn ? { scale: 0.99 } : {}}
+          className="rounded-xl font-rajdhani font-bold tracking-widest text-xs flex items-center justify-center gap-2"
+          style={{
+            padding: '11px 12px',
+            background: 'rgba(255,180,0,0.08)',
+            border: '1px solid rgba(255,180,0,0.35)',
+            color: 'rgba(255,180,0,0.95)',
+            opacity: mockAlreadyIn ? 0.45 : 1,
+            cursor: mockAlreadyIn ? 'default' : 'pointer',
+            flexShrink: 0,
+          }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
+            <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+          {mockAlreadyIn
+            ? `${TEST_MODE_MOCK_PARTICIPANT.toUpperCase()} JÁ ESTÁ NA LISTA`
+            : `ADICIONAR PARTICIPANTE ${TEST_MODE_MOCK_PARTICIPANT.toUpperCase()}`}
+        </motion.button>
+      )}
 
       <AnimatePresence mode="wait">
 

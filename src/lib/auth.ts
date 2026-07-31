@@ -13,6 +13,14 @@ function secret() {
 export interface SessionPayload {
   username: string;
   isAdmin: boolean;
+  /**
+   * MODO TESTE: o admin está logado na conta de `username` só pra olhar/testar.
+   * O middleware recusa qualquer escrita enquanto isso for true — é aqui que
+   * mora a garantia de que nada do modo teste chega no banco.
+   */
+  testMode?: boolean;
+  /** Quem entrou no modo teste — usado pra devolver a sessão de admin na saída. */
+  adminUsername?: string;
 }
 
 export async function signToken(payload: SessionPayload): Promise<string> {

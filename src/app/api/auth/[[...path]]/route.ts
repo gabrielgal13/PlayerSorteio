@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
-import { signToken, sessionCookieOptions, clearCookieOptions } from '@/lib/auth';
+import { signToken, verifyToken, sessionCookieOptions, clearCookieOptions } from '@/lib/auth';
+import { buildSessionProfile } from '@/lib/sessionProfile';
 
 export async function POST(
   req: NextRequest,
@@ -23,43 +24,7 @@ export async function POST(
 
     const token = await signToken({ username: streamer.username, isAdmin: streamer.isAdmin });
 
-    const res = NextResponse.json({
-      username: streamer.username,
-      mascot: streamer.mascot,
-      displayName: streamer.displayName,
-      forcePasswordChange: streamer.forcePasswordChange,
-      twitchChannel: streamer.twitchChannel,
-      twitchAffiliateEnabled: streamer.twitchAffiliateEnabled,
-      twitchSubsConnected: Boolean(streamer.twitchUserId && streamer.twitchUserAccessToken),
-      kickChannel: streamer.kickChannel,
-      kickChatroomId: streamer.kickChatroomId,
-      youtubeChannel: streamer.youtubeChannel,
-      youtubeDisplayName: streamer.youtubeDisplayName,
-      isAdmin: streamer.isAdmin,
-      isAffiliate: streamer.isAffiliate,
-      pscBalance: streamer.pscBalance,
-      audioEnabled: streamer.audioEnabled,
-      excelImportEnabled: streamer.excelImportEnabled,
-      excelPrizesImportEnabled: streamer.excelPrizesImportEnabled,
-      eventMusic: streamer.eventMusic,
-      eventEffect: streamer.eventEffect,
-      spinEffect: streamer.spinEffect,
-      themeColor: streamer.themeColor,
-      socoChuteModeEnabled: streamer.socoChuteModeEnabled,
-      raffleTriggerMode: streamer.raffleTriggerMode,
-      autoRoundDelay: streamer.autoRoundDelay,
-      chatTriggerCount: streamer.chatTriggerCount,
-      chatTriggerCommand: streamer.chatTriggerCommand,
-      raffleAnimationStyle: streamer.raffleAnimationStyle,
-      chatWarsSprite: streamer.chatWarsSprite,
-      chatWarsBossSprite: streamer.chatWarsBossSprite,
-      twitchConfig: {
-        channel: streamer.twitchChannel ?? '',
-        registrationCommand: streamer.registrationCommand,
-        claimCommand: streamer.claimCommand,
-        validationTimeout: streamer.validationTimeout,
-      },
-    });
+    const res = NextResponse.json(buildSessionProfile(streamer));
 
     res.cookies.set(sessionCookieOptions(token, rememberMe));
     return res;
@@ -68,6 +33,28 @@ export async function POST(
   if (route === 'logout') {
     const res = NextResponse.json({ ok: true });
     res.cookies.set(clearCookieOptions());
+    return res;
+  }
+
+  // Sai do MODO TESTE e devolve a sessão de admin. Fica em /api/auth (e não em
+  // /api/admin) de propósito: durante o teste a sessão não é admin, então as
+  // rotas /api/admin respondem 403.
+  if (route === 'exit-test-mode') {
+    const current = req.cookies.get('ps_session')?.value;
+    const session = current ? await verifyToken(current) : null;
+    if (!session?.testMode || !session.adminUsername)
+      return NextResponse.json({ error: 'Sessão não está em modo teste' }, { status: 400 });
+
+    const admin = await prisma.streamer.findUnique({ where: { username: session.adminUsername } });
+    if (!admin?.isAdmin) {
+      const res = NextResponse.json({ error: 'Admin não encontrado' }, { status: 403 });
+      res.cookies.set(clearCookieOptions());
+      return res;
+    }
+
+    const token = await signToken({ username: admin.username, isAdmin: true });
+    const res = NextResponse.json(buildSessionProfile(admin));
+    res.cookies.set(sessionCookieOptions(token));
     return res;
   }
 

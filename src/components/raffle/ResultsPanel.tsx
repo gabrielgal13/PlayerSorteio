@@ -114,7 +114,7 @@ export default function ResultsPanel() {
 
           {/* Mascot */}
           <div className="flex-1 relative w-full min-h-0 overflow-visible" style={{ marginTop: '-100px' }}>
-            <MascotContainer isExploding={false} isScorched={false} />
+            <MascotContainer isExploding={false} isScorched={false} maxScale={1.25} />
           </div>
 
           {/* VALEU CHAT */}

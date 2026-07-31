@@ -14,6 +14,7 @@ import ConfettiExplosion from '@/components/effects/ConfettiExplosion';
 import FireworksExplosion from '@/components/effects/FireworksExplosion';
 import SparklesExplosion from '@/components/effects/SparklesExplosion';
 import { useEventMusic } from '@/hooks/useEventMusic';
+import { useStageScale } from '@/hooks/useStageScale';
 import AnimationPreviewMini from '@/components/effects/AnimationPreviewMini';
 import type { RaffleSpinEffect, RaffleTriggerMode, EventMusicTrack, EventEffectType, RaffleAnimationStyle } from '@/types';
 
@@ -257,16 +258,16 @@ function StructureTooltip({ lines, color }: { lines: string[]; color: string }) 
 
 type SettingsTab = 'plataformas' | 'chat' | 'sorteio' | 'config-evento' | 'geral';
 
-const SETTINGS_TABS: { id: SettingsTab; label: string; subtitle: string }[] = [
-  { id: 'plataformas',   label: 'PLATAFORMAS',          subtitle: 'Personalize e conecte suas plataformas de streaming' },
-  { id: 'chat',          label: 'CHAT',                 subtitle: '' },
-  { id: 'sorteio',       label: 'SORTEIO',              subtitle: '' },
-  { id: 'config-evento', label: 'CONFIG. DO EVENTO',    subtitle: '' },
-  { id: 'geral',         label: 'GERAL',                subtitle: '' },
+const SETTINGS_TABS: { id: SettingsTab; label: string; title: string; subtitle: string }[] = [
+  { id: 'plataformas',   label: 'PLATAFORMAS',          title: 'CONFIGURAÇÕES DE PLATAFORMAS', subtitle: 'Personalize e conecte suas plataformas de streaming' },
+  { id: 'chat',          label: 'CHAT',                 title: 'CONFIGURAÇÕES DO CHAT',         subtitle: '' },
+  { id: 'sorteio',       label: 'SORTEIO',              title: 'CONFIGURAÇÕES DO SORTEIO',      subtitle: '' },
+  { id: 'config-evento', label: 'CONFIG. DO EVENTO',    title: 'CONFIGURAÇÕES DO EVENTO',       subtitle: '' },
+  { id: 'geral',         label: 'GERAL',                title: 'CONFIGURAÇÕES GERAIS',          subtitle: '' },
 ];
 
 export default function EventConfig() {
-  const { participants, prizes, setRaffleStage, currentUser, twitchConfig, setTwitchConfig, setTwitchAuthenticated, saveConfigToDB, setYoutubeChannel: saveYoutubeChannel, setKickChannel: saveKickChannel, excelImportEnabled, setExcelImportEnabled, excelPrizesImportEnabled, setExcelPrizesImportEnabled, autoRevealWinner, setAutoRevealWinner, spinEffect, setSpinEffect, socoChuteModeEnabled, setSocoChuteModeEnabled, raffleTriggerMode, setRaffleTriggerMode, autoRoundDelay, setAutoRoundDelay, chatTriggerCount, setChatTriggerCount, chatTriggerCommand, setChatTriggerCommand, themeColor, eventBackground, setEventBackground, eventMusic, setEventMusic, eventEffect, setEventEffect, raffleAnimationStyle, setRaffleAnimationStyle, isAffiliate, pscBalance } = useStore();
+  const { participants, prizes, setRaffleStage, currentUser, twitchConfig, setTwitchConfig, setTwitchAuthenticated, saveConfigToDB, setYoutubeChannel: saveYoutubeChannel, setKickChannel: saveKickChannel, excelImportEnabled, setExcelImportEnabled, excelPrizesImportEnabled, setExcelPrizesImportEnabled, autoRevealWinner, setAutoRevealWinner, winnerTimeoutEnabled, setWinnerTimeoutEnabled, spinEffect, setSpinEffect, socoChuteModeEnabled, setSocoChuteModeEnabled, raffleTriggerMode, setRaffleTriggerMode, autoRoundDelay, setAutoRoundDelay, chatTriggerCount, setChatTriggerCount, chatTriggerCommand, setChatTriggerCommand, themeColor, eventBackground, setEventBackground, eventMusic, setEventMusic, eventEffect, setEventEffect, raffleAnimationStyle, setRaffleAnimationStyle, isAffiliate, pscBalance, testMode } = useStore();
   const prizeManagerRef = useRef<PrizeManagerHandle>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('plataformas');
@@ -287,6 +288,7 @@ export default function EventConfig() {
   const [youtubeError, setYoutubeError] = useState('');
   const [kickConnectedUI, setKickConnectedUI] = useState(Boolean(currentUser?.kickChannel));
   const [localAutoDelay, setLocalAutoDelay] = useState(autoRoundDelay);
+  const [localWinnerTimeout, setLocalWinnerTimeout] = useState(twitchConfig.validationTimeout);
   const [localChatCount, setLocalChatCount] = useState(chatTriggerCount);
   const [localChatCmd, setLocalChatCmd] = useState(chatTriggerCommand);
   const [kickVerifying, setKickVerifying] = useState(false);
@@ -302,6 +304,7 @@ export default function EventConfig() {
   const styleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileRef = useRef<HTMLInputElement>(null!);
   const music = useEventMusic();
+  const stageScale = useStageScale();
 
   const triggerPreview = (effect: EventEffectType) => {
     setPreviewEffect('none');
@@ -373,6 +376,12 @@ export default function EventConfig() {
   }
 
   function handleTwitchConnect() {
+    // O OAuth salva o token da conta no banco — o servidor recusa em modo teste,
+    // então avisa aqui em vez de abrir um popup que só mostraria o erro.
+    if (testMode && twitchAffiliateEnabled) {
+      setTwitchError('MODO TESTE: autenticar a Twitch gravaria no banco e está bloqueado.');
+      return;
+    }
     if (twitchAffiliateEnabled) handleTwitchConnectOAuth();
     else handleTwitchConnectManual();
   }
@@ -596,9 +605,19 @@ export default function EventConfig() {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="#00E5FF">
                           <path d="M4.3 3H21v13.7l-4.3 4.3H3V7.3L4.3 3zM5 5.7V19h11l3-3V5H5zm6 3h2v6h-2zm0 8h2v2h-2z"/>
                         </svg>
-                        <span className="font-orbitron text-xs tracking-widest" style={{ color: '#00E5FF' }}>
-                          CONFIGURAÇÕES DO CHAT
-                        </span>
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={settingsTab}
+                            className="font-orbitron text-xs tracking-widest"
+                            style={{ color: '#00E5FF' }}
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
+                            transition={{ duration: 0.15 }}
+                          >
+                            {SETTINGS_TABS.find(t => t.id === settingsTab)?.title}
+                          </motion.span>
+                        </AnimatePresence>
                       </div>
                       <AnimatePresence mode="wait">
                         {SETTINGS_TABS.find(t => t.id === settingsTab)?.subtitle && (
@@ -1187,6 +1206,69 @@ export default function EventConfig() {
                                     />
                                   </button>
                                 </div>
+
+                                {/* Toggle: Tempo para o ganhador responder */}
+                                <div style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                                  padding: '12px 14px', borderRadius: '12px',
+                                  background: winnerTimeoutEnabled ? 'rgba(0,229,255,0.04)' : 'rgba(255,255,255,0.02)',
+                                  border: `1px solid ${winnerTimeoutEnabled ? 'rgba(0,229,255,0.15)' : 'rgba(255,255,255,0.08)'}`,
+                                  transition: 'all 0.25s',
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px', minWidth: 0 }}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill={winnerTimeoutEnabled ? '#00E5FF' : 'rgba(255,255,255,0.25)'} style={{ flexShrink: 0, transition: 'fill 0.25s' }}>
+                                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                                    </svg>
+                                    <span className="font-rajdhani" style={{ fontSize: '12px', lineHeight: 1.3, color: winnerTimeoutEnabled ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.4)', transition: 'color 0.25s' }}>
+                                      Tempo para o ganhador responder
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() => setWinnerTimeoutEnabled(!winnerTimeoutEnabled)}
+                                    style={{
+                                      position: 'relative', flexShrink: 0,
+                                      width: '42px', height: '22px', borderRadius: '11px',
+                                      background: winnerTimeoutEnabled ? 'rgba(0,229,255,0.35)' : 'rgba(255,255,255,0.1)',
+                                      border: `1px solid ${winnerTimeoutEnabled ? 'rgba(0,229,255,0.55)' : 'rgba(255,255,255,0.15)'}`,
+                                      cursor: 'pointer', transition: 'all 0.25s',
+                                      boxShadow: winnerTimeoutEnabled ? '0 0 10px rgba(0,229,255,0.2)' : 'none',
+                                    }}
+                                  >
+                                    <motion.div
+                                      animate={{ x: winnerTimeoutEnabled ? 21 : 2 }}
+                                      transition={{ type: 'spring', damping: 22, stiffness: 320 }}
+                                      style={{
+                                        position: 'absolute', top: '2px',
+                                        width: '16px', height: '16px', borderRadius: '50%',
+                                        background: winnerTimeoutEnabled ? '#00E5FF' : 'rgba(255,255,255,0.35)',
+                                        boxShadow: winnerTimeoutEnabled ? '0 0 6px rgba(0,229,255,0.6)' : 'none',
+                                        transition: 'background 0.25s, box-shadow 0.25s',
+                                      }}
+                                    />
+                                  </button>
+                                </div>
+
+                                {/* Winner timeout seconds stepper */}
+                                {winnerTimeoutEnabled && (
+                                  <div style={{ padding: '12px 14px', borderRadius: '10px', background: 'rgba(0,229,255,0.04)', border: '1px solid rgba(0,229,255,0.12)' }}>
+                                    <label className="font-orbitron font-bold" style={{ fontSize: '8px', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '8px' }}>
+                                      SEGUNDOS PARA RESPONDER
+                                    </label>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                                      <button
+                                        onClick={() => { const v = Math.max(10, localWinnerTimeout - 5); setLocalWinnerTimeout(v); setTwitchConfig({ validationTimeout: v }); saveConfigToDB(); }}
+                                        style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                      >−</button>
+                                      <span className="font-orbitron font-bold" style={{ fontSize: '22px', color: ACCENT, minWidth: '40px', textAlign: 'center' }}>
+                                        {localWinnerTimeout}
+                                      </span>
+                                      <button
+                                        onClick={() => { const v = Math.min(600, localWinnerTimeout + 5); setLocalWinnerTimeout(v); setTwitchConfig({ validationTimeout: v }); saveConfigToDB(); }}
+                                        style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                      >+</button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
 
                               {/* Col 3: FUNDO */}
@@ -1532,11 +1614,9 @@ export default function EventConfig() {
                               key={previewStyleKey}
                               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                               transition={{ duration: 0.25 }}
-                              style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}
+                              style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 1 }}
                             >
-                              <div style={{ transform: 'scale(4.5)', transformOrigin: 'center' }}>
-                                <AnimationPreviewMini style={stagePreviewStyle} />
-                              </div>
+                              <AnimationPreviewMini style={stagePreviewStyle} fill />
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -1813,12 +1893,14 @@ export default function EventConfig() {
           {/* Mascot */}
           <div style={{ pointerEvents: 'none' }}>
             {currentUser?.mascot !== 'careca' ? (
-              <img
-                src="/mascote-inicio-ganja.png"
-                alt="ShadowGanjaK"
-                draggable={false}
-                style={{ width: '280px', height: '300px', objectFit: 'contain', objectPosition: 'bottom', userSelect: 'none' }}
-              />
+              <div style={{ width: '280px', height: '300px', transform: `scale(${stageScale})`, transformOrigin: 'bottom center' }}>
+                <img
+                  src="/mascote-inicio-ganja.png"
+                  alt="ShadowGanjaK"
+                  draggable={false}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'bottom', userSelect: 'none' }}
+                />
+              </div>
             ) : (
               <div style={{ transform: 'scale(1.17)', transformOrigin: 'center center', width: '280px', height: '300px' }}>
                 <MascotContainer isExploding={false} isScorched={false} />

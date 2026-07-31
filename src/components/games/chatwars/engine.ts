@@ -31,6 +31,9 @@ export interface Ball {
   isStreamer: boolean;
   isBoss: boolean;       // the LIVE BOSS — chat must defeat it together
   threatId: string | null; // id of the bigger ball this one is currently fleeing (for arrows)
+  dmgImmuneUntil: number; // world time até quando está imune a mordidas (após levar dano)
+  biteReadyAt: number;    // world time a partir de quando pode morder de novo (cadência do atacante)
+  dashUntil: number;      // world time até quando pode passar do teto de velocidade (repelão pós-batida)
 }
 
 export type ParticleKind = 'pop' | 'steal' | 'xp' | 'meteor' | 'spawn';
@@ -93,12 +96,13 @@ export interface World {
   bossId: string | null;              // active LIVE BOSS
   moment: LiveMoment | null;
   xpRainSpawnAcc: number;             // particle spawn accumulator for XP rain
+  contacts: Set<string>;              // pares que estavam se tocando no frame anterior (mordida 1x por contato)
+  joinCount: number;                  // quantos jogadores novos já falaram (define a massa de entrada)
   stats: MatchStats;
 }
 
 export interface MatchStats {
   messages: number;   // chat messages from players
-  eaten: number;      // balls eliminated (drained to 0)
   maxMass: number;    // biggest size any player reached
   events: number;     // streamer powers triggered
 }
@@ -106,19 +110,31 @@ export interface MatchStats {
 /* ── Tuning ──────────────────────────────────────────────────────────────── */
 export const TUNING = {
   startMass: 12,
-  minMass: 6,                 // below this → eliminated
-  radiusK: 4.2,               // radius = sqrt(mass) * k
+  joinStartFirst: 22,         // 1º a falar no chat entra com 22 de vida
+  joinStartSecond: 21,        // 2º entra com 21
+  joinStartRest: 20,          // 3º em diante entram com 20 — daí começa a dinâmica de pontos
+  floorMass: 1,                // piso absoluto de vida — NENHUMA bola (jogador) morre, só encolhe até aqui
+  bossDefeatMass: 6,           // só o LIVE BOSS é derrotado ao chegar nesse tanto de vida
+  radiusK: 7.6,               // radius = sqrt(mass) * k — grande de propósito pra ler na live
   radiusEase: 8,              // per-second easing toward target radius
-  friction: 2.2,             // velocity damping per second
-  wanderAccel: 70,
-  baseSpeed: 220,             // small-ball top speed; scaled down by radius
-  speedSizePenalty: 0.014,    // bigger = slower
+  friction: 1.9,             // velocity damping per second
+  wanderAccel: 120,          // energia pra vaguear e ESCAPAR de aglomerados (não travam)
+  baseSpeed: 230,             // small-ball top speed; scaled down by radius (nem tão veloz)
+  speedSizePenalty: 0.009,    // bigger = slower
+  minSpeed: 55,              // piso de velocidade — bolas NUNCA ficam paradas, sempre deslizando
+  crowdSeparationRange: 2.4, // até quantos raios de distância uma bola "sente" e foge da vizinha
+  crowdSeparationForce: 340, // força da fuga — espalha o enxame pelo mapa em vez de empilhar
+  wallRestitution: 1,        // parede devolve 100% da velocidade (rebote elástico, simétrico)
+  wallMinBounce: 75,         // rebote mínimo ao tocar a parede, mesmo chegando devagar
   cooldownMs: 2500,           // anti-spam: messages within this window ≈ 0 pts
   streakWindowMs: 12000,      // gap under which streak continues
   spawnGain: 5,               // first message after offline
   shortMsgLen: 3,             // "k", "ok", "aaa" → reduced
   dominationAdvantage: 1.18,  // size ratio needed to drain
   drainPerSec: 9,             // mass/sec drained on sustained contact
+  biteDamage: 1,              // jogo normal: o maior tira isso do menor a cada mordida
+  biteImmuneMs: 5000,         // quem leva mordida fica 5s imune (não perde mais vida nesse tempo)
+  biteCooldownMs: 3000,       // uma bola só morde de novo a cada 3s — mata o farm do grandão
   goldenGainPerSec: 14,
   feedWords: ['<3', 'gg', 'amo', 'top', 'cresce', 'lindo', 'goat', 'pog'],
   trollWords: ['lixo', 'troll', 'cai', 'morre', 'noob', 'bot', 'feio'],
@@ -134,6 +150,33 @@ export const TUNING = {
   bossRadiusScale: 3,         // boss aparece bem maior que uma bola comum da mesma massa/vida
   bossRadiusFloor: 50,        // tamanho mínimo do boss em px, mesmo com pouca vida (lobby pequeno)
 } as const;
+
+/* ── Tamanho do mundo (cresce com a galera) ──────────────────────────────────
+ * O mundo começa no mínimo e vai CRESCENDO conforme entra gente, pra ninguém
+ * ficar espremido/travado. Só cresce, nunca encolhe no meio da partida (senão
+ * bolas ficariam fora dos limites). Zera no reset. */
+export const WORLD_MIN_W = 1000;
+export const WORLD_MIN_H = 640;
+const WORLD_ASPECT = WORLD_MIN_W / WORLD_MIN_H;
+// ~50.000px² por jogador — dá espaço real até pras bolas grandonas (mass 150+
+// já passa de 28.000px² sozinha). O teto antigo (2600) cortava o crescimento
+// bem cedo pra lobbies grandes (100+); agora só limita em casos bem extremos.
+const WORLD_AREA_PER_PLAYER = 50000;
+const WORLD_MAX_W = 4200;
+
+export function worldSizeForPlayers(n: number): { w: number; h: number } {
+  const area = Math.max(WORLD_MIN_W * WORLD_MIN_H, n * WORLD_AREA_PER_PLAYER);
+  const w = Math.min(WORLD_MAX_W, Math.round(Math.sqrt(area * WORLD_ASPECT)));
+  const h = Math.round(w / WORLD_ASPECT);
+  return { w, h };
+}
+
+/** Cresce o mundo pra caber n jogadores com folga — nunca encolhe. */
+function growWorld(w: World, n: number): void {
+  const t = worldSizeForPlayers(n);
+  if (t.w > w.width) w.width = t.w;
+  if (t.h > w.height) w.height = t.h;
+}
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 export function radiusForMass(mass: number): number {
@@ -186,7 +229,9 @@ export function createWorld(width: number, height: number): World {
     bossId: null,
     moment: null,
     xpRainSpawnAcc: 0,
-    stats: { messages: 0, eaten: 0, maxMass: 0, events: 0 },
+    contacts: new Set(),
+    joinCount: 0,
+    stats: { messages: 0, maxMass: 0, events: 0 },
   };
 }
 
@@ -243,13 +288,14 @@ export function applyMessage(w: World, msg: IncomingMessage): void {
         sb.mass += TUNING.streamerFeed;
         addFloat(w, sb.x, sb.y - sb.radius - 6, `+${TUNING.streamerFeed}`, '#7CFFB2');
       } else if (TUNING.trollWords.some(k => lower.includes(k))) {
-        sb.mass = Math.max(TUNING.minMass, sb.mass - TUNING.streamerTroll);
+        sb.mass = Math.max(TUNING.floorMass, sb.mass - TUNING.streamerTroll);
         addFloat(w, sb.x, sb.y - sb.radius - 6, `-${TUNING.streamerTroll}`, '#FF6B6B');
       }
     }
   }
 
   let ball = w.balls.get(id);
+  const isBrandNew = !ball;   // nunca falou antes → entra com massa fixa pela ordem de chegada
   const hue = hexToHue(msg.color) ?? hashHue(id);
 
   // anti-spam multiplier
@@ -277,15 +323,22 @@ export function applyMessage(w: World, msg: IncomingMessage): void {
   gain *= TUNING.xpMultiplier;
 
   if (!ball) {
+    // Massa de entrada FIXA pela ordem de chegada: 1º a falar = 22, 2º = 21,
+    // 3º em diante = 20. A dinâmica de pontos só começa nas mensagens seguintes.
+    w.joinCount++;
+    const joinMass = w.joinCount === 1 ? TUNING.joinStartFirst
+      : w.joinCount === 2 ? TUNING.joinStartSecond
+      : TUNING.joinStartRest;
     const p = randPos(w);
     ball = {
       id, name: msg.username, source: msg.source, color: msg.color || '#9147FF', hue,
       x: p.x, y: p.y, vx: 0, vy: 0,
-      mass: Math.max(TUNING.startMass, TUNING.startMass + gain - 1),
-      radius: radiusForMass(TUNING.startMass),
+      mass: joinMass,
+      radius: radiusForMass(joinMass),
       streak, lastMsgAt: now, lastText: lower, spawnAt: now,
       hitFlash: 0, wobble: Math.random() * 10, wanderAngle: Math.random() * Math.PI * 2,
       ghost: false, isStreamer: false, isBoss: false, threatId: null,
+      dmgImmuneUntil: 0, biteReadyAt: 0, dashUntil: 0,
     };
     w.balls.set(id, ball);
     spawnBurst(w, ball.x, ball.y, `hsl(${hue},90%,60%)`, 16, 'spawn');
@@ -306,7 +359,7 @@ export function applyMessage(w: World, msg: IncomingMessage): void {
     ball.hue = hue;
   }
 
-  if (gain >= 1) {
+  if (gain >= 1 && !isBrandNew) {
     const label = streak === 5 ? '+10 COMBO' : streak === 20 ? '+50 COMBO!' : `+${Math.round(gain)}`;
     addFloat(w, ball.x, ball.y - ball.radius - 8, label,
       streak >= 5 ? '#FFD24A' : '#FFFFFF', streak >= 20 ? 22 : 15);
@@ -330,6 +383,7 @@ export function toggleStreamerBall(w: World, name: string): void {
     mass: TUNING.startMass * 4, radius: radiusForMass(TUNING.startMass * 4),
     streak: 0, lastMsgAt: w.time, lastText: '', spawnAt: w.time,
     hitFlash: 0, wobble: 0, wanderAngle: 0, ghost: false, isStreamer: true, isBoss: false, threatId: null,
+    dmgImmuneUntil: 0, biteReadyAt: 0, dashUntil: 0,
   };
   w.balls.set(id, ball);
   w.streamerId = id;
@@ -340,7 +394,7 @@ export function toggleStreamerBall(w: World, name: string): void {
 export function triggerXpRain(w: World) {
   w.events.xpRain = w.time + 30_000;
   w.stats.events++;
-  setMoment(w, 'CHUVA DE XP', 'todos ganham 5x pontos por 30s', 6, null);
+  setMoment(w, 'CHUVA DE XP', 'quem digitar ganha 5x pontos por 30s', 6, null);
 }
 export function triggerHappyHour(w: World) {
   w.events.happyHour = w.time + 5 * 60_000;
@@ -404,6 +458,7 @@ export function triggerBoss(w: World) {
     streak: 0, lastMsgAt: w.time, lastText: '', spawnAt: w.time,
     hitFlash: 0, wobble: 0, wanderAngle: 0,
     ghost: false, isStreamer: false, isBoss: true, threatId: null,
+    dmgImmuneUntil: 0, biteReadyAt: 0, dashUntil: 0,
   };
   w.balls.set(id, ball);
   w.bossId = id;
@@ -463,6 +518,9 @@ export function stepWorld(w: World, dtMs: number): void {
   }
   const avgMass = n > 0 ? total / n : TUNING.startMass;
 
+  // mundo cresce conforme entra gente — mais espaço, menos aperto e travamento
+  growWorld(w, n);
+
   // ── per-ball movement ──
   for (const b of w.balls.values()) {
     if (b.ghost) {
@@ -498,13 +556,26 @@ export function stepWorld(w: World, dtMs: number): void {
     }
 
     // small revolt: small balls hunt big ones; otherwise small balls flee bigger
+    // Junto, calcula uma repulsão de multidão SEMPRE ativa: cada vizinho perto
+    // empurra de leve pra longe, proporcional ao aperto. É o que faz o enxame
+    // se espalhar organicamente pelo mapa (que cresce com a galera) em vez de
+    // ficar todo mundo empilhado numa bolha só.
     let nearest: Ball | null = null, nearestD = Infinity;
+    let sepAx = 0, sepAy = 0;
     for (const o of w.balls.values()) {
       if (o === b || o.ghost) continue;
       const dx = o.x - b.x, dy = o.y - b.y;
-      const d = dx * dx + dy * dy;
-      if (d < nearestD) { nearestD = d; nearest = o; }
+      const d2 = dx * dx + dy * dy;
+      if (d2 < nearestD) { nearestD = d2; nearest = o; }
+      const range = (b.radius + o.radius) * TUNING.crowdSeparationRange;
+      if (d2 < range * range) {
+        const d = Math.sqrt(d2) || 1;
+        const push = TUNING.crowdSeparationForce * (1 - d / range);
+        sepAx -= (dx / d) * push;
+        sepAy -= (dy / d) * push;
+      }
     }
+    ax += sepAx; ay += sepAy;
     b.threatId = null;
     // movement reaction only during the "Revolta dos Pequenos" power — the
     // small balls hunt the big ones. No generic chasing/fleeing otherwise.
@@ -522,8 +593,17 @@ export function stepWorld(w: World, dtMs: number): void {
     // speed cap by size; small-revolt small balls get a burst
     let maxSpeed = TUNING.baseSpeed / (1 + b.radius * TUNING.speedSizePenalty);
     if (smallRevolt && isSmall) maxSpeed *= 1.8;
+    // durante a janela de dash (pós-batida) o teto sobe muito, pra o repelão
+    // realmente jogar a bola pra longe antes do atrito trazer de volta ao normal.
+    const cap = w.time < b.dashUntil ? maxSpeed * 3.2 : maxSpeed;
     const sp = Math.hypot(b.vx, b.vy);
-    if (sp > maxSpeed) { b.vx = (b.vx / sp) * maxSpeed; b.vy = (b.vy / sp) * maxSpeed; }
+    if (sp > cap) {
+      b.vx = (b.vx / sp) * cap; b.vy = (b.vy / sp) * cap;
+    } else if (sp < TUNING.minSpeed) {
+      // NUNCA param: mantém um deslize mínimo (no rumo atual, ou no do wander se parada de vez)
+      if (sp > 1) { b.vx = (b.vx / sp) * TUNING.minSpeed; b.vy = (b.vy / sp) * TUNING.minSpeed; }
+      else { b.vx = Math.cos(b.wanderAngle) * TUNING.minSpeed; b.vy = Math.sin(b.wanderAngle) * TUNING.minSpeed; }
+    }
 
     b.x += b.vx * dt; b.y += b.vy * dt;
 
@@ -531,11 +611,14 @@ export function stepWorld(w: World, dtMs: number): void {
     const target = b.isBoss ? radiusForBoss(b.mass) : radiusForMass(b.mass);
     b.radius += (target - b.radius) * Math.min(TUNING.radiusEase * dt, 1);
 
-    // walls
-    if (b.x < b.radius) { b.x = b.radius; b.vx = Math.abs(b.vx) * 0.6; }
-    if (b.x > w.width - b.radius) { b.x = w.width - b.radius; b.vx = -Math.abs(b.vx) * 0.6; }
-    if (b.y < b.radius) { b.y = b.radius; b.vy = Math.abs(b.vy) * 0.6; }
-    if (b.y > w.height - b.radius) { b.y = w.height - b.radius; b.vy = -Math.abs(b.vy) * 0.6; }
+    // walls — rebote ELÁSTICO e simétrico: a parede joga a bola de volta pro
+    // lado contrário (mín. wallMinBounce) e inverte o rumo do wander, pra ela
+    // não voltar a "cavar" contra a parede e ficar presa ali.
+    const R = TUNING.wallRestitution, MB = TUNING.wallMinBounce;
+    if (b.x < b.radius) { b.x = b.radius; b.vx = Math.max(Math.abs(b.vx) * R, MB); b.wanderAngle = Math.PI - b.wanderAngle; }
+    if (b.x > w.width - b.radius) { b.x = w.width - b.radius; b.vx = -Math.max(Math.abs(b.vx) * R, MB); b.wanderAngle = Math.PI - b.wanderAngle; }
+    if (b.y < b.radius) { b.y = b.radius; b.vy = Math.max(Math.abs(b.vy) * R, MB); b.wanderAngle = -b.wanderAngle; }
+    if (b.y > w.height - b.radius) { b.y = w.height - b.radius; b.vy = -Math.max(Math.abs(b.vy) * R, MB); b.wanderAngle = -b.wanderAngle; }
 
     // golden zone passive gain
     if (w.golden) {
@@ -549,15 +632,15 @@ export function stepWorld(w: World, dtMs: number): void {
   // ── collisions + domination (spatial grid) ──
   resolveCollisions(w, dt, { smallRevolt, hunted });
 
-  // ── eliminate starved balls ──
+  // Nenhuma bola de jogador morre — nunca vira fantasma, só encolhe até o piso.
   for (const b of w.balls.values()) {
-    if (!b.ghost && !b.isBoss && b.mass < TUNING.minMass) eliminate(w, b);
+    if (!b.isBoss && b.mass < TUNING.floorMass) b.mass = TUNING.floorMass;
   }
 
-  // ── boss defeat ──
+  // ── boss defeat (o único que de fato é "derrotado" no jogo) ──
   if (w.bossId) {
     const boss = w.balls.get(w.bossId);
-    if (boss && boss.mass <= TUNING.minMass) defeatBoss(w, boss);
+    if (boss && boss.mass <= TUNING.bossDefeatMass) defeatBoss(w, boss);
   }
 
   // ── meteors ──
@@ -614,6 +697,8 @@ function resolveCollisions(w: World, dt: number, flags: StepFlags) {
     (grid.get(k) ?? grid.set(k, []).get(k)!).push(b);
   }
   const checked = new Set<string>();
+  const prevContacts = w.contacts;
+  const nextContacts = new Set<string>();
   for (const a of balls) {
     const cx = Math.floor(a.x / cell), cy = Math.floor(a.y / cell);
     for (let gx = cx - 1; gx <= cx + 1; gx++) {
@@ -625,14 +710,20 @@ function resolveCollisions(w: World, dt: number, flags: StepFlags) {
           const pairKey = a.id < b.id ? a.id + '|' + b.id : b.id + '|' + a.id;
           if (checked.has(pairKey)) continue;
           checked.add(pairKey);
-          interact(w, a, b, dt, flags);
+          interact(w, a, b, dt, flags, pairKey, prevContacts, nextContacts);
         }
       }
     }
   }
+  // pares que estão se tocando AGORA viram o histórico do próximo frame — assim
+  // a mordida só dispara na batida (contato novo), nunca enquanto ficam grudados.
+  w.contacts = nextContacts;
 }
 
-function interact(w: World, a: Ball, b: Ball, dt: number, flags: StepFlags) {
+function interact(
+  w: World, a: Ball, b: Ball, dt: number, flags: StepFlags,
+  pairKey: string, prevContacts: Set<string>, nextContacts: Set<string>,
+) {
   const dx = b.x - a.x, dy = b.y - a.y;
   const dist = Math.hypot(dx, dy) || 0.0001;
   const minDist = a.radius + b.radius;
@@ -641,15 +732,39 @@ function interact(w: World, a: Ball, b: Ball, dt: number, flags: StepFlags) {
   const nx = dx / dist, ny = dy / dist;
   const overlap = minDist - dist;
 
+  // Estão se tocando neste frame. Guarda o par e descobre se a batida é NOVA
+  // (não estavam grudados no frame anterior) — a mordida só vale em batida nova.
+  nextContacts.add(pairKey);
+  const freshHit = !prevContacts.has(pairKey);
+
   // push apart weighted by mass (heavier moves less)
   const ma = a.mass, mb = b.mass, sum = ma + mb;
   a.x -= nx * overlap * (mb / sum); a.y -= ny * overlap * (mb / sum);
   b.x += nx * overlap * (ma / sum); b.y += ny * overlap * (ma / sum);
 
-  // small bounce impulse
-  const push = 40 * Math.min(overlap / minDist, 1);
-  a.vx -= nx * push * (mb / sum); a.vy -= ny * push * (mb / sum);
-  b.vx += nx * push * (ma / sum); b.vy += ny * push * (ma / sum);
+  // ── Separação: as bolas NUNCA grudam ──
+  // Empurrão contínuo (tira a sobreposição no capricho) + na BATIDA NOVA um
+  // repelão FORTE pra longe: com uma janela de "dash" a bola passa do teto de
+  // velocidade e voa mesmo, e ganha um NOVO rumo aleatório apontando pra longe
+  // do outro — então, se ficarem se reencontrando, cada batida manda cada uma
+  // pra um lado novo em vez de repicar no mesmo lugar.
+  const fa = Math.max(0.4, mb / sum);   // fração que A recebe (viés pro mais leve)
+  const fb = Math.max(0.4, ma / sum);   // fração que B recebe
+  const cont = 45 + 120 * Math.min(overlap / minDist, 1);
+  a.vx -= nx * cont * fa; a.vy -= ny * cont * fa;
+  b.vx += nx * cont * fb; b.vy += ny * cont * fb;
+
+  if (freshHit && !a.isBoss && !b.isBoss) {
+    const DASH = 360;
+    a.vx -= nx * DASH * fa; a.vy -= ny * DASH * fa;
+    b.vx += nx * DASH * fb; b.vy += ny * DASH * fb;
+    // novo rumo aleatório (dentro de ±90°) apontando pra LONGE do outro
+    a.wanderAngle = Math.atan2(-ny, -nx) + (Math.random() - 0.5) * Math.PI;
+    b.wanderAngle = Math.atan2(ny, nx) + (Math.random() - 0.5) * Math.PI;
+    // janela onde podem estourar o teto de velocidade → repelem pra bem longe
+    a.dashUntil = w.time + 450;
+    b.dashUntil = w.time + 450;
+  }
 
   // ── LIVE BOSS: the player always damages the boss; boss damages back ──
   if (a.isBoss || b.isBoss) {
@@ -660,7 +775,7 @@ function interact(w: World, a: Ball, b: Ball, dt: number, flags: StepFlags) {
     boss.mass -= dmg;
     pl.mass += dmg * TUNING.bossPlayerGrowthPerDamage; // atacar o boss faz crescer 2x mais que o normal
     boss.hitFlash = 1;
-    pl.mass = Math.max(TUNING.minMass, pl.mass - TUNING.bossHitPerSec * dt);
+    pl.mass = Math.max(TUNING.floorMass, pl.mass - TUNING.bossHitPerSec * dt);
     // knock the player outward from the boss
     const dirx = (pl.x - boss.x) / dist, diry = (pl.y - boss.y) / dist;
     pl.vx += dirx * 90; pl.vy += diry * 90;
@@ -672,7 +787,8 @@ function interact(w: World, a: Ball, b: Ball, dt: number, flags: StepFlags) {
   let predator: Ball | null = null, prey: Ball | null = null;
   const hunted = flags.hunted;
 
-  // Stealing only happens through streamer powers — never in normal play.
+  // Dreno contínuo (rápido) só rola nos poderes do streamer. Fora deles, a troca
+  // é a mordida de `biteDamage` por batida, tratada no `else` mais abaixo.
   if (hunted && (a.id === hunted.id || b.id === hunted.id)) {
     // giant hunt: the OTHER ball drains the hunted, fast
     predator = a.id === hunted.id ? b : a;
@@ -702,32 +818,36 @@ function interact(w: World, a: Ball, b: Ball, dt: number, flags: StepFlags) {
         spawnBurst(w, prey.x, prey.y, `hsl(${prey.hue},90%,60%)`, 2, 'steal', 90);
       }
     }
-  }
-}
-
-function eliminate(w: World, b: Ball) {
-  if (!b.isStreamer) w.stats.eaten++;
-  spawnBurst(w, b.x, b.y, `hsl(${b.hue},90%,62%)`, 26, 'pop', 240);
-  const wasHunted = w.huntedId === b.id;
-  const wasStreamer = b.isStreamer;
-  if (b.isStreamer) {
-    // streamer ball revives small instead of becoming a ghost
-    b.mass = TUNING.startMass * 2;
-    const p = randPos(w);
-    b.x = p.x; b.y = p.y; b.vx = 0; b.vy = 0;
-  } else {
-    b.ghost = true;
-    b.mass = TUNING.minMass;
-    b.vx = (Math.random() - 0.5) * 60;
-    b.vy = (Math.random() - 0.5) * 60;
-  }
-  if (wasHunted) {
-    w.huntedId = null;
-    w.huntedStartMass = null;
-    w.events.giantHunt = 0;
-    setMoment(w, `${b.name} FOI DESTRONADO!`, 'o gigante caiu 👑💥', 6, null);
-  } else if (wasStreamer) {
-    setMoment(w, `${b.name} EXPLODIU!`, 'o chat derrubou o streamer 😂', 5, null);
+  } else if (freshHit) {
+    // ── Jogo normal: MORDIDA no esbarrão, com cadência pra não virar farm ──
+    // O maior tira `biteDamage` do menor SÓ SE:
+    //   • o atacante já passou do próprio cooldown de mordida (biteCooldownMs), e
+    //   • o alvo não está no período de imunidade (biteImmuneMs) de uma mordida anterior.
+    // Depois de uma mordida válida os dois quicam pra se separar. Se a mordida
+    // não vale (cooldown/imunidade), continua sendo só um esbarrão físico, sem dano.
+    const diff = a.mass - b.mass;
+    if (Math.abs(diff) > 0.01) {
+      const big = diff > 0 ? a : b;
+      const small = diff > 0 ? b : a;
+      const now = w.time;
+      const canBite = now >= big.biteReadyAt && now >= small.dmgImmuneUntil;
+      const bite = canBite ? Math.min(TUNING.biteDamage, small.mass - TUNING.floorMass) : 0;
+      if (bite > 0) {
+        small.mass -= bite;
+        big.mass += bite;
+        small.hitFlash = 1;
+        small.dmgImmuneUntil = now + TUNING.biteImmuneMs;  // 5s protegido
+        big.biteReadyAt = now + TUNING.biteCooldownMs;      // atacante em recarga
+        addFloat(w, small.x, small.y - small.radius - 6, `-${bite % 1 === 0 ? bite : bite.toFixed(1)}`, '#FF6B6B', 14);
+        if (Math.random() < 0.6) spawnBurst(w, small.x, small.y, `hsl(${small.hue},90%,60%)`, 2, 'steal', 110);
+        // empurrão de separação (independente da ordem a/b)
+        const sepx = big.x - small.x, sepy = big.y - small.y;
+        const sd = Math.hypot(sepx, sepy) || 1;
+        const ux = sepx / sd, uy = sepy / sd;
+        big.vx += ux * 90; big.vy += uy * 90;
+        small.vx -= ux * 90; small.vy -= uy * 90;
+      }
+    }
   }
 }
 
@@ -741,7 +861,7 @@ function detonateMeteor(w: World, m: Meteor) {
     if (d < blast) {
       const frac = 1 - d / blast;
       const loss = b.mass * 0.35 * frac;     // big balls lose a chunk
-      b.mass = Math.max(TUNING.minMass, b.mass - loss);
+      b.mass = Math.max(TUNING.floorMass, b.mass - loss);
       b.hitFlash = 1;
       // knockback
       const nx = (b.x - m.x) / (d || 1), ny = (b.y - m.groundY) / (d || 1);

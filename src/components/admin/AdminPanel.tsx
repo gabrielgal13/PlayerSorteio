@@ -16,7 +16,7 @@ interface AdminProduct { id: string; name: string; description: string | null; i
 interface FixedProductTemplate { id: string; name: string; description: string | null; imageUrl: string | null; pscValue: number | null; skipPsc: boolean; locked: boolean; }
 interface MarketingImageOption { id: number; imageData: string; label: string | null; }
 interface EditProfile { displayName: string; nome?: string; newPassword: string; twitchChannel: string; kickChannel: string; youtubeChannel: string; themeColor: string; chatWarsSprite: string; chatWarsBossSprite: string; forceFirstAccess: boolean; currentForcePasswordChange: boolean; twitchAffiliateEnabled: boolean; }
-type Section = 'psc' | 'criar-streamer' | 'entregas' | 'editar-streamer' | 'marketing' | 'bots' | 'jogos' | 'afiliados' | 'vendas' | 'playerskins';
+type Section = 'psc' | 'criar-streamer' | 'entregas' | 'editar-streamer' | 'testar-streamer' | 'marketing' | 'bots' | 'jogos' | 'afiliados' | 'vendas' | 'playerskins';
 
 const GAME_TOGGLE_LIST: { id: string; label: string; description: string }[] = [
   { id: 'hangman', label: 'JOGO DA FORCA', description: 'Adivinhe a palavra antes que o bonequinho engorque.' },
@@ -562,6 +562,7 @@ function BotMuteToggle() {
 export default function AdminPanel() {
   const logout = useStore(s => s.logout);
   const addPscToAll = useStore(s => s.addPscToAll);
+  const enterTestMode = useStore(s => s.enterTestMode);
 
   const [activeSection, setActiveSection] = useState<Section>('psc');
 
@@ -603,6 +604,25 @@ export default function AdminPanel() {
   const [savingPinnedItemId, setSavingPinnedItemId] = useState<string | null>(null);
   const [marketingImages, setMarketingImages] = useState<MarketingImageOption[]>([]);
   const [showFixedImagePicker, setShowFixedImagePicker] = useState(false);
+
+  // Testar streamer (modo teste) state
+  const [testStreamer, setTestStreamer] = useState<string>('');
+  const [enteringTest, setEnteringTest] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
+
+  const handleEnterTestMode = async () => {
+    if (!testStreamer || enteringTest) return;
+    setEnteringTest(true);
+    setTestError(null);
+    try {
+      await enterTestMode(testStreamer);
+      // A partir daqui a sessão não é mais admin — o app troca sozinho pro
+      // Dashboard do streamer (page.tsx decide pelo currentUser.isAdmin).
+    } catch (e) {
+      setTestError(e instanceof Error ? e.message : 'Erro ao entrar no modo teste.');
+      setEnteringTest(false);
+    }
+  };
 
   // Jogos (habilitar/desabilitar) state
   const [disabledGames, setDisabledGames] = useState<string[]>([]);
@@ -1211,6 +1231,15 @@ export default function AdminPanel() {
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
           <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'testar-streamer' as Section,
+      label: 'TESTAR STREAMER',
+      icon: (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
         </svg>
       ),
     },
@@ -2133,6 +2162,139 @@ export default function AdminPanel() {
             )}
 
             {/* ── EDITAR STREAMER ── */}
+            {/* ── TESTAR STREAMER (MODO TESTE) ── */}
+            {activeSection === 'testar-streamer' && (
+              <motion.div
+                key="testar-streamer"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -12 }}
+                transition={{ duration: 0.22 }}
+                className="w-full max-w-2xl flex flex-col gap-6"
+              >
+                <div
+                  className="rounded-2xl overflow-hidden"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <div
+                    className="flex items-center gap-3 px-6 py-4 border-b"
+                    style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ background: 'rgba(255,180,0,0.12)', border: '1px solid rgba(255,180,0,0.25)' }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,180,0,0.9)">
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h2 className="font-orbitron text-sm font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                        TESTAR STREAMER
+                      </h2>
+                      <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                        Entra na conta e vê tudo exatamente como o streamer configurou.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="px-6 py-6 flex flex-col gap-5">
+                    {/* O que o modo teste faz */}
+                    <div
+                      className="rounded-xl px-4 py-4 flex flex-col gap-2"
+                      style={{ background: 'rgba(255,180,0,0.05)', border: '1px solid rgba(255,180,0,0.2)' }}
+                    >
+                      {[
+                        'Nada é gravado no banco — configurações, preferências e entregas ficam intactas.',
+                        'Nenhum sorteio feito no teste entra no histórico do streamer.',
+                        'Não tem PSC: sem saldo, sem desconto e sem compra no marketplace.',
+                        'Um botão adiciona o participante mockado ddkf1ps na hora.',
+                      ].map(line => (
+                        <div key={line} className="flex items-start gap-2">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,180,0,0.8)" style={{ flexShrink: 0, marginTop: 3 }}>
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                          </svg>
+                          <span className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                            {line}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="font-orbitron text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                        STREAMER
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={testStreamer}
+                          onChange={e => { setTestStreamer(e.target.value); setTestError(null); }}
+                          className="w-full rounded-xl font-rajdhani text-sm outline-none px-4 py-3 appearance-none cursor-pointer"
+                          style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            color: testStreamer ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.3)',
+                          }}
+                        >
+                          <option value="" style={{ background: '#080d24' }}>Selecionar streamer...</option>
+                          {streamers.map(s => (
+                            <option key={s.username} value={s.username} style={{ background: '#080d24' }}>
+                              {s.displayName || s.username}{s.testProfile ? '  [TESTE]' : ''}
+                            </option>
+                          ))}
+                        </select>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.3)" className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                      </div>
+                    </div>
+
+                    {testError && (
+                      <p className="font-rajdhani text-xs" style={{ color: 'rgba(239,68,68,0.9)' }}>{testError}</p>
+                    )}
+
+                    <button
+                      onClick={handleEnterTestMode}
+                      disabled={!testStreamer || enteringTest}
+                      className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-orbitron text-xs font-bold tracking-widest transition-all"
+                      style={{
+                        background: !testStreamer || enteringTest
+                          ? 'rgba(255,255,255,0.04)'
+                          : 'linear-gradient(135deg, rgba(255,180,0,0.25), rgba(255,120,0,0.15))',
+                        border: `1px solid ${!testStreamer || enteringTest ? 'rgba(255,255,255,0.08)' : 'rgba(255,180,0,0.5)'}`,
+                        color: !testStreamer || enteringTest ? 'rgba(255,255,255,0.25)' : 'rgba(255,180,0,1)',
+                        cursor: !testStreamer || enteringTest ? 'not-allowed' : 'pointer',
+                        boxShadow: !testStreamer || enteringTest ? 'none' : '0 0 20px rgba(255,180,0,0.15)',
+                      }}
+                    >
+                      {enteringTest ? (
+                        <>
+                          <motion.span
+                            className="inline-block w-3 h-3 border-2 rounded-full"
+                            style={{ borderColor: 'rgba(255,255,255,0.15)', borderTopColor: 'rgba(255,255,255,0.4)' }}
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                          />
+                          ENTRANDO...
+                        </>
+                      ) : (
+                        <>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
+                          </svg>
+                          ENTRAR NO MODO TESTE
+                        </>
+                      )}
+                    </button>
+
+                    <p className="font-rajdhani text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                      Pra voltar pro painel, use SAIR DO MODO TESTE na faixa amarela no topo.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {activeSection === 'editar-streamer' && (
               <motion.div
                 key="editar-streamer"

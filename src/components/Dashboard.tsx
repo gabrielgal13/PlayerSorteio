@@ -14,6 +14,7 @@ import WorldGuessr from '@/components/games/WorldGuessr';
 import SkribllGame from '@/components/games/SkribllGame';
 import ChatWarsGame from '@/components/games/ChatWarsGame';
 import PoolWarsGame from '@/components/games/PoolWarsGame';
+import PokeArenaGame from '@/components/games/PokeArenaGame';
 import GamesLobby from '@/components/games/GamesLobby';
 import CommunityBar from '@/components/community/CommunityBar';
 import EntregasPage from '@/components/deliveries/EntregasPage';
@@ -52,11 +53,13 @@ export default function Dashboard() {
     eventBackground, setEventBackground,
     pscBalance,
     isAffiliate,
+    testMode, exitTestMode,
   } = useStore();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [exitingTest, setExitingTest] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const [activeGame, setActiveGame] = useState<'hangman' | 'worldguessr' | 'skribll' | 'chatwars' | 'poolwars' | null>(null);
+  const [activeGame, setActiveGame] = useState<'hangman' | 'worldguessr' | 'skribll' | 'chatwars' | 'poolwars' | 'pokearena' | null>(null);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -80,8 +83,9 @@ export default function Dashboard() {
   // pscBalance/isAffiliate não sobrevivem a um refresh de página (não ficam no
   // localStorage) — resincroniza com o saldo real do banco assim que monta,
   // pra nunca mostrar um saldo desatualizado (ex: 0 depois de um F5).
+  // Modo teste não tem PSC — resincronizar traria o saldo real do streamer de volta.
   useEffect(() => {
-    if (!currentUser?.username) return;
+    if (!currentUser?.username || testMode) return;
     fetch(`/api/streamer/config?username=${encodeURIComponent(currentUser.username)}`)
       .then(r => r.json())
       .then(data => {
@@ -90,8 +94,7 @@ export default function Dashboard() {
         }
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.username]);
+  }, [currentUser?.username, testMode]);
 
   useEffect(() => {
     if (activeTab !== 'games') setActiveGame(null);
@@ -135,6 +138,58 @@ export default function Dashboard() {
         <ParticleCanvas count={60} intensity="low" />
         <NeonGrid />
       </div>
+
+      {/* MODO TESTE — faixa fixa no topo enquanto o admin está vendo a conta */}
+      {testMode && !obsMode && (
+        <motion.div
+          className="relative z-30 flex items-center gap-3 px-4 md:px-6 py-2 flex-shrink-0"
+          style={{
+            background: 'linear-gradient(90deg, rgba(255,180,0,0.16), rgba(255,120,0,0.08))',
+            borderBottom: '1px solid rgba(255,180,0,0.35)',
+          }}
+          initial={{ y: -30, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.35 }}
+        >
+          <motion.span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ background: '#FFB400', boxShadow: '0 0 8px rgba(255,180,0,0.8)' }}
+            animate={{ opacity: [1, 0.25, 1] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
+          />
+          <span
+            className="font-orbitron font-bold tracking-widest flex-shrink-0"
+            style={{ fontSize: '11px', color: 'rgba(255,180,0,0.95)' }}
+          >
+            MODO TESTE
+          </span>
+          <span className="font-rajdhani tracking-wide" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)' }}>
+            Vendo a conta de <span style={{ color: 'rgba(255,180,0,0.9)', fontWeight: 700 }}>
+              {currentUser.displayName || currentUser.username}
+            </span>{' '}
+            — nada é gravado no banco, nenhum sorteio entra no histórico e não há PSC.
+          </span>
+          <div className="flex-1" />
+          <button
+            onClick={async () => { setExitingTest(true); await exitTestMode(); }}
+            disabled={exitingTest}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg font-orbitron font-bold tracking-widest transition-all flex-shrink-0"
+            style={{
+              fontSize: '10px',
+              background: 'rgba(255,180,0,0.12)',
+              border: '1px solid rgba(255,180,0,0.4)',
+              color: 'rgba(255,180,0,0.95)',
+              opacity: exitingTest ? 0.5 : 1,
+              cursor: exitingTest ? 'wait' : 'pointer',
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+            </svg>
+            {exitingTest ? 'SAINDO...' : 'SAIR DO MODO TESTE'}
+          </button>
+        </motion.div>
+      )}
 
       {/* HEADER */}
       {!obsMode && (
@@ -462,6 +517,12 @@ export default function Dashboard() {
                     initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
                     transition={{ duration: 0.3 }}>
                     <PoolWarsGame onBack={() => setActiveGame(null)} />
+                  </motion.div>
+                ) : activeGame === 'pokearena' ? (
+                  <motion.div key="pokearena" className="flex-1 flex flex-col min-h-0"
+                    initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
+                    transition={{ duration: 0.3 }}>
+                    <PokeArenaGame onBack={() => setActiveGame(null)} />
                   </motion.div>
                 ) : (
                   <motion.div key="games-lobby" className="flex-1 flex flex-col min-h-0"

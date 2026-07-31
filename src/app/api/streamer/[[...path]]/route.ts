@@ -344,6 +344,22 @@ export async function GET(
     return NextResponse.json({ disabled });
   }
 
+  // GET /api/streamer/pokearena  (header: x-session-username)
+  // Coleção da PokéArena Live desta comunidade. Se a tabela ainda não existe
+  // (migration não rodada) devolve vazio — o jogo cai no localStorage sozinho.
+  if (route === 'pokearena') {
+    const username = req.headers.get('x-session-username');
+    if (!username) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true } });
+    if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
+    try {
+      const save = await prisma.pokeArenaSave.findUnique({ where: { streamerId: streamer.id } });
+      return NextResponse.json({ data: save ? JSON.parse(save.data) : null });
+    } catch {
+      return NextResponse.json({ data: null });
+    }
+  }
+
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
@@ -463,6 +479,30 @@ export async function POST(
     return NextResponse.json(result);
   }
 
+  // POST /api/streamer/pokearena  { data }  (header: x-session-username)
+  if (route === 'pokearena') {
+    const username = req.headers.get('x-session-username');
+    if (!username) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true } });
+    if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
+    const { data } = await req.json() as { data: unknown };
+    if (!data || typeof data !== 'object') return NextResponse.json({ error: 'data inválido' }, { status: 400 });
+    const json = JSON.stringify(data);
+    // ~8 MB é muito mais do que qualquer comunidade real gera; corta lixo/abuso.
+    if (json.length > 8_000_000) return NextResponse.json({ error: 'save grande demais' }, { status: 413 });
+    try {
+      await prisma.pokeArenaSave.upsert({
+        where: { streamerId: streamer.id },
+        create: { streamerId: streamer.id, data: json },
+        update: { data: json },
+      });
+      return NextResponse.json({ ok: true });
+    } catch {
+      // tabela ainda não migrada — o jogo continua salvando no localStorage
+      return NextResponse.json({ ok: false, error: 'tabela PokeArenaSave indisponível' }, { status: 503 });
+    }
+  }
+
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
@@ -572,6 +612,7 @@ export async function PATCH(
       chatTriggerCount: streamer.chatTriggerCount,
       chatTriggerCommand: streamer.chatTriggerCommand,
       raffleAnimationStyle: streamer.raffleAnimationStyle,
+      winnerTimeoutEnabled: streamer.winnerTimeoutEnabled,
     });
   }
 

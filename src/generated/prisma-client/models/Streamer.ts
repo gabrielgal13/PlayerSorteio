@@ -69,6 +69,7 @@ export type StreamerMinAggregateOutputType = {
   registrationCommand: string | null
   claimCommand: string | null
   validationTimeout: number | null
+  winnerTimeoutEnabled: boolean | null
   isAffiliate: boolean | null
   testProfile: boolean | null
   pscBalance: number | null
@@ -119,6 +120,7 @@ export type StreamerMaxAggregateOutputType = {
   registrationCommand: string | null
   claimCommand: string | null
   validationTimeout: number | null
+  winnerTimeoutEnabled: boolean | null
   isAffiliate: boolean | null
   testProfile: boolean | null
   pscBalance: number | null
@@ -169,6 +171,7 @@ export type StreamerCountAggregateOutputType = {
   registrationCommand: number
   claimCommand: number
   validationTimeout: number
+  winnerTimeoutEnabled: number
   isAffiliate: number
   testProfile: number
   pscBalance: number
@@ -241,6 +244,7 @@ export type StreamerMinAggregateInputType = {
   registrationCommand?: true
   claimCommand?: true
   validationTimeout?: true
+  winnerTimeoutEnabled?: true
   isAffiliate?: true
   testProfile?: true
   pscBalance?: true
@@ -291,6 +295,7 @@ export type StreamerMaxAggregateInputType = {
   registrationCommand?: true
   claimCommand?: true
   validationTimeout?: true
+  winnerTimeoutEnabled?: true
   isAffiliate?: true
   testProfile?: true
   pscBalance?: true
@@ -341,6 +346,7 @@ export type StreamerCountAggregateInputType = {
   registrationCommand?: true
   claimCommand?: true
   validationTimeout?: true
+  winnerTimeoutEnabled?: true
   isAffiliate?: true
   testProfile?: true
   pscBalance?: true
@@ -478,6 +484,7 @@ export type StreamerGroupByOutputType = {
   registrationCommand: string
   claimCommand: string
   validationTimeout: number
+  winnerTimeoutEnabled: boolean
   isAffiliate: boolean
   testProfile: boolean
   pscBalance: number
@@ -551,6 +558,7 @@ export type StreamerWhereInput = {
   registrationCommand?: Prisma.StringFilter<"Streamer"> | string
   claimCommand?: Prisma.StringFilter<"Streamer"> | string
   validationTimeout?: Prisma.IntFilter<"Streamer"> | number
+  winnerTimeoutEnabled?: Prisma.BoolFilter<"Streamer"> | boolean
   isAffiliate?: Prisma.BoolFilter<"Streamer"> | boolean
   testProfile?: Prisma.BoolFilter<"Streamer"> | boolean
   pscBalance?: Prisma.IntFilter<"Streamer"> | number
@@ -606,6 +614,7 @@ export type StreamerOrderByWithRelationInput = {
   registrationCommand?: Prisma.SortOrder
   claimCommand?: Prisma.SortOrder
   validationTimeout?: Prisma.SortOrder
+  winnerTimeoutEnabled?: Prisma.SortOrder
   isAffiliate?: Prisma.SortOrder
   testProfile?: Prisma.SortOrder
   pscBalance?: Prisma.SortOrder
@@ -664,6 +673,7 @@ export type StreamerWhereUniqueInput = Prisma.AtLeast<{
   registrationCommand?: Prisma.StringFilter<"Streamer"> | string
   claimCommand?: Prisma.StringFilter<"Streamer"> | string
   validationTimeout?: Prisma.IntFilter<"Streamer"> | number
+  winnerTimeoutEnabled?: Prisma.BoolFilter<"Streamer"> | boolean
   isAffiliate?: Prisma.BoolFilter<"Streamer"> | boolean
   testProfile?: Prisma.BoolFilter<"Streamer"> | boolean
   pscBalance?: Prisma.IntFilter<"Streamer"> | number
@@ -719,6 +729,7 @@ export type StreamerOrderByWithAggregationInput = {
   registrationCommand?: Prisma.SortOrder
   claimCommand?: Prisma.SortOrder
   validationTimeout?: Prisma.SortOrder
+  winnerTimeoutEnabled?: Prisma.SortOrder
   isAffiliate?: Prisma.SortOrder
   testProfile?: Prisma.SortOrder
   pscBalance?: Prisma.SortOrder
@@ -777,6 +788,7 @@ export type StreamerScalarWhereWithAggregatesInput = {
   registrationCommand?: Prisma.StringWithAggregatesFilter<"Streamer"> | string
   claimCommand?: Prisma.StringWithAggregatesFilter<"Streamer"> | string
   validationTimeout?: Prisma.IntWithAggregatesFilter<"Streamer"> | number
+  winnerTimeoutEnabled?: Prisma.BoolWithAggregatesFilter<"Streamer"> | boolean
   isAffiliate?: Prisma.BoolWithAggregatesFilter<"Streamer"> | boolean
   testProfile?: Prisma.BoolWithAggregatesFilter<"Streamer"> | boolean
   pscBalance?: Prisma.IntWithAggregatesFilter<"Streamer"> | number
@@ -827,6 +839,7 @@ export type StreamerCreateInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -882,6 +895,7 @@ export type StreamerUncheckedCreateInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -937,6 +951,7 @@ export type StreamerUpdateInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -992,6 +1007,7 @@ export type StreamerUncheckedUpdateInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1047,6 +1063,7 @@ export type StreamerCreateManyInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -1097,6 +1114,7 @@ export type StreamerUpdateManyMutationInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1147,6 +1165,7 @@ export type StreamerUncheckedUpdateManyInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1197,6 +1216,7 @@ export type StreamerCountOrderByAggregateInput = {
   registrationCommand?: Prisma.SortOrder
   claimCommand?: Prisma.SortOrder
   validationTimeout?: Prisma.SortOrder
+  winnerTimeoutEnabled?: Prisma.SortOrder
   isAffiliate?: Prisma.SortOrder
   testProfile?: Prisma.SortOrder
   pscBalance?: Prisma.SortOrder
@@ -1257,6 +1277,7 @@ export type StreamerMaxOrderByAggregateInput = {
   registrationCommand?: Prisma.SortOrder
   claimCommand?: Prisma.SortOrder
   validationTimeout?: Prisma.SortOrder
+  winnerTimeoutEnabled?: Prisma.SortOrder
   isAffiliate?: Prisma.SortOrder
   testProfile?: Prisma.SortOrder
   pscBalance?: Prisma.SortOrder
@@ -1307,6 +1328,7 @@ export type StreamerMinOrderByAggregateInput = {
   registrationCommand?: Prisma.SortOrder
   claimCommand?: Prisma.SortOrder
   validationTimeout?: Prisma.SortOrder
+  winnerTimeoutEnabled?: Prisma.SortOrder
   isAffiliate?: Prisma.SortOrder
   testProfile?: Prisma.SortOrder
   pscBalance?: Prisma.SortOrder
@@ -1478,6 +1500,7 @@ export type StreamerCreateWithoutRankEventsInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -1532,6 +1555,7 @@ export type StreamerUncheckedCreateWithoutRankEventsInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -1602,6 +1626,7 @@ export type StreamerUpdateWithoutRankEventsInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1656,6 +1681,7 @@ export type StreamerUncheckedUpdateWithoutRankEventsInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1710,6 +1736,7 @@ export type StreamerCreateWithoutPrizeListsInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -1764,6 +1791,7 @@ export type StreamerUncheckedCreateWithoutPrizeListsInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -1834,6 +1862,7 @@ export type StreamerUpdateWithoutPrizeListsInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1888,6 +1917,7 @@ export type StreamerUncheckedUpdateWithoutPrizeListsInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1942,6 +1972,7 @@ export type StreamerCreateWithoutPscTransactionsInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -1996,6 +2027,7 @@ export type StreamerUncheckedCreateWithoutPscTransactionsInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -2066,6 +2098,7 @@ export type StreamerUpdateWithoutPscTransactionsInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2120,6 +2153,7 @@ export type StreamerUncheckedUpdateWithoutPscTransactionsInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2174,6 +2208,7 @@ export type StreamerCreateWithoutHistoryInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -2228,6 +2263,7 @@ export type StreamerUncheckedCreateWithoutHistoryInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -2298,6 +2334,7 @@ export type StreamerUpdateWithoutHistoryInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2352,6 +2389,7 @@ export type StreamerUncheckedUpdateWithoutHistoryInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2406,6 +2444,7 @@ export type StreamerCreateWithoutBotCommandsInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -2460,6 +2499,7 @@ export type StreamerUncheckedCreateWithoutBotCommandsInput = {
   registrationCommand?: string
   claimCommand?: string
   validationTimeout?: number
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: number
@@ -2530,6 +2570,7 @@ export type StreamerUpdateWithoutBotCommandsInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2584,6 +2625,7 @@ export type StreamerUncheckedUpdateWithoutBotCommandsInput = {
   registrationCommand?: Prisma.StringFieldUpdateOperationsInput | string
   claimCommand?: Prisma.StringFieldUpdateOperationsInput | string
   validationTimeout?: Prisma.IntFieldUpdateOperationsInput | number
+  winnerTimeoutEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isAffiliate?: Prisma.BoolFieldUpdateOperationsInput | boolean
   testProfile?: Prisma.BoolFieldUpdateOperationsInput | boolean
   pscBalance?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2705,6 +2747,7 @@ export type StreamerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   registrationCommand?: boolean
   claimCommand?: boolean
   validationTimeout?: boolean
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: boolean
@@ -2761,6 +2804,7 @@ export type StreamerSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   registrationCommand?: boolean
   claimCommand?: boolean
   validationTimeout?: boolean
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: boolean
@@ -2811,6 +2855,7 @@ export type StreamerSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   registrationCommand?: boolean
   claimCommand?: boolean
   validationTimeout?: boolean
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: boolean
@@ -2861,6 +2906,7 @@ export type StreamerSelectScalar = {
   registrationCommand?: boolean
   claimCommand?: boolean
   validationTimeout?: boolean
+  winnerTimeoutEnabled?: boolean
   isAffiliate?: boolean
   testProfile?: boolean
   pscBalance?: boolean
@@ -2888,7 +2934,7 @@ export type StreamerSelectScalar = {
   updatedAt?: boolean
 }
 
-export type StreamerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "passwordHash" | "mascot" | "displayName" | "nome" | "isAdmin" | "twitchChannel" | "kickChannel" | "twitchAffiliateEnabled" | "twitchUserId" | "twitchUserAccessToken" | "twitchUserRefreshToken" | "kickChatroomId" | "youtubeChannel" | "youtubeDisplayName" | "youtubeLiveChatId" | "youtubeNextPageToken" | "youtubeLiveChatCheckedAt" | "registrationCommand" | "claimCommand" | "validationTimeout" | "isAffiliate" | "testProfile" | "pscBalance" | "audioEnabled" | "excelImportEnabled" | "excelPrizesImportEnabled" | "eventMusic" | "eventEffect" | "spinEffect" | "themeColor" | "socoChuteModeEnabled" | "raffleTriggerMode" | "autoRoundDelay" | "chatTriggerCount" | "chatTriggerCommand" | "raffleAnimationStyle" | "chatWarsSprite" | "chatWarsBossSprite" | "rankPoints" | "rankStreakCount" | "rankLastActiveDate" | "rankLastRaffleAt" | "forcePasswordChange" | "createdAt" | "updatedAt", ExtArgs["result"]["streamer"]>
+export type StreamerOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "passwordHash" | "mascot" | "displayName" | "nome" | "isAdmin" | "twitchChannel" | "kickChannel" | "twitchAffiliateEnabled" | "twitchUserId" | "twitchUserAccessToken" | "twitchUserRefreshToken" | "kickChatroomId" | "youtubeChannel" | "youtubeDisplayName" | "youtubeLiveChatId" | "youtubeNextPageToken" | "youtubeLiveChatCheckedAt" | "registrationCommand" | "claimCommand" | "validationTimeout" | "winnerTimeoutEnabled" | "isAffiliate" | "testProfile" | "pscBalance" | "audioEnabled" | "excelImportEnabled" | "excelPrizesImportEnabled" | "eventMusic" | "eventEffect" | "spinEffect" | "themeColor" | "socoChuteModeEnabled" | "raffleTriggerMode" | "autoRoundDelay" | "chatTriggerCount" | "chatTriggerCommand" | "raffleAnimationStyle" | "chatWarsSprite" | "chatWarsBossSprite" | "rankPoints" | "rankStreakCount" | "rankLastActiveDate" | "rankLastRaffleAt" | "forcePasswordChange" | "createdAt" | "updatedAt", ExtArgs["result"]["streamer"]>
 export type StreamerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   history?: boolean | Prisma.Streamer$historyArgs<ExtArgs>
   pscTransactions?: boolean | Prisma.Streamer$pscTransactionsArgs<ExtArgs>
@@ -2932,6 +2978,7 @@ export type $StreamerPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     registrationCommand: string
     claimCommand: string
     validationTimeout: number
+    winnerTimeoutEnabled: boolean
     isAffiliate: boolean
     testProfile: boolean
     pscBalance: number
@@ -3407,6 +3454,7 @@ export interface StreamerFieldRefs {
   readonly registrationCommand: Prisma.FieldRef<"Streamer", 'String'>
   readonly claimCommand: Prisma.FieldRef<"Streamer", 'String'>
   readonly validationTimeout: Prisma.FieldRef<"Streamer", 'Int'>
+  readonly winnerTimeoutEnabled: Prisma.FieldRef<"Streamer", 'Boolean'>
   readonly isAffiliate: Prisma.FieldRef<"Streamer", 'Boolean'>
   readonly testProfile: Prisma.FieldRef<"Streamer", 'Boolean'>
   readonly pscBalance: Prisma.FieldRef<"Streamer", 'Int'>

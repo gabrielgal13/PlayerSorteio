@@ -580,6 +580,7 @@ export default function RaffleEngine() {
     mascotDead,
     resetMascotRound,
     autoRevealWinner,
+    winnerTimeoutEnabled,
     chatTriggerCount,
     chatTriggerCommand,
     raffleAnimationStyle,
@@ -605,6 +606,7 @@ export default function RaffleEngine() {
   const skipResolverRef = useRef<(() => void) | null>(null);
   const skipAllRef = useRef(false);
   const [autoCountdown, setAutoCountdown] = useState<number | null>(null);
+  const [validationCancelled, setValidationCancelled] = useState(false);
   const [chatVoteProgress, setChatVoteProgress] = useState(0);
   const [chatTriggerArmed, setChatTriggerArmed] = useState(false);
   const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -775,7 +777,7 @@ export default function RaffleEngine() {
     play('victory');
     setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), 4000);
-    if (twitchConnected && twitchConfig.channel) {
+    if (twitchConnected && twitchConfig.channel && winnerTimeoutEnabled) {
       setRaffleStatus('validating');
       startValidation(winner);
     }
@@ -785,6 +787,7 @@ export default function RaffleEngine() {
   startRaffleRef.current = startRaffle;
 
   const startValidation = (_winner: Participant) => {
+    setValidationCancelled(false);
     let countdown = twitchConfig.validationTimeout;
     setValidationCountdown(countdown);
     countdownRef.current = setInterval(() => {
@@ -796,6 +799,11 @@ export default function RaffleEngine() {
 
   const stopValidation = () => {
     if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+  };
+
+  const cancelValidationTimer = () => {
+    stopValidation();
+    setValidationCancelled(true);
   };
 
   const stopChatVerification = () => {
@@ -952,6 +960,7 @@ export default function RaffleEngine() {
     revealResolveRef.current = null;
     stopValidation(); stopChatVerification();
     cancelAutoTrigger();
+    setValidationCancelled(false);
     setWinnerChatMessage(null); setCurrentWinner(null);
     setRaffleStatus('idle'); setShowConfetti(false);
     setIsExploding(false); setIsScorched(false);
@@ -1273,24 +1282,35 @@ export default function RaffleEngine() {
                           <motion.div key="timer" exit={{ opacity: 0 }} style={{ marginBottom: '28px' }}>
                             <div className="px-4 py-3 rounded-xl" style={{ background: `rgba(${accentRgb},0.07)`, border: `1px solid rgba(${accentRgb},0.18)`, marginBottom: '24px' }}>
                               <p className="font-rajdhani text-sm" style={{ color: `rgba(${accentRgb},0.7)` }}>
-                                Aguardando mensagem no chat
+                                {validationCancelled ? 'Timer cancelado — confirme quando quiser' : 'Aguardando mensagem no chat'}
                               </p>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'center' }}>
-                              <div className="relative w-20 h-20">
-                                <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-                                  <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4"/>
-                                  <motion.circle cx="40" cy="40" r="34" fill="none"
-                                    stroke={accent} strokeWidth="4" strokeLinecap="round"
-                                    strokeDasharray={`${2 * Math.PI * 34}`}
-                                    strokeDashoffset={`${2 * Math.PI * 34 * (1 - validationCountdown / twitchConfig.validationTimeout)}`}
-                                    style={{ transition: 'stroke-dashoffset 0.9s linear' }} />
-                                </svg>
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <span className="font-orbitron font-bold text-xl" style={{ color: accent }}>{validationCountdown}</span>
+                            {!validationCancelled && (
+                              <>
+                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                  <div className="relative w-20 h-20">
+                                    <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                                      <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4"/>
+                                      <motion.circle cx="40" cy="40" r="34" fill="none"
+                                        stroke={accent} strokeWidth="4" strokeLinecap="round"
+                                        strokeDasharray={`${2 * Math.PI * 34}`}
+                                        strokeDashoffset={`${2 * Math.PI * 34 * (1 - validationCountdown / twitchConfig.validationTimeout)}`}
+                                        style={{ transition: 'stroke-dashoffset 0.9s linear' }} />
+                                    </svg>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <span className="font-orbitron font-bold text-xl" style={{ color: accent }}>{validationCountdown}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
+                                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '14px' }}>
+                                  <button onClick={cancelValidationTimer}
+                                    className="font-rajdhani text-xs tracking-wide"
+                                    style={{ color: 'rgba(255,255,255,0.35)', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                                    Cancelar timer
+                                  </button>
+                                </div>
+                              </>
+                            )}
                           </motion.div>
                         )}
                       </AnimatePresence>

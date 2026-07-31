@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 
-type GameId = 'hangman' | 'worldguessr' | 'skribll' | 'chatwars' | 'poolwars';
+type GameId = 'hangman' | 'worldguessr' | 'skribll' | 'chatwars' | 'poolwars' | 'pokearena';
 
 interface GameCard {
   id: GameId;
@@ -59,11 +59,11 @@ const GAMES: Card[] = [
     icon: <PoolWarsIcon />,
   },
   {
-    id: 'coming1',
-    title: 'EM BREVE',
-    description: 'Novos jogos\nem desenvolvimento!',
-    available: false,
-    icon: <LockIcon />,
+    id: 'pokearena',
+    title: 'POKÉARENA LIVE',
+    description: 'O chat captura, evolui e batalha\n— a coleção fica salva no nick!',
+    available: true,
+    icon: <PokeArenaIcon />,
   },
   {
     id: 'coming2',
@@ -344,6 +344,27 @@ function PoolWarsIcon() {
         {/* two fighters */}
         <circle cx="25" cy="24" r="5" />
         <circle cx="40" cy="26" r="5" />
+      </g>
+    </svg>
+  );
+}
+
+function PokeArenaIcon() {
+  return (
+    <svg width="52" height="52" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="pk-lobby-glow">
+          <feGaussianBlur stdDeviation="1.5" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      <g filter="url(#pk-lobby-glow)" stroke="#00E5FF" strokeWidth="2.5" fill="none" strokeLinecap="round">
+        {/* pokébola */}
+        <circle cx="32" cy="34" r="20" />
+        <line x1="12" y1="34" x2="52" y2="34" />
+        <circle cx="32" cy="34" r="6" />
+        {/* faíscas de captura */}
+        <path d="M14 14 L18 18 M50 14 L46 18 M32 6 L32 11" strokeWidth="2.2" />
       </g>
     </svg>
   );

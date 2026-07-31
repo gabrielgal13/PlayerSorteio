@@ -37,6 +37,7 @@ model Streamer {
   registrationCommand String @default("!entrar")
   claimCommand        String @default("!claim")
   validationTimeout   Int    @default(60)
+  winnerTimeoutEnabled Boolean @default(true)
 
   // Afiliado (controla visibilidade do PSC)
   isAffiliate Boolean @default(true)
@@ -226,4 +227,13 @@ model AppConfig {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// Progresso da PokéArena Live: uma linha por streamer com a coleção de todos os
+// viewers daquela comunidade (treinadores, equipes, itens e pokédex) em JSON.
+model PokeArenaSave {
+  id         String   @id @default(cuid())
+  streamerId String   @unique
+  data       String
+  updatedAt  DateTime @updatedAt
 }

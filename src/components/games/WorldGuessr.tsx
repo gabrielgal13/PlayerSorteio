@@ -1,7 +1,9 @@
 'use client';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '@/store/useStore';
+
+type ChatSource = 'twitch' | 'kick' | 'youtube' | undefined;
 
 interface Props {
   onBack: () => void;
@@ -13,19 +15,59 @@ const WORLDGUESSR_URL =
     : 'http://localhost:3002';
 
 export default function WorldGuessr({ onBack }: Props) {
-  const { chatMessages, chatRegistrationActive, setChatRegistrationRequested } = useStore();
+  const {
+    chatMessages, setChatRegistrationRequested, setChatRegistrationStopRequested,
+    setParticipants, setRaffleStage, setActiveTab,
+  } = useStore();
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const seenChatIdsRef = useRef<Set<string | number>>(new Set());
+  // Quem interagiu no chat durante a partida (candidatos ao sorteio). Não inscreve
+  // ninguém ao vivo — só vira participante quando o streamer clica em SORTEAR.
+  const playersRef = useRef<Map<string, ChatSource>>(new Map());
+  const [playerCount, setPlayerCount] = useState(0);
 
   useEffect(() => {
-    if (!chatRegistrationActive) {
-      setChatRegistrationRequested(true);
-    }
+    // Liga a escuta do chat só pra receber mensagens durante o jogo. Se fomos nós
+    // que abrimos, fechamos ao sair — assim voltar pro sorteio não deixa a busca ligada.
+    const wasActive = useStore.getState().chatRegistrationActive;
+    if (!wasActive) setChatRegistrationRequested(true);
+    return () => { if (!wasActive) setChatRegistrationStopRequested(true); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
+
+  // Rastreia quem participou pelo chat (sem inscrever no sorteio ainda).
+  useEffect(() => {
+    for (const msg of chatMessages) {
+      if (seenChatIdsRef.current.has(msg.id)) continue;
+      seenChatIdsRef.current.add(msg.id);
+      const key = msg.username.toLowerCase();
+      if (!playersRef.current.has(key)) {
+        playersRef.current.set(key, msg.source);
+        setPlayerCount(playersRef.current.size);
+      }
+    }
+  }, [chatMessages]);
+
+  // Fecha a partida inscrevendo só quem jogou e volta pro sorteio com a lista fechada.
+  const handleSorteio = () => {
+    const parts = [...playersRef.current.entries()].map(([nameKey, source], i) => ({
+      id: `wg_${i}_${nameKey}`,
+      number: i + 1,
+      // recupera o nome com a capitalização original enviada no chat
+      name: chatMessages.find(m => m.username.toLowerCase() === nameKey)?.username ?? nameKey,
+      source,
+      tickets: 1,
+    }));
+    setParticipants(parts);
+    setChatRegistrationStopRequested(true);
+    setRaffleStage(1);
+    setActiveTab('raffle');
+    onBack();
+  };
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -53,6 +95,25 @@ export default function WorldGuessr({ onBack }: Props) {
         <span className="font-orbitron font-bold text-sm tracking-widest text-white">
           WORLDGUESSR
         </span>
+
+        <div className="flex-1" />
+
+        {/* Sortear: inscreve quem participou pelo chat e fecha a lista no sorteio */}
+        <motion.button
+          onClick={handleSorteio}
+          disabled={playerCount === 0}
+          whileHover={playerCount > 0 ? { scale: 1.03 } : {}}
+          whileTap={playerCount > 0 ? { scale: 0.97 } : {}}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl font-orbitron font-bold text-xs tracking-widest"
+          style={{
+            background: playerCount > 0 ? 'rgba(0,229,255,0.1)' : 'rgba(255,255,255,0.03)',
+            border: playerCount > 0 ? '1px solid rgba(0,229,255,0.35)' : '1px solid rgba(255,255,255,0.08)',
+            color: playerCount > 0 ? '#00E5FF' : 'rgba(255,255,255,0.25)',
+            cursor: playerCount > 0 ? 'pointer' : 'not-allowed',
+          }}
+        >
+          🎟️ SORTEAR ({playerCount})
+        </motion.button>
       </div>
 
       {/* Body: jogo + chat lado a lado */}

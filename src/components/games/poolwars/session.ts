@@ -43,6 +43,7 @@ class PoolWarsSession {
         this.seen.add(m.id);
         if (this.running) {
           applyMessage(this.world, { username: m.username, text: m.text, color: m.color, source: m.source });
+          useStore.getState().addParticipantFromChat(m.username, m.source);
         }
       }
       if (this.seen.size > 600) this.seen = new Set(state.chatMessages.map(m => m.id));

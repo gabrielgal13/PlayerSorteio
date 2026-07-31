@@ -12,15 +12,16 @@
 'use client';
 import {
   createWorld, stepWorld, applyMessage, leaderboard,
-  toggleStreamerBall, type World, type LeaderRow, type MatchStats,
+  toggleStreamerBall, WORLD_MIN_W, WORLD_MIN_H,
+  type World, type LeaderRow, type MatchStats,
 } from './engine';
 import { useStore } from '@/store/useStore';
 
-// Mundo menor que antes — com poucos jogadores (streams pequenas) as bolinhas
-// se espalhavam por uma área tão grande que a câmera precisava dar um zoom-out
-// enorme pra caber todo mundo, deixando tudo minúsculo e ilegível.
-const WORLD_W = 1300;
-const WORLD_H = 820;
+// O mundo começa nesse mínimo e CRESCE sozinho conforme entra gente (ver
+// growWorld no engine), então poucas bolas ficam pertinho e grandes, e uma
+// multidão ganha espaço pra não travar. Só zera de volta ao mínimo no reset.
+const WORLD_W = WORLD_MIN_W;
+const WORLD_H = WORLD_MIN_H;
 
 export type FinalStats = MatchStats & { elapsedMs: number };
 
@@ -31,7 +32,7 @@ class ChatWarsSession {
   finished = false;
   streamerOn = false;
   finalRows: LeaderRow[] = [];
-  finalStats: FinalStats = { messages: 0, eaten: 0, maxMass: 0, events: 0, elapsedMs: 0 };
+  finalStats: FinalStats = { messages: 0, maxMass: 0, events: 0, elapsedMs: 0 };
 
   private seen = new Set<string>();
   private raf: number | null = null;
@@ -51,6 +52,7 @@ class ChatWarsSession {
         this.seen.add(m.id);
         if (this.running) {
           applyMessage(this.world, { username: m.username, text: m.text, color: m.color, source: m.source });
+          useStore.getState().addParticipantFromChat(m.username, m.source);
         }
       }
       if (this.seen.size > 600) this.seen = new Set(state.chatMessages.map(m => m.id));

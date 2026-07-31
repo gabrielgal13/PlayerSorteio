@@ -65,6 +65,9 @@ function fmtMass(m: number): string {
 export function updateCamera(cam: Camera, w: World, viewW: number, viewH: number, dt: number) {
   let tx = w.width / 2, ty = w.height / 2, tzoom = 0.5;
 
+  let count = 0;
+  for (const b of w.balls.values()) if (!b.ghost) count++;
+
   const focus = w.moment?.focusId ? w.balls.get(w.moment.focusId) : null;
   if (focus && !focus.ghost) {
     tx = focus.x; ty = focus.y;
@@ -78,16 +81,18 @@ export function updateCamera(cam: Camera, w: World, viewW: number, viewH: number
       maxX = Math.max(maxX, b.x + b.radius); maxY = Math.max(maxY, b.y + b.radius);
     }
     if (any) {
-      const pad = 120;
+      const pad = 80;
       const bw = (maxX - minX) + pad * 2, bh = (maxY - minY) + pad * 2;
       tx = (minX + maxX) / 2; ty = (minY + maxY) / 2;
       tzoom = Math.min(viewW / bw, viewH / bh);
     }
   }
-  // Piso alto de propósito: as bolinhas precisam continuar bem visíveis mesmo
-  // quando o grupo está espalhado — preferimos cortar quem ficou muito longe
-  // do enxame a encolher todo mundo até ficar ilegível.
-  tzoom = Math.max(0.55, Math.min(1.4, tzoom));
+  // Piso de zoom DINÂMICO: com poucos jogadores mantemos um piso alto (as
+  // bolinhas ficam grandes, preenchendo a tela). Com muitos, o piso precisa
+  // BAIXAR — senão a câmera nunca revela o mapa maior (que já cresceu lá no
+  // engine) e tudo fica espremido do mesmo jeito, mesmo com mais espaço.
+  const floorZoom = count <= 6 ? 0.9 : Math.max(0.34, 0.9 - (count - 6) * (0.56 / 144));
+  tzoom = Math.max(floorZoom, Math.min(1.6, tzoom));
 
   const ease = focus ? 4 : 1.8;
   const k = Math.min(ease * dt, 1);
@@ -96,7 +101,7 @@ export function updateCamera(cam: Camera, w: World, viewW: number, viewH: number
   cam.zoom += (tzoom - cam.zoom) * Math.min(2.2 * dt, 1);
 
   if (w.moment && w.moment.shake > cam.shake) cam.shake = w.moment.shake;
-  cam.shake = Math.max(0, cam.shake - dt * 1.6);
+  cam.shake = Math.max(0, cam.shake - dt * 3.2); // decaimento 2x mais rápido — terremoto dura metade do tempo
 }
 
 export function render(ctx: CanvasRenderingContext2D, w: World, cam: Camera, viewW: number, viewH: number, sprite: ProcessedSprite | null = null, bossSprite: ProcessedSprite | null = null) {
@@ -254,9 +259,10 @@ function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: Proc
   // boss horns (behind body)
   if (b.isBoss) drawHorns(ctx, r);
 
-  // outer glow
+  // outer glow — sutil de propósito: aura grande dava a ilusão de que as bolas
+  // se tocavam quando na verdade só o brilho encostava.
   ctx.shadowColor = b.isBoss ? '#ff2030' : b.isStreamer ? '#00E5FF' : `hsl(${b.hue},95%,55%)`;
-  ctx.shadowBlur = b.isBoss ? 55 : b.isStreamer || isLeader ? 38 : 20;
+  ctx.shadowBlur = b.isBoss ? 30 : b.isStreamer || isLeader ? 18 : 8;
 
   if (activeSprite) {
     // The sprite IS the ball — draw it round, keeping its native aspect ratio
@@ -318,6 +324,15 @@ function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: Proc
     ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(0, 0, r + 8, 0, Math.PI * 2); ctx.stroke();
   }
+  // escudo de imunidade pós-mordida — aninho suave que pulsa enquanto protegido
+  if (!b.isBoss && w.time < b.dmgImmuneUntil) {
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = `rgba(150,215,255,${0.35 + 0.3 * Math.sin(w.time / 110)})`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]); ctx.lineDashOffset = -w.time / 40;
+    ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
   drawNameBelow(ctx, b, r, false);
 
   ctx.restore();
@@ -326,7 +341,7 @@ function drawBall(ctx: CanvasRenderingContext2D, w: World, b: Ball, sprite: Proc
 /* ── Cartoon face ────────────────────────────────────────────────────────── */
 function drawFace(ctx: CanvasRenderingContext2D, mood: Mood, r: number, b: Ball, textBelow: boolean) {
   if (r < 9) return;
-  const eyeY = textBelow ? -r * 0.30 : r * 0.04;   // lower — sits below the sprite's hat
+  const eyeY = textBelow ? -r * 0.30 : -r * 0.08;  // um tico acima do centro do sprite
   const eyeDX = r * 0.24;
   const eyeR = Math.max(2, r * 0.12);
   // pupils track velocity slightly
@@ -370,26 +385,30 @@ function drawFace(ctx: CanvasRenderingContext2D, mood: Mood, r: number, b: Ball,
     ctx.stroke();
   }
 
-  // mouth — always drawn; sits just under the eyes
-  const mouthY = textBelow ? r * 0.06 : r * 0.36;
-  const mr = r * 0.2;
+  // mouth — always drawn. `mouthY` é o CENTRO VISUAL da boca; cada humor é
+  // desenhado simétrico em torno dele (sorriso desce, cara-feia sobe pelo mesmo
+  // tanto) pra TODAS ficarem na mesma altura, nunca coladas no olho.
+  const mouthY = textBelow ? r * 0.06 : r * 0.22;
+  const mr = r * 0.18;
   ctx.strokeStyle = dark;
   ctx.fillStyle = dark;
   ctx.lineWidth = Math.max(2, r * 0.08);
   ctx.lineCap = 'round';
   ctx.beginPath();
   if (mood === 'happy') {
-    ctx.arc(0, mouthY - mr * 0.35, mr, 0.15 * Math.PI, 0.85 * Math.PI);
+    // sorriso (U): centro do arco acima → a curva desce e fica centrada em mouthY
+    ctx.arc(0, mouthY - mr * 0.7, mr, 0.15 * Math.PI, 0.85 * Math.PI);
     ctx.stroke();
   } else if (mood === 'angry') {
-    ctx.arc(0, mouthY + mr * 0.55, mr, 1.15 * Math.PI, 1.85 * Math.PI);
+    // cara-feia (∩): centro do arco abaixo → a curva sobe e fica centrada em mouthY
+    ctx.arc(0, mouthY + mr * 0.7, mr, 1.15 * Math.PI, 1.85 * Math.PI);
     ctx.stroke();
   } else if (mood === 'surprised') {
     ctx.arc(0, mouthY, r * 0.11, 0, Math.PI * 2);
     ctx.fill();
   } else if (mood === 'smug') {
-    ctx.moveTo(-r * 0.16, mouthY - r * 0.03);
-    ctx.quadraticCurveTo(0, mouthY + r * 0.12, r * 0.19, mouthY - r * 0.07);
+    ctx.moveTo(-r * 0.16, mouthY - r * 0.04);
+    ctx.quadraticCurveTo(0, mouthY + r * 0.09, r * 0.19, mouthY - r * 0.07);
     ctx.stroke();
   } else {
     ctx.moveTo(-r * 0.15, mouthY); ctx.lineTo(r * 0.15, mouthY);

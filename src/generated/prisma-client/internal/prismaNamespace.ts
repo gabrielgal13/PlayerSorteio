@@ -394,7 +394,8 @@ export const ModelName = {
   Sale: 'Sale',
   RaffleHistory: 'RaffleHistory',
   BotCommand: 'BotCommand',
-  AppConfig: 'AppConfig'
+  AppConfig: 'AppConfig',
+  PokeArenaSave: 'PokeArenaSave'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -410,7 +411,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "streamer" | "rankEvent" | "prizeList" | "prizeListItem" | "pscTransaction" | "marketingImage" | "affiliateProposal" | "sale" | "raffleHistory" | "botCommand" | "appConfig"
+    modelProps: "streamer" | "rankEvent" | "prizeList" | "prizeListItem" | "pscTransaction" | "marketingImage" | "affiliateProposal" | "sale" | "raffleHistory" | "botCommand" | "appConfig" | "pokeArenaSave"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1228,6 +1229,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PokeArenaSave: {
+      payload: Prisma.$PokeArenaSavePayload<ExtArgs>
+      fields: Prisma.PokeArenaSaveFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PokeArenaSaveFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PokeArenaSavePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PokeArenaSaveFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PokeArenaSavePayload>
+        }
+        findFirst: {
+          args: Prisma.PokeArenaSaveFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PokeArenaSavePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PokeArenaSaveFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PokeArenaSavePayload>
+        }
+        findMany: {
+          args: Prisma.PokeArenaSaveFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PokeArenaSavePayload>[]
+        }
+        create: {
+          args: Prisma.PokeArenaSaveCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PokeArenaSavePayload>
+        }
+        createMany: {
+          args: Prisma.PokeArenaSaveCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PokeArenaSaveCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PokeArenaSavePayload>[]
+        }
+        delete: {
+          args: Prisma.PokeArenaSaveDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PokeArenaSavePayload>
+        }
+        update: {
+          args: Prisma.PokeArenaSaveUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PokeArenaSavePayload>
+        }
+        deleteMany: {
+          args: Prisma.PokeArenaSaveDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PokeArenaSaveUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PokeArenaSaveUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PokeArenaSavePayload>[]
+        }
+        upsert: {
+          args: Prisma.PokeArenaSaveUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PokeArenaSavePayload>
+        }
+        aggregate: {
+          args: Prisma.PokeArenaSaveAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePokeArenaSave>
+        }
+        groupBy: {
+          args: Prisma.PokeArenaSaveGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PokeArenaSaveGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PokeArenaSaveCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PokeArenaSaveCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1290,6 +1365,7 @@ export const StreamerScalarFieldEnum = {
   registrationCommand: 'registrationCommand',
   claimCommand: 'claimCommand',
   validationTimeout: 'validationTimeout',
+  winnerTimeoutEnabled: 'winnerTimeoutEnabled',
   isAffiliate: 'isAffiliate',
   testProfile: 'testProfile',
   pscBalance: 'pscBalance',
@@ -1470,6 +1546,16 @@ export const AppConfigScalarFieldEnum = {
 } as const
 
 export type AppConfigScalarFieldEnum = (typeof AppConfigScalarFieldEnum)[keyof typeof AppConfigScalarFieldEnum]
+
+
+export const PokeArenaSaveScalarFieldEnum = {
+  id: 'id',
+  streamerId: 'streamerId',
+  data: 'data',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PokeArenaSaveScalarFieldEnum = (typeof PokeArenaSaveScalarFieldEnum)[keyof typeof PokeArenaSaveScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1685,6 +1771,7 @@ export type GlobalOmitConfig = {
   raffleHistory?: Prisma.RaffleHistoryOmit
   botCommand?: Prisma.BotCommandOmit
   appConfig?: Prisma.AppConfigOmit
+  pokeArenaSave?: Prisma.PokeArenaSaveOmit
 }
 
 /* Types for Logging */

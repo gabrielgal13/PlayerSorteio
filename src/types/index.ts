@@ -196,7 +196,16 @@ export interface AppState {
   mascotDead: boolean;
   mascotDeadThisRound: boolean;
   autoRevealWinner: boolean;
+  winnerTimeoutEnabled: boolean;
   raffleAnimationStyle: RaffleAnimationStyle;
   pendingMarketplaceDelivery: PendingMarketplaceDelivery | null;
   forcePasswordChange: boolean;
+  /**
+   * MODO TESTE: admin logado na conta de um streamer só pra olhar/testar.
+   * Quem garante que nada é gravado é o middleware (a sessão no cookie carrega
+   * a mesma flag) — aqui só controla a UI: banner, sem PSC, participante mock.
+   */
+  testMode: boolean;
+  /** Username do admin que entrou no modo teste — pra voltar pro painel depois. */
+  testModeAdmin: string | null;
 }

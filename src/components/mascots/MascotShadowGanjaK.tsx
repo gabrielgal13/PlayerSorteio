@@ -75,6 +75,7 @@ const DREADS_SMOKE = [
 
 function playPunchSound() {
   try {
+    if (!useStore.getState().audioEnabled) return;
     const Ctx = (window as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
       ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctx) return;

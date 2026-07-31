@@ -568,6 +568,7 @@ export default function RaffleEngine() {
     chatMessages,
     setRaffleStage,
     updatePrize,
+    dropExhaustedPrizes,
     deductPSC,
     isAffiliate,
     themeColor,
@@ -2060,7 +2061,7 @@ export default function RaffleEngine() {
 
         {/* Sair do sorteio */}
         <motion.button
-          onClick={() => { reset(); setRaffleStage(1); }}
+          onClick={() => { reset(); dropExhaustedPrizes(); setRaffleStage(1); }}
           whileHover={{ color: '#FF4444' }}
           className="flex items-center gap-2 font-rajdhani text-xs tracking-widest transition-all"
           style={{ color: 'rgba(255,255,255,0.3)' }}>

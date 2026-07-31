@@ -25,6 +25,7 @@ interface AppActions {
   addHistory: (result: RaffleResult) => void;
   clearHistory: () => void;
   clearPrizes: () => void;
+  dropExhaustedPrizes: () => void;
   reorderPrizes: (fromIndex: number, toIndex: number) => void;
   setActiveTab: (tab: AppTab) => void;
   setObsMode: (enabled: boolean) => void;
@@ -515,6 +516,19 @@ export const useStore = create<AppState & AppActions>()(
       },
 
       clearPrizes: () => set({ prizes: [], currentPrize: null }),
+
+      // Tira da lista os prêmios que já acabaram (quantidade 0). Sem isso eles
+      // voltavam pro próximo sorteio zerados, ocupando espaço e sem poder sair.
+      // Os que ainda têm unidade ficam — sair do sorteio no meio pra ajustar a
+      // config não pode perder a premiação montada.
+      dropExhaustedPrizes: () => {
+        const remaining = get().prizes.filter(p => p.quantity > 0);
+        const currentPrize = get().currentPrize;
+        set({
+          prizes: remaining,
+          currentPrize: currentPrize && remaining.some(p => p.id === currentPrize.id) ? currentPrize : null,
+        });
+      },
 
       reorderPrizes: (fromIndex, toIndex) => {
         const prizes = [...get().prizes];

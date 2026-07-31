@@ -312,7 +312,7 @@ export default function ResultsPanel() {
 
         {/* Ver Histórico */}
         <motion.button
-          onClick={() => { setRaffleStage(1); setActiveTab('history'); }}
+          onClick={() => { clearPrizes(); setParticipants([]); setRaffleStage(1); setActiveTab('history'); }}
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
           className="flex-1 flex items-center justify-center gap-2.5 rounded-xl font-rajdhani font-bold tracking-widest text-sm"
           style={{

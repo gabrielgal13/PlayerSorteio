@@ -54,6 +54,7 @@ export default function Dashboard() {
     pscBalance,
     isAffiliate,
     testMode, exitTestMode,
+    syncPscBalance,
   } = useStore();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -80,21 +81,21 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.mascot]);
 
-  // pscBalance/isAffiliate não sobrevivem a um refresh de página (não ficam no
-  // localStorage) — resincroniza com o saldo real do banco assim que monta,
-  // pra nunca mostrar um saldo desatualizado (ex: 0 depois de um F5).
-  // Modo teste não tem PSC — resincronizar traria o saldo real do streamer de volta.
+  // O saldo em cache (localStorage) segura a exibição, mas quem manda é o banco.
+  // Além de sincronizar ao montar, refaz quando a aba volta ao foco ou a conexão
+  // volta — numa live longa, uma queda de rede não pode deixar o saldo errado
+  // preso na tela até o streamer deslogar.
   useEffect(() => {
-    if (!currentUser?.username || testMode) return;
-    fetch(`/api/streamer/config?username=${encodeURIComponent(currentUser.username)}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data && typeof data.pscBalance === 'number') {
-          useStore.setState({ pscBalance: data.pscBalance, isAffiliate: data.isAffiliate ?? true });
-        }
-      })
-      .catch(() => {});
-  }, [currentUser?.username, testMode]);
+    if (!currentUser?.username) return;
+    syncPscBalance();
+    const resync = () => syncPscBalance();
+    window.addEventListener('focus', resync);
+    window.addEventListener('online', resync);
+    return () => {
+      window.removeEventListener('focus', resync);
+      window.removeEventListener('online', resync);
+    };
+  }, [currentUser?.username, syncPscBalance]);
 
   useEffect(() => {
     if (activeTab !== 'games') setActiveGame(null);

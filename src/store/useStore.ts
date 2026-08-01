@@ -1,6 +1,6 @@
 'use client';
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   AppState, StreamerProfile, Participant, Prize,
   RaffleResult, RaffleStatus, AppTab, TwitchConfig, ChatMessage,
@@ -14,6 +14,7 @@ interface AppActions {
   enterTestMode: (username: string) => Promise<void>;
   exitTestMode: () => Promise<void>;
   deductPSC: (amount: number) => void;
+  syncPscBalance: () => Promise<void>;
   addPscToAll: (amount: number) => void;
   setParticipants: (participants: Participant[]) => void;
   addPrize: (prize: Omit<Prize, 'id' | 'order'>) => void;
@@ -41,6 +42,7 @@ interface AppActions {
   setChatRegistrationActive: (active: boolean) => void;
   setChatRegistrationRequested: (v: boolean) => void;
   setChatRegistrationStopRequested: (v: boolean) => void;
+  setChatRegistrationWanted: (v: boolean) => void;
   addParticipantFromChat: (username: string, source?: 'twitch' | 'kick' | 'youtube') => boolean;
   setWinnerChatMessage: (message: string | null) => void;
   setRaffleStage: (stage: 1 | 2 | 3) => void;
@@ -77,6 +79,34 @@ const THEME_BY_MASCOT: Record<string, string> = {
   dreads: '#00FFA3',
   careca: '#00E5FF',
 };
+
+/**
+ * localStorage com escrita à prova de cota cheia.
+ *
+ * O zustand regrava o estado inteiro a cada `set()` e não trata erro: com a
+ * cota estourada (lista de participantes grande + sprites base64 do currentUser)
+ * o `setItem` lançaria de dentro de qualquer ação — inclusive a que registra
+ * participante pelo chat. Falhar a escrita em silêncio degrada só o cache; o
+ * app continua funcionando normalmente com o estado em memória.
+ */
+const safeLocalStorage = createJSONStorage(() => {
+  // Precisa LANÇAR no servidor: o createJSONStorage só entende "sem storage"
+  // quando a factory lança (é assim que o storage padrão do zustand lida com
+  // SSR). Devolver undefined aqui quebraria na primeira leitura.
+  if (typeof window === 'undefined') throw new Error('sem localStorage no servidor');
+  const ls = window.localStorage;
+  return {
+    getItem: (name: string) => ls.getItem(name),
+    setItem: (name: string, value: string) => {
+      try {
+        ls.setItem(name, value);
+      } catch {
+        // cota cheia / modo privado — segue sem cache
+      }
+    },
+    removeItem: (name: string) => ls.removeItem(name),
+  };
+});
 
 /** Nick mockado que o admin adiciona com um clique durante o modo teste. */
 export const TEST_MODE_MOCK_PARTICIPANT = 'ddkf1ps';
@@ -176,6 +206,7 @@ const CLEARED_SESSION_STATE = {
   chatRegistrationActive: false,
   chatRegistrationRequested: false,
   chatRegistrationStopRequested: false,
+  chatRegistrationWanted: false,
   winnerChatMessage: null,
   liveViewerCount: null,
   sessionParticipantCount: 0,
@@ -204,6 +235,7 @@ export const useStore = create<AppState & AppActions>()(
       chatRegistrationActive: false,
       chatRegistrationRequested: false,
       chatRegistrationStopRequested: false,
+      chatRegistrationWanted: false,
       winnerChatMessage: null,
       raffleStage: 1,
       sessionStartTimestamp: null,
@@ -471,6 +503,10 @@ export const useStore = create<AppState & AppActions>()(
           raffleStage: 1,
           eventBackground: null,
           chatMessages: [],
+          // O saldo fica em cache no localStorage — precisa sair junto, senão o
+          // próximo streamer a logar nesse navegador herdaria o saldo do anterior.
+          pscBalance: 0,
+          isAffiliate: true,
         });
       },
 
@@ -648,7 +684,15 @@ export const useStore = create<AppState & AppActions>()(
 
       setChatRegistrationActive: (chatRegistrationActive) => set({ chatRegistrationActive }),
       setChatRegistrationRequested: (chatRegistrationRequested) => set({ chatRegistrationRequested }),
-      setChatRegistrationStopRequested: (chatRegistrationStopRequested) => set({ chatRegistrationStopRequested }),
+      // Pedir pra parar é, por definição, não querer mais coletar. Concentrar
+      // isso aqui cobre de uma vez o "ENCERRAR INSCRIÇÕES", o fechamento da
+      // lista pelos jogos e o desmonte deles — sem espalhar o flag por tudo.
+      setChatRegistrationStopRequested: (chatRegistrationStopRequested) =>
+        set(chatRegistrationStopRequested
+          ? { chatRegistrationStopRequested, chatRegistrationWanted: false }
+          : { chatRegistrationStopRequested }),
+
+      setChatRegistrationWanted: (chatRegistrationWanted) => set({ chatRegistrationWanted }),
       setWinnerChatMessage: (winnerChatMessage) => set({ winnerChatMessage }),
 
       addParticipantFromChat: (username: string, source?: 'twitch' | 'kick' | 'youtube') => {
@@ -723,6 +767,24 @@ export const useStore = create<AppState & AppActions>()(
         set({ chatMessages: [...get().chatMessages, { ...msg, id }].slice(-80) });
       },
 
+      // Rebusca o saldo real do banco. Se a rede falhar ou a resposta vier
+      // estranha, mantém o último saldo conhecido de propósito — mostrar 0 por
+      // causa de um fetch que não voltou era justamente o bug do "zerou do nada".
+      syncPscBalance: async () => {
+        const { currentUser, testMode } = get();
+        if (!currentUser?.username || currentUser.isAdmin || testMode) return;
+        try {
+          const res = await fetch(`/api/streamer/config?username=${encodeURIComponent(currentUser.username)}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data && typeof data.pscBalance === 'number') {
+            set({ pscBalance: data.pscBalance, isAffiliate: data.isAffiliate ?? true });
+          }
+        } catch {
+          // silêncio proposital: o saldo em cache continua valendo
+        }
+      },
+
       deductPSC: (amount) => {
         const { pscBalance, currentUser } = get();
         // Otimista pra UI responder na hora, mas o valor que vale é o que o
@@ -735,9 +797,15 @@ export const useStore = create<AppState & AppActions>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: currentUser.username, amount }),
           })
-            .then(r => r.json())
-            .then(data => { if (typeof data.pscBalance === 'number') set({ pscBalance: data.pscBalance }); })
-            .catch(() => {});
+            .then(r => r.ok ? r.json() : Promise.reject(new Error(String(r.status))))
+            .then(data => {
+              if (typeof data.pscBalance === 'number') set({ pscBalance: data.pscBalance });
+              else get().syncPscBalance(); // resposta sem saldo (ex: modo teste)
+            })
+            .catch(() => {
+              // Não deixa o palpite otimista virar verdade: busca o saldo real.
+              get().syncPscBalance();
+            });
         }
       },
 
@@ -751,6 +819,7 @@ export const useStore = create<AppState & AppActions>()(
     }),
     {
       name: 'playerskins-raffle-store',
+      storage: safeLocalStorage,
       partialize: (state) => ({
         // Mantido como cache local para carregamento imediato enquanto DB responde
         isLoggedIn: state.isLoggedIn,
@@ -760,6 +829,17 @@ export const useStore = create<AppState & AppActions>()(
         // sem banner) enquanto o cookie ainda está em modo teste.
         testMode: state.testMode,
         testModeAdmin: state.testModeAdmin,
+        // Último saldo conhecido. O servidor continua sendo a fonte da verdade
+        // (syncPscBalance corrige ao montar/voltar o foco), mas guardar aqui
+        // evita renderizar 0 — que não é "saldo zerado", é "ainda não carregou".
+        pscBalance: state.pscBalance,
+        isAffiliate: state.isAffiliate,
+        // Quem já entrou no sorteio não pode sumir num F5 — juntar 200 pessoas
+        // pelo chat e perder tudo por um refresh acidental é irrecuperável.
+        // Só sai quando o streamer limpa ou quando o sorteio termina.
+        participants: state.participants,
+        // Só a intenção é salva; a conexão em si é refeita do zero no mount.
+        chatRegistrationWanted: state.chatRegistrationWanted,
         twitchConfig: state.twitchConfig,
         audioEnabled: state.audioEnabled,
         excelImportEnabled: state.excelImportEnabled,

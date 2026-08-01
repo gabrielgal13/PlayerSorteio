@@ -169,6 +169,13 @@ export interface AppState {
   chatRegistrationActive: boolean;
   chatRegistrationRequested: boolean;
   chatRegistrationStopRequested: boolean;
+  /**
+   * Intenção do streamer de coletar participantes pelo chat — diferente de
+   * `chatRegistrationActive`, que é o socket de fato conectado. Só este fica
+   * salvo: depois de um F5 o socket morre, então guardar "conectado" seria
+   * mentira. Guardando a intenção, dá pra reabrir a conexão de verdade.
+   */
+  chatRegistrationWanted: boolean;
   winnerChatMessage: string | null;
   raffleStage: 1 | 2 | 3;
   sessionStartTimestamp: number | null;

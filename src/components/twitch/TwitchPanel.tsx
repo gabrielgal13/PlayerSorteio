@@ -13,6 +13,7 @@ export default function TwitchPanel() {
     chatRegistrationActive, setChatRegistrationActive,
     chatRegistrationRequested, setChatRegistrationRequested,
     chatRegistrationStopRequested, setChatRegistrationStopRequested,
+    chatRegistrationWanted,
     addParticipantFromChat,
     setWinnerChatMessage,
     addChatMessage,
@@ -496,6 +497,18 @@ export default function TwitchPanel() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatRegistrationStopRequested]);
+
+  // Reabre a coleta pelo chat depois de um F5. O socket morre no refresh, então
+  // não dá pra restaurar `chatRegistrationActive` direto — o que fica salvo é a
+  // intenção, e aqui ela vira uma conexão de verdade pelo caminho normal.
+  // Declarado DEPOIS do efeito de raffleStage de propósito: no mount aquele
+  // chama stopAndDisconnect (stage 1), e este precisa rodar em seguida.
+  useEffect(() => {
+    if (chatRegistrationWanted && !chatRegistrationActive && !isConnecting) {
+      setChatRegistrationRequested(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Cleanup ao desmontar
   useEffect(() => {

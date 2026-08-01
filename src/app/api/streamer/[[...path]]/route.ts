@@ -8,6 +8,29 @@ import { INFINITE_QUANTITY } from '@/types';
 
 const ADMIN_LIST_NAME = '__admin_products__';
 
+// Campos que o próprio streamer pode gravar. Tudo que não estiver aqui é
+// descartado: antes o body inteiro ia pro `update` do Prisma, então dava pra
+// mandar pscBalance/isAdmin/isAffiliate junto e gravar direto pela API — o que
+// também deixava o saldo à mercê de qualquer payload malformado.
+const CONFIG_FIELDS = [
+  'twitchChannel', 'registrationCommand', 'claimCommand', 'validationTimeout',
+  'youtubeChannel', 'youtubeDisplayName', 'kickChannel', 'kickChatroomId',
+] as const;
+
+const PREFERENCE_FIELDS = [
+  'audioEnabled', 'excelImportEnabled', 'excelPrizesImportEnabled',
+  'eventMusic', 'eventEffect', 'spinEffect', 'themeColor',
+  'socoChuteModeEnabled', 'raffleTriggerMode', 'autoRoundDelay',
+  'chatTriggerCount', 'chatTriggerCommand', 'raffleAnimationStyle',
+  'winnerTimeoutEnabled',
+] as const;
+
+function pickAllowed(body: Record<string, unknown>, allowed: readonly string[]) {
+  const data: Record<string, unknown> = {};
+  for (const key of allowed) if (body[key] !== undefined) data[key] = body[key];
+  return data;
+}
+
 // Resolve a origin real mesmo atrás de proxy/Vercel
 function getOrigin(req: NextRequest): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
@@ -570,18 +593,29 @@ export async function PATCH(
     const { username, amount } = await req.json();
     if (!username || typeof amount !== 'number' || amount < 0)
       return NextResponse.json({ error: 'invalid body' }, { status: 400 });
-    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { pscBalance: true } });
+    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true, pscBalance: true } });
     if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
-    const newBalance = Math.max(0, streamer.pscBalance - amount);
+    const spent = Math.min(amount, streamer.pscBalance);
+    const newBalance = streamer.pscBalance - spent;
     const updated = await prisma.streamer.update({ where: { username }, data: { pscBalance: newBalance } });
+    // Deixa rastro no extrato: sem isso o saldo caía e o Histórico PSC não
+    // mostrava nada, então extrato e saldo nunca fechavam.
+    if (spent > 0) {
+      await prisma.pscTransaction.create({
+        data: { streamerId: streamer.id, type: 'debit', amount: spent, description: 'Prêmio sorteado' },
+      }).catch(() => {});
+    }
     return NextResponse.json({ pscBalance: updated.pscBalance });
   }
 
   if (route === 'config') {
     const body = await req.json();
-    const { username, ...config } = body;
+    const { username } = body;
     if (!username) return NextResponse.json({ error: 'username required' }, { status: 400 });
-    const streamer = await prisma.streamer.update({ where: { username }, data: config });
+    const streamer = await prisma.streamer.update({
+      where: { username },
+      data: pickAllowed(body, CONFIG_FIELDS),
+    });
     return NextResponse.json({
       twitchChannel: streamer.twitchChannel,
       registrationCommand: streamer.registrationCommand,
@@ -591,12 +625,14 @@ export async function PATCH(
   }
 
   if (route === 'preferences') {
-    const { username, ...prefs } = await req.json();
+    const body = await req.json();
+    const { username } = body;
     if (!username) return NextResponse.json({ error: 'username required' }, { status: 400 });
-    const streamer = await prisma.streamer.upsert({
+    // update (e não upsert): o streamer sempre existe, já que o username vem de
+    // um login bem-sucedido. O upsert antigo criava conta com passwordHash ''.
+    const streamer = await prisma.streamer.update({
       where: { username },
-      update: prefs,
-      create: { username, passwordHash: '', ...prefs },
+      data: pickAllowed(body, PREFERENCE_FIELDS),
     });
     return NextResponse.json({
       audioEnabled: streamer.audioEnabled,

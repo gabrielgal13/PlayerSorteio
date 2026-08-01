@@ -33,6 +33,7 @@ export default function ParticipantImport() {
     participants, setParticipants, setActiveTab,
     chatRegistrationActive,
     setChatRegistrationRequested, setChatRegistrationStopRequested,
+    setChatRegistrationWanted,
     twitchConfig, excelImportEnabled, currentUser,
     testMode, addParticipantFromChat,
   } = useStore();
@@ -465,7 +466,11 @@ export default function ParticipantImport() {
               ) : (
                 <div className="flex gap-3">
                   <motion.button
-                    onClick={() => { setIsRequestingChat(true); setChatRegistrationRequested(true); }}
+                    onClick={() => {
+                      setIsRequestingChat(true);
+                      setChatRegistrationWanted(true); // sobrevive ao F5 e reabre a conexão sozinho
+                      setChatRegistrationRequested(true);
+                    }}
                     disabled={isRequestingChat}
                     whileHover={!isRequestingChat ? { scale: 1.02 } : {}}
                     whileTap={!isRequestingChat ? { scale: 0.98 } : {}}

@@ -267,7 +267,7 @@ const SETTINGS_TABS: { id: SettingsTab; label: string; title: string; subtitle: 
 ];
 
 export default function EventConfig() {
-  const { participants, prizes, setRaffleStage, currentUser, twitchConfig, setTwitchConfig, setTwitchAuthenticated, saveConfigToDB, setYoutubeChannel: saveYoutubeChannel, setKickChannel: saveKickChannel, excelImportEnabled, setExcelImportEnabled, excelPrizesImportEnabled, setExcelPrizesImportEnabled, autoRevealWinner, setAutoRevealWinner, winnerTimeoutEnabled, setWinnerTimeoutEnabled, spinEffect, setSpinEffect, socoChuteModeEnabled, setSocoChuteModeEnabled, raffleTriggerMode, setRaffleTriggerMode, autoRoundDelay, setAutoRoundDelay, chatTriggerCount, setChatTriggerCount, chatTriggerCommand, setChatTriggerCommand, themeColor, eventBackground, setEventBackground, eventMusic, setEventMusic, eventEffect, setEventEffect, raffleAnimationStyle, setRaffleAnimationStyle, isAffiliate, pscBalance, testMode } = useStore();
+  const { participants, setParticipants, prizes, setRaffleStage, currentUser, twitchConfig, setTwitchConfig, setTwitchAuthenticated, saveConfigToDB, setYoutubeChannel: saveYoutubeChannel, setKickChannel: saveKickChannel, excelImportEnabled, setExcelImportEnabled, excelPrizesImportEnabled, setExcelPrizesImportEnabled, autoRevealWinner, setAutoRevealWinner, winnerTimeoutEnabled, setWinnerTimeoutEnabled, spinEffect, setSpinEffect, socoChuteModeEnabled, setSocoChuteModeEnabled, raffleTriggerMode, setRaffleTriggerMode, autoRoundDelay, setAutoRoundDelay, chatTriggerCount, setChatTriggerCount, chatTriggerCommand, setChatTriggerCommand, themeColor, eventBackground, setEventBackground, eventMusic, setEventMusic, eventEffect, setEventEffect, raffleAnimationStyle, setRaffleAnimationStyle, isAffiliate, pscBalance, testMode } = useStore();
   const prizeManagerRef = useRef<PrizeManagerHandle>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('plataformas');
@@ -1861,6 +1861,36 @@ export default function EventConfig() {
                 />
               )}
               <div className="flex-1" />
+              {/* A lista sobrevive a refresh, então precisa de um jeito explícito
+                  de esvaziar — antes só dava pra limpar quem veio de arquivo. */}
+              {participants.length > 0 && (
+                <button
+                  type="button"
+                  title="Limpar lista de participantes"
+                  onClick={() => {
+                    if (confirm(`Remover os ${participants.length} participantes da lista?`)) setParticipants([]);
+                  }}
+                  className="flex items-center justify-center rounded-md transition-all"
+                  style={{
+                    width: '22px', height: '22px', flexShrink: 0,
+                    color: 'rgba(255,255,255,0.3)',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = '#FF4444';
+                    e.currentTarget.style.borderColor = 'rgba(255,68,68,0.4)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = 'rgba(255,255,255,0.3)';
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                  }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                  </svg>
+                </button>
+              )}
               <span
                 className="font-orbitron font-bold text-xs px-2 py-0.5 rounded-md"
                 style={{

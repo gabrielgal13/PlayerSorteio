@@ -30,8 +30,17 @@ export default function ResultsPanel() {
     sessionStartTimestamp, sessionDuration, sessionParticipantCount,
     participants, liveViewerCount, twitchConfig, twitchConnected,
     setRaffleStage, setActiveTab,
-    clearPrizes, setParticipants,
+    clearPrizes, setParticipants, setChatRegistrationWanted,
   } = useStore();
+
+  // Sorteio encerrado: zera a premiação, os participantes e a coleta pelo chat.
+  // Sem limpar a intenção, o próximo F5 reabriria a inscrição de um sorteio
+  // que já acabou.
+  const resetRaffleSession = () => {
+    clearPrizes();
+    setParticipants([]);
+    setChatRegistrationWanted(false);
+  };
 
   const hasAnyPlatform = twitchConnected || Boolean(currentUser?.kickChannel) || Boolean(currentUser?.youtubeChannel);
 
@@ -312,7 +321,7 @@ export default function ResultsPanel() {
 
         {/* Ver Histórico */}
         <motion.button
-          onClick={() => { clearPrizes(); setParticipants([]); setRaffleStage(1); setActiveTab('history'); }}
+          onClick={() => { resetRaffleSession(); setRaffleStage(1); setActiveTab('history'); }}
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
           className="flex-1 flex items-center justify-center gap-2.5 rounded-xl font-rajdhani font-bold tracking-widest text-sm"
           style={{
@@ -333,7 +342,7 @@ export default function ResultsPanel() {
 
         {/* Novo Sorteio */}
         <motion.button
-          onClick={() => { clearPrizes(); setParticipants([]); setRaffleStage(1); setActiveTab('raffle'); }}
+          onClick={() => { resetRaffleSession(); setRaffleStage(1); setActiveTab('raffle'); }}
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
           className="flex-[1.4] flex items-center justify-center gap-2.5 rounded-xl font-orbitron font-bold tracking-widest text-sm"
           style={{

@@ -22,7 +22,7 @@ export interface Ball {
   radius: number;        // eased visual radius derived from mass
   streak: number;        // consecutive-message combo counter
   lastMsgAt: number;     // ms (world time) of last counted message
-  lastText: string;      // last message text (repeat detection)
+  recentTexts: string[]; // últimas mensagens (detecção de repetida) — mais recente primeiro
   spawnAt: number;       // world time when first joined (for happy-hour bonus)
   hitFlash: number;      // 0-1, decays — white collision flash
   wobble: number;        // accumulator for gelatin wobble
@@ -127,6 +127,7 @@ export const TUNING = {
   wallRestitution: 1,        // parede devolve 100% da velocidade (rebote elástico, simétrico)
   wallMinBounce: 75,         // rebote mínimo ao tocar a parede, mesmo chegando devagar
   cooldownMs: 2500,           // anti-spam: messages within this window ≈ 0 pts
+  repeatMemory: 15,           // quantas mensagens anteriores contam como "repetida" (mata o alterna A/B)
   streakWindowMs: 12000,      // gap under which streak continues
   spawnGain: 5,               // first message after offline
   shortMsgLen: 3,             // "k", "ok", "aaa" → reduced
@@ -301,21 +302,33 @@ export function applyMessage(w: World, msg: IncomingMessage): void {
   // anti-spam multiplier
   let mult = 1;
   const isReturning = !ball || ball.ghost;
+  // Mensagem repetida não pontua. Compara com as últimas `repeatMemory` e não
+  // só com a anterior — olhando só a anterior, alternar "a"/"b" burlava tudo.
+  const isRepeat = Boolean(
+    ball && !ball.ghost && lower.length > 0 && ball.recentTexts.includes(lower),
+  );
   if (ball && !ball.ghost) {
     if (now - ball.lastMsgAt < TUNING.cooldownMs) mult *= 0.08;       // flood
-    if (lower === ball.lastText && lower.length > 0) mult *= 0.1;     // repeat
   }
   if (text.length < TUNING.shortMsgLen) mult *= 0.3;                  // "k", "ok"
 
-  // streak / combo
+  // streak / combo — repetida congela o combo (não avança nem zera), senão
+  // bastava spammar a mesma coisa pra encostar nos degraus de 5 e 20.
   let streak = 1;
-  if (ball && now - ball.lastMsgAt < TUNING.streakWindowMs) streak = ball.streak + 1;
+  if (ball && isRepeat) streak = ball.streak;
+  else if (ball && now - ball.lastMsgAt < TUNING.streakWindowMs) streak = ball.streak + 1;
 
   // base gain
   let gain = isReturning ? TUNING.spawnGain : 1;
   gain *= mult;
-  if (streak === 5) gain += 10;
-  else if (streak === 20) gain += 50;
+  // Bônus de combo só entra em mensagem que valeu. Ele era somado DEPOIS do
+  // multiplicador anti-spam, então 20 mensagens iguais ainda rendiam +10 e +50
+  // cheios — era daí que vinha o farm.
+  if (!isRepeat) {
+    if (streak === 5) gain += 10;
+    else if (streak === 20) gain += 50;
+  }
+  if (isRepeat) gain = 0;
 
   // global multipliers
   if (now < w.events.xpRain) gain *= 5;
@@ -335,7 +348,7 @@ export function applyMessage(w: World, msg: IncomingMessage): void {
       x: p.x, y: p.y, vx: 0, vy: 0,
       mass: joinMass,
       radius: radiusForMass(joinMass),
-      streak, lastMsgAt: now, lastText: lower, spawnAt: now,
+      streak, lastMsgAt: now, recentTexts: [lower], spawnAt: now,
       hitFlash: 0, wobble: Math.random() * 10, wanderAngle: Math.random() * Math.PI * 2,
       ghost: false, isStreamer: false, isBoss: false, threatId: null,
       dmgImmuneUntil: 0, biteReadyAt: 0, dashUntil: 0,
@@ -355,7 +368,11 @@ export function applyMessage(w: World, msg: IncomingMessage): void {
     ball.name = msg.username;
     ball.streak = streak;
     ball.lastMsgAt = now;
-    ball.lastText = lower;
+    // Guarda mesmo quando repetida — assim continuar spammando segue valendo 0.
+    if (lower.length > 0) {
+      ball.recentTexts = [lower, ...ball.recentTexts.filter(t => t !== lower)]
+        .slice(0, TUNING.repeatMemory);
+    }
     ball.hue = hue;
   }
 
@@ -381,7 +398,7 @@ export function toggleStreamerBall(w: World, name: string): void {
     id, name: name.trim() || 'STREAMER', source: 'twitch', color: '#00E5FF', hue: 187,
     x: p.x, y: p.y, vx: 0, vy: 0,
     mass: TUNING.startMass * 4, radius: radiusForMass(TUNING.startMass * 4),
-    streak: 0, lastMsgAt: w.time, lastText: '', spawnAt: w.time,
+    streak: 0, lastMsgAt: w.time, recentTexts: [], spawnAt: w.time,
     hitFlash: 0, wobble: 0, wanderAngle: 0, ghost: false, isStreamer: true, isBoss: false, threatId: null,
     dmgImmuneUntil: 0, biteReadyAt: 0, dashUntil: 0,
   };
@@ -455,7 +472,7 @@ export function triggerBoss(w: World) {
     id, name: 'CHEFE DO CHAT', source: 'twitch', color: '#ff2d2d', hue: 0,
     x: w.width / 2, y: w.height / 2, vx: 0, vy: 0,
     mass: hp, radius: radiusForBoss(hp),
-    streak: 0, lastMsgAt: w.time, lastText: '', spawnAt: w.time,
+    streak: 0, lastMsgAt: w.time, recentTexts: [], spawnAt: w.time,
     hitFlash: 0, wobble: 0, wanderAngle: 0,
     ghost: false, isStreamer: false, isBoss: true, threatId: null,
     dmgImmuneUntil: 0, biteReadyAt: 0, dashUntil: 0,

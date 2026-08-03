@@ -13,6 +13,7 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [shake, setShake] = useState(false);
   const login = useStore(s => s.login);
+  const sessionExpired = useStore(s => s.sessionExpired);
   const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,6 +139,23 @@ export default function LoginScreen() {
             <p className="text-center text-white/30 text-xs tracking-widest uppercase mb-8 font-rajdhani">
               Autenticação de Streamer
             </p>
+
+            {/* Caiu aqui sozinho porque o cookie de sessão venceu — sem este aviso
+                parece que o painel "deslogou do nada". */}
+            {sessionExpired && !error && (
+              <div
+                className="flex items-start gap-2 px-3 py-2.5 rounded-lg mb-5"
+                style={{ background: 'rgba(255,176,32,0.1)', border: '1px solid rgba(255,176,32,0.3)' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFB020" className="mt-0.5 flex-shrink-0">
+                  <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                </svg>
+                <span className="font-rajdhani text-xs tracking-wide leading-relaxed" style={{ color: '#FFB020' }}>
+                  Sua sessão expirou. Entre de novo — marque &ldquo;Lembrar de mim&rdquo; para continuar
+                  conectado por 30 dias.
+                </span>
+              </div>
+            )}
 
             <motion.form
               ref={formRef}

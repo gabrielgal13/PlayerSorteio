@@ -11,6 +11,8 @@ import type {
 interface AppActions {
   login: (profile: StreamerProfile) => Promise<void>;
   logout: () => void;
+  /** Confere no servidor se o cookie de sessão ainda vale (chamado ao montar o app). */
+  restoreSession: () => Promise<void>;
   enterTestMode: (username: string) => Promise<void>;
   exitTestMode: () => Promise<void>;
   /** `reason` vai pro extrato — sem ele, um débito no histórico não diz o que pagou. */
@@ -219,6 +221,7 @@ export const useStore = create<AppState & AppActions>()(
     (set, get) => ({
       isLoggedIn: false,
       currentUser: null,
+      sessionExpired: false,
       participants: [],
       prizes: [],
       history: [],
@@ -432,7 +435,7 @@ export const useStore = create<AppState & AppActions>()(
 
         const data = await res.json();
 
-        set({ ...profileToState(data), testMode: false, testModeAdmin: null });
+        set({ ...profileToState(data), testMode: false, testModeAdmin: null, sessionExpired: false });
 
         // Carrega histórico do DB em background
         if (!data.isAdmin) {
@@ -440,6 +443,57 @@ export const useStore = create<AppState & AppActions>()(
             .then(r => r.json())
             .then(history => { if (Array.isArray(history)) set({ history }); })
             .catch(() => {});
+        }
+      },
+
+      /**
+       * O localStorage diz "logado", mas quem autoriza a API é o cookie
+       * `ps_session` — e ele morre antes (fecha o navegador sem "lembrar-me",
+       * ou 7 dias de JWT). Sem esta checagem o painel continuava aberto com uma
+       * sessão morta e todo botão que fala com o servidor falhava em silêncio;
+       * no OAuth da Twitch, que abre popup direto na rota da API, o streamer
+       * ainda levava um `{"error":"Não autenticado"}` cru na cara.
+       *
+       * Só valida e ressincroniza o perfil: nada do estado do evento
+       * (participantes, prêmios, etapa do sorteio) é tocado, porque isso roda a
+       * cada F5 e o sorteio em andamento tem que sobreviver ao refresh.
+       */
+      restoreSession: async () => {
+        if (!get().isLoggedIn) return;
+        let res: Response;
+        try {
+          res = await fetch('/api/auth/me');
+        } catch {
+          // Offline/queda de rede não é sessão expirada — mantém o que tem.
+          return;
+        }
+
+        if (res.status === 401) {
+          set({
+            isLoggedIn: false,
+            currentUser: null,
+            forcePasswordChange: false,
+            testMode: false,
+            testModeAdmin: null,
+            sessionExpired: true,
+          });
+          return;
+        }
+        if (!res.ok) return;
+
+        try {
+          const data = await res.json() as SessionProfileResponse & { testMode?: boolean; testModeAdmin?: string | null };
+          set({
+            sessionExpired: false,
+            currentUser: profileToState(data).currentUser,
+            forcePasswordChange: data.forcePasswordChange ?? false,
+            testMode: data.testMode ?? false,
+            testModeAdmin: data.testModeAdmin ?? null,
+            // Modo teste não tem saldo — não sobrescreve com o do streamer real.
+            ...(data.testMode ? {} : { pscBalance: data.pscBalance, isAffiliate: data.isAffiliate ?? true }),
+          });
+        } catch {
+          // resposta estranha: mantém a sessão local, não derruba ninguém à toa
         }
       },
 
@@ -501,6 +555,8 @@ export const useStore = create<AppState & AppActions>()(
           forcePasswordChange: false,
           testMode: false,
           testModeAdmin: null,
+          // Saiu por vontade própria — não é pra tela de login dizer "expirou".
+          sessionExpired: false,
           raffleStage: 1,
           eventBackground: null,
           chatMessages: [],

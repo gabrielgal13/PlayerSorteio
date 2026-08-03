@@ -215,4 +215,10 @@ export interface AppState {
   testMode: boolean;
   /** Username do admin que entrou no modo teste — pra voltar pro painel depois. */
   testModeAdmin: string | null;
+  /**
+   * A sessão do cookie morreu enquanto o localStorage ainda dizia "logado".
+   * Só serve pra tela de login explicar por que o streamer caiu ali sozinho —
+   * não é estado persistido.
+   */
+  sessionExpired: boolean;
 }

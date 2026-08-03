@@ -29,6 +29,30 @@ const TEST_MODE_BLOCKED_PATHS = [
 
 const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+// Rotas abertas como janela do navegador (popup do OAuth), não por fetch. Um 401
+// em JSON aqui aparece como `{"error":"Não autenticado"}` cru na tela do
+// streamer — devolve HTML explicando o que fazer e avisa a janela que abriu.
+const POPUP_PATHS = [
+  '/api/streamer/twitch-streamer-auth',
+  '/api/streamer/twitch-streamer-callback',
+];
+
+function popupSessionExpired() {
+  const msg = JSON.stringify({ type: 'twitch-streamer-oauth', ok: false, reason: 'session-expired' });
+  return new NextResponse(
+    `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Sessão expirada</title></head>
+    <body style="font-family:system-ui,monospace;background:#0a0a0a;color:#FF4444;padding:2rem;line-height:1.6">
+    <h2 style="margin:0 0 .5rem">Sua sessão expirou</h2>
+    <p style="color:#ccc">Feche esta janela, faça login de novo no painel e tente conectar a Twitch outra vez.</p>
+    <script>
+      if (window.opener) window.opener.postMessage(${msg}, window.location.origin);
+      setTimeout(function () { window.close(); }, 6000);
+    </script>
+    </body></html>`,
+    { status: 401, headers: { 'Content-Type': 'text/html; charset=utf-8' } },
+  );
+}
+
 export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const isProtected = PROTECTED.some(p => path.startsWith(p));
@@ -36,14 +60,15 @@ export async function proxy(req: NextRequest) {
   const token = req.cookies.get('ps_session')?.value;
   const session = token ? await verifyToken(token) : null;
 
-  if (isProtected) {
+  if (isProtected && !session) {
+    if (POPUP_PATHS.some(p => path.startsWith(p))) return popupSessionExpired();
     if (!token) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-    if (!session) return NextResponse.json({ error: 'Sessão inválida' }, { status: 401 });
-
-    // Rotas /api/admin/* exigem isAdmin
-    if (path.startsWith('/api/admin') && !session.isAdmin)
-      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    return NextResponse.json({ error: 'Sessão inválida' }, { status: 401 });
   }
+
+  // Rotas /api/admin/* exigem isAdmin
+  if (path.startsWith('/api/admin') && !session?.isAdmin)
+    return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
 
   if (session?.testMode && TEST_MODE_BLOCKED_PATHS.some(p => path.startsWith(p)))
     return NextResponse.json(

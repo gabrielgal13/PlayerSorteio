@@ -398,7 +398,7 @@ export default function EventConfig() {
   useEffect(() => {
     function onTwitchOAuthMessage(e: MessageEvent) {
       if (e.origin !== window.location.origin) return;
-      const data = e.data as { type?: string; ok?: boolean; channel?: string } | undefined;
+      const data = e.data as { type?: string; ok?: boolean; channel?: string; reason?: string } | undefined;
       if (data?.type !== 'twitch-streamer-oauth') return;
       if (twitchPopupTimerRef.current) clearInterval(twitchPopupTimerRef.current);
       setTwitchVerifying(false);
@@ -406,6 +406,9 @@ export default function EventConfig() {
         setTwitchConnectedUI(true);
         setTwitchError('');
         setTwitchAuthenticated(data.channel ?? '', true);
+      } else if (data.reason === 'session-expired') {
+        // Não é problema da Twitch: o login do painel é que caiu.
+        setTwitchError('Sua sessão do painel expirou. Faça login de novo e tente conectar a Twitch outra vez.');
       } else {
         setTwitchError('Falha ao autenticar com a Twitch. Tente novamente.');
       }

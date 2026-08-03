@@ -914,7 +914,6 @@ export default function AdminPanel() {
       const body: Record<string, unknown> = {
         isAffiliate: editData.isAffiliate,
         testProfile: editData.testProfile ?? false,
-        pscBalance: pscValue,
         themeColor: editProfile.themeColor,
         twitchChannel: editProfile.twitchChannel || null,
         kickChannel: editProfile.kickChannel || null,
@@ -925,6 +924,11 @@ export default function AdminPanel() {
         chatWarsBossSprite: editProfile.chatWarsBossSprite || null,
         twitchAffiliateEnabled: editProfile.twitchAffiliateEnabled,
       };
+      // Só manda o saldo se o admin realmente mexeu no campo. Mandando sempre,
+      // qualquer edição (cor, canal, nome) regravava o valor carregado quando a
+      // tela abriu — revertendo em silêncio o que o streamer gastou nesse meio
+      // tempo, ou derrubando o saldo pra um número velho.
+      if (pscValue !== editData.pscBalance) body.pscBalance = pscValue;
       if (editProfile.forceFirstAccess) {
         body.forcePasswordChange = true;
       } else if (editProfile.newPassword.trim()) {

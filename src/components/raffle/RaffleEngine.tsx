@@ -867,7 +867,7 @@ export default function RaffleEngine() {
       timestamp: Date.now(),
       confirmed: true,
     });
-    if (isAffiliate && activePrize.pscValue && !activePrize.skipPsc) deductPSC(activePrize.pscValue);
+    if (isAffiliate && activePrize.pscValue && !activePrize.skipPsc) deductPSC(activePrize.pscValue, activePrize.name);
 
     const winnerName = currentWinner.name;
     const prizeName = activePrize.name;

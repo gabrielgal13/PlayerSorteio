@@ -590,22 +590,41 @@ export async function PATCH(
     // vindo do client, que pode estar desatualizado (ex: aba aberta há tempo,
     // ou pscBalance ainda não recarregado após um refresh) e sobrescrever um
     // saldo válido com lixo.
-    const { username, amount } = await req.json();
-    if (!username || typeof amount !== 'number' || amount < 0)
+    const { username, amount, reason } = await req.json();
+    if (!username || typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0)
       return NextResponse.json({ error: 'invalid body' }, { status: 400 });
-    const streamer = await prisma.streamer.findUnique({ where: { username }, select: { id: true, pscBalance: true } });
-    if (!streamer) return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
-    const spent = Math.min(amount, streamer.pscBalance);
-    const newBalance = streamer.pscBalance - spent;
-    const updated = await prisma.streamer.update({ where: { username }, data: { pscBalance: newBalance } });
-    // Deixa rastro no extrato: sem isso o saldo caía e o Histórico PSC não
-    // mostrava nada, então extrato e saldo nunca fechavam.
-    if (spent > 0) {
-      await prisma.pscTransaction.create({
-        data: { streamerId: streamer.id, type: 'debit', amount: spent, description: 'Prêmio sorteado' },
-      }).catch(() => {});
+
+    // Saldo e extrato mudam JUNTOS ou não mudam. Antes eram duas escritas
+    // soltas (a do extrato ainda com .catch silencioso), então dava pra o saldo
+    // cair sem registrar o porquê — foi assim que sumiu PSC sem rastro.
+    try {
+      const pscBalance = await prisma.$transaction(async (tx) => {
+        const s = await tx.streamer.findUnique({ where: { username }, select: { id: true, pscBalance: true } });
+        if (!s) throw new Error('NOT_FOUND');
+        const spent = Math.min(Math.round(amount), s.pscBalance);
+        if (spent <= 0) return s.pscBalance;
+        const updated = await tx.streamer.update({
+          where: { username },
+          // decrement em vez de gravar um total calculado no Node: o banco faz a
+          // conta, então duas deduções simultâneas não se sobrescrevem.
+          data: { pscBalance: { decrement: spent } },
+        });
+        await tx.pscTransaction.create({
+          data: {
+            streamerId: s.id, type: 'debit', amount: spent,
+            description: typeof reason === 'string' && reason.trim()
+              ? `Prêmio: ${reason.trim().slice(0, 80)}`
+              : 'Prêmio sorteado',
+          },
+        });
+        return updated.pscBalance;
+      });
+      return NextResponse.json({ pscBalance });
+    } catch (e) {
+      if (e instanceof Error && e.message === 'NOT_FOUND')
+        return NextResponse.json({ error: 'Streamer não encontrado.' }, { status: 404 });
+      throw e;
     }
-    return NextResponse.json({ pscBalance: updated.pscBalance });
   }
 
   if (route === 'config') {

@@ -13,7 +13,8 @@ interface AppActions {
   logout: () => void;
   enterTestMode: (username: string) => Promise<void>;
   exitTestMode: () => Promise<void>;
-  deductPSC: (amount: number) => void;
+  /** `reason` vai pro extrato — sem ele, um débito no histórico não diz o que pagou. */
+  deductPSC: (amount: number, reason?: string) => void;
   syncPscBalance: () => Promise<void>;
   addPscToAll: (amount: number) => void;
   setParticipants: (participants: Participant[]) => void;
@@ -785,7 +786,7 @@ export const useStore = create<AppState & AppActions>()(
         }
       },
 
-      deductPSC: (amount) => {
+      deductPSC: (amount, reason) => {
         const { pscBalance, currentUser } = get();
         // Otimista pra UI responder na hora, mas o valor que vale é o que o
         // servidor devolve — ele calcula em cima do saldo real no banco, nunca
@@ -795,7 +796,7 @@ export const useStore = create<AppState & AppActions>()(
           fetch('/api/streamer/balance', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser.username, amount }),
+            body: JSON.stringify({ username: currentUser.username, amount, reason }),
           })
             .then(r => r.ok ? r.json() : Promise.reject(new Error(String(r.status))))
             .then(data => {

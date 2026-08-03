@@ -633,6 +633,7 @@ export async function POST(
     });
     if (existing) return NextResponse.json({ error: 'Username já existe.' }, { status: 409 });
     const passwordHash = await bcrypt.hash(password, 10);
+    const openingBalance = typeof pscBalance === 'number' && pscBalance >= 0 ? Math.round(pscBalance) : 0;
     const streamer = await prisma.streamer.create({
       data: {
         username: username.toLowerCase(),
@@ -642,11 +643,19 @@ export async function POST(
         mascot: mascot || 'dreads',
         themeColor: themeColor || '#00E5FF',
         eventEffect: raffleEffect || 'confetti',
-        pscBalance: typeof pscBalance === 'number' && pscBalance >= 0 ? pscBalance : 0,
+        pscBalance: openingBalance,
         isAdmin: false,
         twitchAffiliateEnabled: twitchAffiliateEnabled === true,
       },
     });
+    // Saldo inicial vira lançamento. Sem isso o extrato começa "devendo" o
+    // valor de abertura e nunca fecha com o saldo — o que impedia auditar se
+    // uma mudança de saldo foi legítima ou não.
+    if (openingBalance > 0) {
+      await prisma.pscTransaction.create({
+        data: { streamerId: streamer.id, type: 'credit', amount: openingBalance, description: 'Saldo inicial' },
+      });
+    }
     return NextResponse.json({ username: streamer.username }, { status: 201 });
   }
 
